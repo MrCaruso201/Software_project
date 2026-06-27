@@ -295,6 +295,7 @@ struct TimingView: View {
     @StateObject private var manager = KartTimingManager()
     @State private var showURLSheet = false
     @State private var newURL = ""
+    @State private var expandedDriverId: String? = nil
 
     var body: some View {
         ZStack {
@@ -448,6 +449,9 @@ struct TimingView: View {
 
         let isLeader = (pos == "1")
         let shortName = abbrev(fullName)
+        
+        let driverId = fullName.isEmpty ? "kart-\(kart)" : fullName
+        let isExpanded = (expandedDriverId == driverId)
 
         // Colonne secondarie non vuote
         let extras: [(String, String)] = headers.indices.compactMap { i in
@@ -469,77 +473,144 @@ struct TimingView: View {
                     .strokeBorder(Color.kartAccent.opacity(0.5), lineWidth: 1)
             }
 
-            HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                HStack(spacing: 0) {
 
-                // ── Posizione ──────────────────────────────────────────
-                Text(pos)
-                    .font(.system(size: 22, weight: .black, design: .monospaced))
-                    .foregroundColor(isLeader ? .kartAccent : .kartDim)
-                    .frame(width: 44)
+                    // ── Posizione ──────────────────────────────────────────
+                    Text(pos)
+                        .font(.system(size: 22, weight: .black, design: .monospaced))
+                        .foregroundColor(isLeader ? .kartAccent : .kartDim)
+                        .frame(width: 44)
 
-                // Divisore
-                Rectangle()
-                    .fill(Color.white.opacity(0.06))
-                    .frame(width: 1, height: 44)
+                    // Divisore
+                    Rectangle()
+                        .fill(Color.white.opacity(0.06))
+                        .frame(width: 1, height: 44)
 
-                // ── Kart # + Nome ──────────────────────────────────────
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        if !kart.isEmpty {
-                            Text("#\(kart)")
-                                .font(.system(size: 15, weight: .bold, design: .monospaced))
-                                .foregroundColor(.white)
-                        }
-                        if !shortName.isEmpty {
-                            Text(shortName)
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
-                                .foregroundColor(isLeader ? .kartAccent : .white)
-                                .tracking(2)
-                        }
-                    }
-
-                    // Extra secondari (es. squadra, classe…)
-                    if !extras.isEmpty {
-                        Text(extras.map { "\($0.0.prefix(4).uppercased()):\($0.1)" }.joined(separator: "  "))
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
-                            .foregroundColor(.kartDim)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 10)
-
-                // ── Tempi ──────────────────────────────────────────────
-                VStack(alignment: .trailing, spacing: 3) {
-                    // Ultimo giro (primario)
-                    Text(lapTime)
-                        .font(.system(size: 17, weight: .bold, design: .monospaced))
-                        .foregroundColor(isLeader ? .kartAccent : .white)
-
-                    HStack(spacing: 8) {
-                        // Migliore giro
-                        if !best.isEmpty {
-                            HStack(spacing: 3) {
-                                Image(systemName: "bolt.fill")
-                                    .font(.system(size: 7))
-                                    .foregroundColor(.kartGreen)
-                                Text(best)
-                                    .font(.system(size: 10, design: .monospaced))
-                                    .foregroundColor(.kartGreen)
+                    // ── Kart # + Nome ──────────────────────────────────────
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            if !kart.isEmpty {
+                                Text("#\(kart)")
+                                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.white)
+                            }
+                            if !shortName.isEmpty {
+                                Text(shortName)
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundColor(isLeader ? .kartAccent : .white)
+                                    .tracking(2)
                             }
                         }
-                        // Gap
-                        if !gap.isEmpty && !isLeader {
-                            Text(gap)
-                                .font(.system(size: 10, design: .monospaced))
+
+                        // Extra secondari (es. squadra, classe…)
+                        if !extras.isEmpty {
+                            Text(extras.map { "\($0.0.prefix(4).uppercased()):\($0.1)" }.joined(separator: "  "))
+                                .font(.system(size: 9, weight: .medium, design: .monospaced))
                                 .foregroundColor(.kartDim)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 10)
+
+                    // ── Tempi ──────────────────────────────────────────────
+                    VStack(alignment: .trailing, spacing: 3) {
+                        // Ultimo giro (primario)
+                        Text(lapTime)
+                            .font(.system(size: 17, weight: .bold, design: .monospaced))
+                            .foregroundColor(isLeader ? .kartAccent : .white)
+
+                        HStack(spacing: 8) {
+                            // Migliore giro
+                            if !best.isEmpty {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "bolt.fill")
+                                        .font(.system(size: 7))
+                                        .foregroundColor(.kartGreen)
+                                    Text(best)
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .foregroundColor(.kartGreen)
+                                }
+                            }
+                            // Gap
+                            if !gap.isEmpty && !isLeader {
+                                Text(gap)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundColor(.kartDim)
+                            }
+                        }
+                    }
+                    .padding(.trailing, 12)
+                    
+                    // Chevron di stato espansione
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.kartDim)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                        .padding(.trailing, 12)
                 }
-                .padding(.trailing, 12)
+                .padding(.vertical, 10)
+                
+                if isExpanded {
+                    Divider()
+                        .background(Color.white.opacity(0.1))
+                        .padding(.horizontal, 16)
+                    
+                    VStack(alignment: .leading, spacing: 14) {
+                        // Nome completo in evidenza
+                        if !fullName.isEmpty {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("PILOTA (NOME COMPLETO)")
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.kartDim)
+                                Text(fullName)
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        
+                        // Griglia dinamica con tutti i dettagli/colonne ricevute
+                        let allDetails: [(index: Int, header: String, value: String)] = headers.indices.compactMap { i in
+                            guard row.indices.contains(i) else { return nil }
+                            let val = row[i].trimmingCharacters(in: .whitespaces)
+                            return (index: i, header: headers[i], value: val)
+                        }
+                        
+                        let gridItems = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
+                        
+                        LazyVGrid(columns: gridItems, alignment: .leading, spacing: 12) {
+                            ForEach(allDetails, id: \.index) { item in
+                                if !["driver", "pilota", "name", "nome", "pilot"].contains(item.header.lowercased()) {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(item.header.uppercased())
+                                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                            .foregroundColor(.kartDim)
+                                        Text(item.value.isEmpty ? "-" : item.value)
+                                            .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 16)
+                    .transition(.opacity)
+                }
             }
-            .padding(.vertical, 10)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                if isExpanded {
+                    expandedDriverId = nil
+                } else {
+                    expandedDriverId = driverId
+                }
+            }
         }
     }
 
