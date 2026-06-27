@@ -1,0 +1,15 @@
+# Python – virtual environments (qualunque posizione li crei l'IDE)
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.playwright_installed
+
+# macOS
+.DS_Store
+
+# Xcode / iOS
+client_ios_app/**/*.xcuserstate
+client_ios_app/**/xcuserdata/
+client_ios_app/**/DerivedData/

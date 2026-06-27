@@ -15,6 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from zeroconf import ServiceInfo, Zeroconf
@@ -22,10 +24,8 @@ from playwright.sync_api import sync_playwright
 
 import uvicorn
 
-#start uvicorn server
-
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info")
 
 
 # ---------------------------------------------------------------------------
@@ -74,18 +74,7 @@ JS_EXTRACT = """
 }
 """
 
-# ---------------------------------------------------------------------------
-# FastAPI
-# ---------------------------------------------------------------------------
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# app is created after the lifespan function (see below)
 
 # ---------------------------------------------------------------------------
 # Stato globale (tipizzazione compatibile Python 3.9)
@@ -134,8 +123,9 @@ async def start_bonjour():
 
 async def stop_bonjour():
     if zeroconf_instance:
-        await zeroconf_instance.async_unregister_all_services()
-        await zeroconf_instance.async_close()
+        loop = asyncio.get_event_loop()
+        # close() è sincrono in questa versione di zeroconf
+        await loop.run_in_executor(None, zeroconf_instance.close)
         print("🔴 Bonjour fermato")
 
 # ---------------------------------------------------------------------------
@@ -256,17 +246,29 @@ def stop_scraper():
 # ---------------------------------------------------------------------------
 
 
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup e shutdown dell'applicazione."""
     loop = asyncio.get_event_loop()
     await start_bonjour()
     start_scraper(DEFAULT_URL, loop)
-
-
-@app.on_event("shutdown")
-async def shutdown():
+    yield
     stop_scraper()
     await stop_bonjour()
+
+
+# ---------------------------------------------------------------------------
+# FastAPI
+# ---------------------------------------------------------------------------
+
+app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------------------------------------------------------------------------
 # WebSocket endpoint
