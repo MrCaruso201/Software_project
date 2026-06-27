@@ -373,67 +373,174 @@ struct TimingView: View {
 
     // ── Tabella classifica ────────────────────────────────────────────────
 
+    /// Indice della colonna il cui header contiene una delle keyword (case-insensitive)
+    private func colIndex(in headers: [String], keywords: [String]) -> Int? {
+        for kw in keywords {
+            if let i = headers.firstIndex(where: { $0.lowercased().contains(kw) }) {
+                return i
+            }
+        }
+        return nil
+    }
+
+    /// Abbreviazione nome: prime 3 lettere maiuscole (solo alfa)
+    private func abbrev(_ name: String) -> String {
+        let letters = name.filter { $0.isLetter }
+        return String(letters.prefix(3)).uppercased()
+    }
+
     @ViewBuilder
     private func timingTable(timing: TimingPayload) -> some View {
+        let h = timing.headers
+        let posIdx  = colIndex(in: h, keywords: ["pos", "pos.", "p", "#"])           ?? 0
+        let kartIdx = colIndex(in: h, keywords: ["kart", "num", "n°", "no", "bib"])
+        let nameIdx = colIndex(in: h, keywords: ["driver", "pilota", "name", "nome", "pilot"])
+        let lapIdx  = colIndex(in: h, keywords: ["last", "lap", "giro", "time", "tempo"])
+        let gapIdx  = colIndex(in: h, keywords: ["gap", "diff", "distanza", "behind"])
+        let bestIdx = colIndex(in: h, keywords: ["best", "migliore", "fastest", "record"])
+
+        // Colonne "secondarie" = tutto ciò che non è già nelle 6 chiave
+        let primarySet: Set<Int> = [posIdx, kartIdx, nameIdx, lapIdx, gapIdx, bestIdx]
+            .compactMap { $0 }
+            .reduce(into: Set<Int>()) { $0.insert($1) }
+
         ScrollView {
-            VStack(spacing: 0) {
-                // Header colonne
-                if !timing.headers.isEmpty {
-                    headerRow(timing.headers)
-                }
-                // Righe
+            VStack(spacing: 6) {
                 ForEach(Array(timing.rows.enumerated()), id: \.offset) { idx, row in
-                    dataRow(row: row, headers: timing.headers, index: idx)
+                    kartCard(
+                        row: row,
+                        headers: h,
+                        index: idx,
+                        posIdx: posIdx,
+                        kartIdx: kartIdx,
+                        nameIdx: nameIdx,
+                        lapIdx: lapIdx,
+                        gapIdx: gapIdx,
+                        bestIdx: bestIdx,
+                        primarySet: primarySet
+                    )
                 }
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
         }
     }
 
-    private func headerRow(_ headers: [String]) -> some View {
-        HStack(spacing: 0) {
-            ForEach(Array(headers.enumerated()), id: \.offset) { _, h in
-                Text(h.uppercased())
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .tracking(1)
-                    .foregroundColor(.kartAccent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-            }
+    @ViewBuilder
+    private func kartCard(
+        row: [String],
+        headers: [String],
+        index: Int,
+        posIdx: Int,
+        kartIdx: Int?,
+        nameIdx: Int?,
+        lapIdx: Int?,
+        gapIdx: Int?,
+        bestIdx: Int?,
+        primarySet: Set<Int>
+    ) -> some View {
+        let pos      = row.indices.contains(posIdx)  ? row[posIdx]  : "-"
+        let kart     = kartIdx.flatMap { row.indices.contains($0) ? row[$0] : nil } ?? ""
+        let fullName = nameIdx.flatMap { row.indices.contains($0) ? row[$0] : nil } ?? ""
+        let lapTime  = lapIdx.flatMap  { row.indices.contains($0) ? row[$0] : nil } ?? "-"
+        let gap      = gapIdx.flatMap  { row.indices.contains($0) ? row[$0] : nil } ?? ""
+        let best     = bestIdx.flatMap { row.indices.contains($0) ? row[$0] : nil } ?? ""
+
+        let isLeader = (pos == "1")
+        let shortName = abbrev(fullName)
+
+        // Colonne secondarie non vuote
+        let extras: [(String, String)] = headers.indices.compactMap { i in
+            guard !primarySet.contains(i),
+                  row.indices.contains(i),
+                  !row[i].trimmingCharacters(in: .whitespaces).isEmpty
+            else { return nil }
+            return (headers[i], row[i])
         }
-        .background(Color(red: 0.12, green: 0.10, blue: 0.04))
-    }
 
-    private func dataRow(row: [String], headers: [String], index: Int) -> some View {
-        let isFirst = row.first == "1"
-        let bg: Color = isFirst
-            ? Color.kartAccent.opacity(0.08)
-            : (index % 2 == 0 ? Color.kartPanel : Color.kartBG)
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isLeader
+                      ? Color.kartAccent.opacity(0.12)
+                      : Color.kartPanel)
 
-        return HStack(spacing: 0) {
-            ForEach(Array(row.enumerated()), id: \.offset) { colIdx, val in
-                Text(val)
-                    .font(.system(size: 13, weight: colIdx == 0 ? .bold : .regular,
-                                  design: .monospaced))
-                    .foregroundColor(colIdx == 0 && isFirst ? .kartAccent : .white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
+            if isLeader {
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.kartAccent.opacity(0.5), lineWidth: 1)
             }
-            // Riempi celle mancanti
-            if row.count < headers.count {
-                ForEach(row.count..<headers.count, id: \.self) { _ in
-                    Text("").frame(maxWidth: .infinity)
+
+            HStack(spacing: 0) {
+
+                // ── Posizione ──────────────────────────────────────────
+                Text(pos)
+                    .font(.system(size: 22, weight: .black, design: .monospaced))
+                    .foregroundColor(isLeader ? .kartAccent : .kartDim)
+                    .frame(width: 44)
+
+                // Divisore
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(width: 1, height: 44)
+
+                // ── Kart # + Nome ──────────────────────────────────────
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        if !kart.isEmpty {
+                            Text("#\(kart)")
+                                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white)
+                        }
+                        if !shortName.isEmpty {
+                            Text(shortName)
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .foregroundColor(isLeader ? .kartAccent : .white)
+                                .tracking(2)
+                        }
+                    }
+
+                    // Extra secondari (es. squadra, classe…)
+                    if !extras.isEmpty {
+                        Text(extras.map { "\($0.0.prefix(4).uppercased()):\($0.1)" }.joined(separator: "  "))
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .foregroundColor(.kartDim)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10)
+
+                // ── Tempi ──────────────────────────────────────────────
+                VStack(alignment: .trailing, spacing: 3) {
+                    // Ultimo giro (primario)
+                    Text(lapTime)
+                        .font(.system(size: 17, weight: .bold, design: .monospaced))
+                        .foregroundColor(isLeader ? .kartAccent : .white)
+
+                    HStack(spacing: 8) {
+                        // Migliore giro
+                        if !best.isEmpty {
+                            HStack(spacing: 3) {
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 7))
+                                    .foregroundColor(.kartGreen)
+                                Text(best)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundColor(.kartGreen)
+                            }
+                        }
+                        // Gap
+                        if !gap.isEmpty && !isLeader {
+                            Text(gap)
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundColor(.kartDim)
+                        }
+                    }
+                }
+                .padding(.trailing, 12)
             }
+            .padding(.vertical, 10)
         }
-        .background(bg)
-        .overlay(
-            Rectangle()
-                .frame(height: 0.5)
-                .foregroundColor(Color.white.opacity(0.05)),
-            alignment: .bottom
-        )
     }
 
     // ── Empty state ───────────────────────────────────────────────────────
