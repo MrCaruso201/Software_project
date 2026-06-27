@@ -1,0 +1,51 @@
+{
+  "type": "timing_update",
+  "url": "https://live.racefacer.com/ottobianomotorsport",
+  "updated_at": "2026-06-27T11:51:04.210141",
+  "headers": [
+    "P",
+    "Kart",
+    "Driver",
+    "Lap Time",
+    "Gap",
+    "Int",
+    "Best",
+    "Laps",
+    ""
+  ],
+  "rows": [
+    [
+      "1",
+      "60",
+      "Silvano Polenghi",
+      "1:21.619",
+      "-",
+      "-",
+      "1:16.494",
+      "8",
+      ""
+    ],
+    [
+      "2",
+      "58",
+      "Alessandro De Biasi",
+      "1:18.255",
+      "+0.661",
+      "+0.661",
+      "1:17.155",
+      "8",
+      ""
+    ],
+    [
+      "3",
+      "50",
+      "Martina Morone",
+      "1:27.779",
+      "+11.249",
+      "+10.588",
+      "1:27.743",
+      "7",
+      ""
+    ]
+  ]
+}
