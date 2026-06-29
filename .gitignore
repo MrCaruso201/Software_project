@@ -1,6 +1,5 @@
 # Python – virtual environments (qualunque posizione li crei l'IDE)
-.venv/
-venv/
+
 __pycache__/
 *.pyc
 *.pyo

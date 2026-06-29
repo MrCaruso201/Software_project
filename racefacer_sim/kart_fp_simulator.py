@@ -28,8 +28,11 @@ from typing import List, Optional
 
 # ─── Configurazione ───────────────────────────────────────────────────────────
 
+# Percorso della directory dello script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
 DEFAULT_DURATION_MINUTES = 15           # Durata prova libera
-OUTPUT_FILE              = "live_timing.json"   # File unico sovrascritto ad ogni update
+OUTPUT_FILE              = script_dir + "/sim_data/live_timing.json"   # File unico sovrascritto ad ogni update
 BASE_URL                 = "https://live.racefacer.com/simulator"
 
 # Piloti: nome, numero kart, tempo base giro (secondi), sigma (varianza = consistenza)
