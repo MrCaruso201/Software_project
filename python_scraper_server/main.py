@@ -45,6 +45,9 @@ DATA_DIR.mkdir(exist_ok=True)
 JSON_PATH = DATA_DIR / "live_timing.json"
 
 DEFAULT_URL = "https://live.racefacer.com/ottobianomotorsport"
+SIMULATOR_URL = "https://live.racefacer.com/simulator"
+SIMULATOR_JSON_PATH = Path(__file__).parent.parent / "racefacer_sim" / "sim_data" / "live_timing.json"
+
 
 # ---------------------------------------------------------------------------
 # JS estrattore tabella (identico allo script originale)
@@ -169,6 +172,29 @@ def scraper_loop(url: str, loop: asyncio.AbstractEventLoop):
     global scraper_running, last_payload
     last_hash = None
     poll_count = 0
+
+    if url == SIMULATOR_URL:
+        print(f"🎮 Avvio simulatore locale da {SIMULATOR_JSON_PATH}")
+        while scraper_running:
+            try:
+                if SIMULATOR_JSON_PATH.exists():
+                    with open(SIMULATOR_JSON_PATH, "r", encoding="utf-8") as f:
+                        payload = json.load(f)
+                    
+                    h = data_hash(payload)
+                    if h != last_hash:
+                        last_hash = h
+                        last_payload = payload
+                        save_json(payload)
+                        print(f"📊 Dati simulatore aggiornati: {len(payload.get('rows', []))} righe")
+                        asyncio.run_coroutine_threadsafe(broadcast(payload), loop)
+                else:
+                    print(f"⚠️ File simulatore non trovato a {SIMULATOR_JSON_PATH}")
+            except Exception as e:
+                print(f"⚠️ Errore lettura simulatore: {e}")
+            time.sleep(POLL_INTERVAL)
+        print("🔴 Loop simulatore fermato.")
+        return
 
     try:
         with sync_playwright() as pw:
