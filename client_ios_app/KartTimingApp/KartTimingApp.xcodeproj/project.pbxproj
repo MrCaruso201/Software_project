@@ -272,6 +272,7 @@
 				INFOPLIST_FILE = KartTimingApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Race Manager";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "L'app cerca i server di timing sulla rete locale per mostrare i tempi in tempo reale.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -307,6 +308,7 @@
 				INFOPLIST_FILE = KartTimingApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Race Manager";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "L'app cerca i server di timing sulla rete locale per mostrare i tempi in tempo reale.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

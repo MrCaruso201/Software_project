@@ -36,6 +36,12 @@ SERVICE_TYPE  = "_karttiming._tcp.local."
 SERVICE_NAME  = "Kart Live Timing._karttiming._tcp.local."
 SERVICE_PORT  = 8000
 
+API_TOKEN = "miotokentest12345"
+
+# API_TOKEN = os.environ.get("KART_API_TOKEN")
+# if not API_TOKEN:
+#    print("⚠️  ATTENZIONE: KART_API_TOKEN non impostato, autenticazione WS disabilitata")
+
 POLL_INTERVAL  = 3          # secondi tra un poll e l'altro
 REFRESH_EVERY  = 10         # refresh pagina ogni N poll
 
@@ -303,6 +309,12 @@ app.add_middleware(
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    if API_TOKEN:
+        token = websocket.query_params.get("token")
+        if token != API_TOKEN:
+            await websocket.close(code=4401)
+            return
+
     await websocket.accept()
     connected_clients.append(websocket)
     print(f"📱 Client connesso. Totale: {len(connected_clients)}")

@@ -4,7 +4,9 @@
 <dict>
 	<key>NSAppTransportSecurity</key>
 	<dict/>
-	<key>Allow Local Networking</key>
-	<true/>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_karttiming._tcp.</string>
+	</array>
 </dict>
 </plist>
