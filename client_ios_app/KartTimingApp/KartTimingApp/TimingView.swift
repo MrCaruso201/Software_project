@@ -4,8 +4,9 @@ struct TimingView: View {
     let server: DiscoveredServer
     @StateObject private var manager = KartTimingManager()
     @State private var showURLSheet = false
-    @State private var newURL = ""
     @State private var expandedDriverId: String? = nil
+    @State private var selectedKartodromo: Kartodromo? = nil
+    @State private var searchText = ""
 
     var body: some View {
         ZStack {
@@ -15,31 +16,112 @@ struct TimingView: View {
                 // Status bar
                 statusBar
 
-                // Classifica
-                if let timing = manager.timing, !timing.rows.isEmpty {
-                    timingTable(timing: timing)
-                } else {
+                if selectedKartodromo == nil {
+                    kartodromoSelectionCard
+                    
+                    Spacer()
                     emptyState
+                    Spacer()
+                } else {
+                    // Classifica
+                    if let timing = manager.timing, !timing.rows.isEmpty {
+                        timingTable(timing: timing)
+                    } else {
+                        emptyState
+                    }
                 }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    newURL = manager.currentURL
-                    showURLSheet = true
-                } label: {
-                    Image(systemName: "link.badge.plus").foregroundColor(.kartAccent)
+            if selectedKartodromo != nil {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showURLSheet = true
+                    } label: {
+                        Image(systemName: "list.bullet.rectangle.portrait").foregroundColor(.kartAccent)
+                    }
                 }
             }
         }
         .sheet(isPresented: $showURLSheet) {
             urlSheet
         }
-        .onAppear { manager.connect(to: server) }
         .onDisappear { manager.disconnect() }
+    }
+
+    // ── Selezione Kartodromo ──────────────────────────────────────────────
+    
+    private var filteredKartodromi: [Kartodromo] {
+        if searchText.isEmpty {
+            return KartodromiData.lista
+        } else {
+            return KartodromiData.lista.filter { $0.nome.lowercased().contains(searchText.lowercased()) }
+        }
+    }
+
+    private var kartodromoSelectionCard: some View {
+        VStack(spacing: 0) {
+            // Barra di ricerca fissa in cima
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.kartDim)
+                TextField("Cerca kartodromo...", text: $searchText)
+                    .foregroundColor(.white)
+                    .autocorrectionDisabled()
+            }
+            .padding(14)
+            .background(Color.kartBG.opacity(0.5))
+            
+            Divider().background(Color.white.opacity(0.1))
+            
+            // Lista scrollabile
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(filteredKartodromi) { k in
+                        Button {
+                            let wasConnected = manager.isConnected
+                            selectedKartodromo = k
+                            
+                            if !wasConnected {
+                                manager.connect(to: server)
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    manager.sendCommand("set_url", extra: ["url": k.url])
+                                }
+                            } else {
+                                manager.sendCommand("set_url", extra: ["url": k.url])
+                            }
+                            showURLSheet = false
+                        } label: {
+                            HStack {
+                                Text(k.nome)
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.kartDim)
+                                    .font(.system(size: 12))
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        
+                        if k != filteredKartodromi.last {
+                            Divider().background(Color.white.opacity(0.06))
+                                .padding(.horizontal, 16)
+                        }
+                    }
+                }
+            }
+            .frame(maxHeight: 450)
+        }
+        .background(Color.kartPanel)
+        .cornerRadius(12)
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
     }
 
     // ── Status bar ────────────────────────────────────────────────────────
@@ -353,42 +435,13 @@ struct TimingView: View {
         NavigationStack {
             ZStack {
                 Color.kartBG.ignoresSafeArea()
-                VStack(spacing: 20) {
-                    Text("URL kartdromo")
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.kartDim)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    TextField("https://live.racefacer.com/...", text: $newURL)
-                        .font(.system(size: 14, design: .monospaced))
-                        .foregroundColor(.white)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                        .padding(12)
-                        .background(Color.white.opacity(0.07))
-                        .cornerRadius(10)
-
-                    Button {
-                        if newURL.hasPrefix("http") {
-                            manager.sendCommand("set_url", extra: ["url": newURL])
-                            showURLSheet = false
-                        }
-                    } label: {
-                        Text("Aggiorna URL")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.kartAccent)
-                            .cornerRadius(12)
-                    }
-
+                VStack {
+                    kartodromoSelectionCard
                     Spacer()
                 }
-                .padding(24)
+                .padding(.vertical, 20)
             }
-            .navigationTitle("Cambia sorgente")
+            .navigationTitle("Cambia Kartodromo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
@@ -398,7 +451,7 @@ struct TimingView: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
