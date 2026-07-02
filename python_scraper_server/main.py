@@ -25,6 +25,7 @@ import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict
+from urllib.parse import urlparse
 
 from contextlib import asynccontextmanager
 
@@ -64,6 +65,30 @@ DATA_DIR.mkdir(exist_ok=True)
 DEFAULT_URL = "https://live.racefacer.com/ottobianomotorsport"
 SIMULATOR_URL = "https://live.racefacer.com/simulator"
 SIMULATOR_JSON_PATH = Path(__file__).parent.parent / "racefacer_sim" / "sim_data" / "live_timing.json"
+
+# Domini che i client possono richiedere via "set_url". Chiunque abbia il
+# token può scegliere la propria sorgente, ma solo tra questi host: evita
+# che un client possa far scrapare al server URL arbitrari (SSRF verso la
+# rete interna, siti a caso, ecc.).
+ALLOWED_URL_HOSTS = {
+    "live.racefacer.com",
+    # "timing.altrapiattaforma.com",
+}
+
+# Numero massimo di sessioni di scraping distinte attive in contemporanea
+# (una per URL distinto in uso). Protegge da un client che tenta di far
+# aprire tanti browser headless diversi per esaurire CPU/RAM del server.
+MAX_CONCURRENT_SESSIONS = 5
+
+
+def is_url_allowed(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    if parsed.scheme not in ("http", "https"):
+        return False
+    return parsed.hostname in ALLOWED_URL_HOSTS
 
 
 def json_path_for(url: str) -> Path:
@@ -456,7 +481,28 @@ async def websocket_endpoint(websocket: WebSocket):
 
             if command == "set_url":
                 new_url = msg.get("url", "").strip()
-                if new_url.startswith("http"):
+
+                if not new_url.startswith("http"):
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": "URL non valido"
+                    }))
+
+                elif not is_url_allowed(new_url):
+                    print(f"🚫 URL rifiutato (host non consentito): {new_url}")
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": "Dominio non consentito"
+                    }))
+
+                elif new_url not in sessions and len(sessions) >= MAX_CONCURRENT_SESSIONS:
+                    print(f"🚫 Limite sessioni raggiunto, rifiuto: {new_url}")
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": "Troppe sessioni attive, riprova più tardi"
+                    }))
+
+                else:
                     print(f"🔗 Client richiede cambio URL → {new_url}")
                     new_session = subscribe_client(websocket, new_url, loop)
                     await websocket.send_text(json.dumps({
@@ -469,11 +515,6 @@ async def websocket_endpoint(websocket: WebSocket):
                         await websocket.send_text(
                             json.dumps(new_session.last_payload, ensure_ascii=False)
                         )
-                else:
-                    await websocket.send_text(json.dumps({
-                        "type": "error",
-                        "message": "URL non valido"
-                    }))
 
             elif command == "get_status":
                 current = client_url.get(websocket, DEFAULT_URL)
