@@ -2,59 +2,26 @@
 Gestione delle sessioni di scraping.
 
 Una ScraperSession rappresenta un singolo URL in scraping:
-  - Tiene aperto un browser Playwright in un thread dedicato
+  - Ottiene il provider corretto dalla factory (scraper/factory.py)
+  - Esegue il loop di polling in un thread dedicato
   - Notifica via broadcast tutti i client iscritti a quell'URL quando i dati cambiano
   - Si ferma automaticamente dopo SESSION_IDLE_GRACE secondi senza iscritti
 
 Il dizionario globale `sessions` mappa URL -> ScraperSession ed è l'unica fonte
 di verità sulle sessioni attive.
+
+Per aggiungere supporto a un nuovo provider non è necessario toccare questo file:
+basta aggiungere la classe in scraper/providers/ e registrarla in scraper/factory.py.
 """
 
 import asyncio
-import json
 import threading
 import time
 from datetime import datetime
 from typing import Dict, Optional
 
-from playwright.sync_api import sync_playwright
-
-from config import (
-    POLL_INTERVAL,
-    REFRESH_EVERY,
-    SESSION_IDLE_GRACE,
-    SIMULATOR_JSON_PATH,
-    SIMULATOR_URL,
-)
+from config import POLL_INTERVAL, SESSION_IDLE_GRACE
 from scraper.storage import data_hash, json_path_for, save_json
-
-# ---------------------------------------------------------------------------
-# JavaScript estrattore tabella
-# ---------------------------------------------------------------------------
-
-JS_EXTRACT = """
-() => {
-    const tables = document.querySelectorAll('table');
-    let bestTable = null;
-    let maxRows = 0;
-    tables.forEach(t => {
-        const rows = t.querySelectorAll('tr');
-        if (rows.length > maxRows) { maxRows = rows.length; bestTable = t; }
-    });
-    if (!bestTable) return { headers: [], rows: [] };
-
-    const allRows = Array.from(bestTable.querySelectorAll('tr'));
-    const headers = Array.from(allRows[0]?.querySelectorAll('th, td') || [])
-                        .map(c => c.innerText.trim());
-
-    const rows = allRows.slice(1).map(row => {
-        return Array.from(row.querySelectorAll('td'))
-                    .map(c => c.innerText.trim());
-    }).filter(r => r.some(c => c !== ''));
-
-    return { headers, rows };
-}
-"""
 
 
 # ---------------------------------------------------------------------------
@@ -138,93 +105,51 @@ class ScraperSession:
     # -- scraping loop (thread separato) -----------------------------------
 
     def _loop(self):
-        # Importazione locale per evitare dipendenza circolare
-        # (broadcast_to_url è definito in ws.manager che importa session)
+        # Import locali per evitare dipendenze circolari:
+        #   - broadcast_to_url è in ws.manager che importa session
+        #   - get_scraper_for_url importa i provider che non dipendono da session
         from ws.manager import broadcast_to_url
+        from scraper.factory import get_scraper_for_url
 
-        last_hash = None
-        poll_count = 0
         path = json_path_for(self.url)
+        last_hash = None
 
-        # --- Modalità simulatore locale ---
-        if self.url == SIMULATOR_URL:
-            print(f"🎮 Avvio simulatore locale da {SIMULATOR_JSON_PATH}")
+        scraper = get_scraper_for_url(self.url)
+        print(f"🔌 Provider selezionato: {type(scraper).__name__} → {self.url}")
+
+        scraper.setup(self.url)
+        try:
             while self.running:
                 try:
-                    if SIMULATOR_JSON_PATH.exists():
-                        with open(SIMULATOR_JSON_PATH, "r", encoding="utf-8") as f:
-                            payload = json.load(f)
+                    data = scraper.scrape()
+                    payload = {
+                        "type": "timing_update",
+                        "url": self.url,
+                        "updated_at": datetime.now().isoformat(),
+                        "headers": data.get("headers", []),
+                        "rows": data.get("rows", []),
+                    }
 
-                        h = data_hash(payload)
-                        if h != last_hash:
-                            last_hash = h
-                            self.last_payload = payload
-                            save_json(payload, path)
-                            print(
-                                f"📊 [{self.url}] Dati simulatore aggiornati: "
-                                f"{len(payload.get('rows', []))} righe"
-                            )
-                            asyncio.run_coroutine_threadsafe(
-                                broadcast_to_url(self.url, payload), self.loop
-                            )
-                    else:
-                        print(f"⚠️ File simulatore non trovato a {SIMULATOR_JSON_PATH}")
+                    h = data_hash(payload)
+                    if h != last_hash:
+                        last_hash = h
+                        self.last_payload = payload
+                        save_json(payload, path)
+                        print(
+                            f"📊 [{self.url}] Dati aggiornati: "
+                            f"{len(payload['rows'])} righe"
+                        )
+                        asyncio.run_coroutine_threadsafe(
+                            broadcast_to_url(self.url, payload), self.loop
+                        )
+
                 except Exception as e:
-                    print(f"⚠️ Errore lettura simulatore: {e}")
+                    print(f"⚠️  Errore polling ({self.url}): {e}")
+
                 time.sleep(POLL_INTERVAL)
-            print(f"🔴 Loop simulatore fermato → {self.url}")
-            return
 
-        # --- Modalità scraping Playwright ---
-        try:
-            with sync_playwright() as pw:
-                browser = pw.chromium.launch(headless=True)
-                page = browser.new_page()
-
-                print(f"🌐 Caricamento pagina: {self.url}")
-                page.goto(self.url, wait_until="networkidle", timeout=30_000)
-                print(f"✅ Pagina caricata ({self.url}). Inizio polling.")
-
-                while self.running:
-                    try:
-                        if poll_count > 0 and poll_count % REFRESH_EVERY == 0:
-                            print(f"🔄 Refresh pagina... ({self.url})")
-                            page.goto(self.url, wait_until="networkidle", timeout=30_000)
-
-                        poll_count += 1
-                        result = page.evaluate(JS_EXTRACT)
-                        headers = result.get("headers", [])
-                        rows = result.get("rows", [])
-
-                        payload = {
-                            "type": "timing_update",
-                            "url": self.url,
-                            "updated_at": datetime.now().isoformat(),
-                            "headers": headers,
-                            "rows": rows,
-                        }
-
-                        h = data_hash(payload)
-                        if h != last_hash:
-                            last_hash = h
-                            self.last_payload = payload
-                            save_json(payload, path)
-                            print(f"📊 [{self.url}] Dati aggiornati: {len(rows)} righe")
-                            asyncio.run_coroutine_threadsafe(
-                                broadcast_to_url(self.url, payload), self.loop
-                            )
-
-                        time.sleep(POLL_INTERVAL)
-
-                    except Exception as e:
-                        print(f"⚠️  Errore polling ({self.url}): {e}")
-                        time.sleep(POLL_INTERVAL)
-
-                browser.close()
-
-        except Exception as e:
-            print(f"❌ Errore browser ({self.url}): {e}")
         finally:
+            scraper.teardown()
             self.running = False
             print(f"🔴 Scraper fermato → {self.url}")
 

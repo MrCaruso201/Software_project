@@ -47,6 +47,8 @@ SIMULATOR_URL = "https://live.racefacer.com/simulator"
 # rete interna, siti a caso, ecc.).
 ALLOWED_URL_HOSTS = {
     "live.racefacer.com",
+    "www.apex-timing.com",
+    "apex-timing.com",
     # "timing.altrapiattaforma.com",
 }
 
