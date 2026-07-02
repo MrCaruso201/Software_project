@@ -4,158 +4,67 @@ Documentazione del server Python nella cartella `python_scraper_server`.
 
 ## Panoramica
 
-Questo server fornisce un servizio di scraping live per pagine di timing karting, espone i dati via WebSocket e pubblica il servizio sulla rete locale con Bonjour/mDNS.
+Questo server fornisce un servizio di scraping live per pagine di timing karting, espone i dati via WebSocket e gestisce l'autenticazione degli utenti tramite JWT. Il servizio è pensato per essere pubblicato all'esterno tramite Tailscale Funnel.
 
 Funzionalità principali:
 
 - Scraping headless con `playwright`
 - Server WebSocket basato su `FastAPI`
-- Scoperta di rete con `zeroconf`
+- Autenticazione e Autorizzazione (JWT, RBAC con ruoli viewer, race_director, admin)
+- Database SQLite per gestione utenti e refresh token
 - Supporto multi-client e multi-URL
 - Persistenza temporanea dei payload in file JSON
 - Modalità simulatore per test locale
 
-## File principali
-
-- `main.py`: logica del server, scraping, gestione delle sessioni e endpoint WebSocket
-- `requirements.txt`: dipendenze Python
-- `data/`: directory per i file di output JSON temporanei
-
 ## Architettura
 
-Il server mantiene una mappatura tra client WebSocket e URL richiesti.
-Ogni URL gestito ha una propria `ScraperSession`:
+Il progetto utilizza **FastAPI** come framework principale ed è strutturato nei seguenti moduli:
 
-- condivide lo stesso browser/thread tra tutti i client che guardano lo stesso URL
-- avvia il browser solo quando serve
-- ferma la sessione se resta senza client per un breve periodo
+- `main.py`: Entrypoint dell'applicazione, setup di FastAPI e lifespan.
+- `auth/`: Logica di autenticazione, gestione JWT, hashing password (bcrypt), definizione dei ruoli e router (`/auth` per login/register e `/admin` per gestione utenti).
+- `db/`: Connessione al database SQLite tramite **SQLAlchemy** e modelli ORM (`User`, `RefreshToken`).
+- `scraper/`: Logica di scraping (tramite **Playwright**), gestione delle sessioni (`ScraperSession`) e persistenza su disco.
+- `ws/`: Gestione delle connessioni WebSocket, smistamento messaggi (broadcast e sottoscrizioni).
 
 ### `ScraperSession`
 
-- esegue il polling della pagina ogni `POLL_INTERVAL` secondi (default 15s)
-- ricarica la pagina ogni `REFRESH_EVERY` poll (default refresh ogni 10 poll)
-- tempo di `POLL_INTERVAL` tra un poll e l'altro (default 3s)
-- salva payload JSON atomici in `data/live_timing_<hash>.json`
-- invia ai client solo se i dati cambiano
+Ogni URL richiesto ha una propria `ScraperSession`. Il server mantiene una mappatura tra client WebSocket e URL richiesti.
+- condivide lo stesso browser/thread tra tutti i client che guardano lo stesso URL
+- avvia il browser solo quando serve
+- ferma la sessione se resta senza client per un breve periodo (default 10s `SESSION_IDLE_GRACE`)
+- esegue il polling della pagina ogni `POLL_INTERVAL` (default 15s) e ricarica la pagina dopo un certo numero di cicli (`REFRESH_EVERY`).
+- salva i dati in file JSON nella cartella `data/` basati sull'hash dell'URL.
 
-## Configurazione
+## Autenticazione e Ruoli
 
-Le impostazioni principali sono definite in `main.py`:
+L'applicazione espone endpoint REST in `/auth` per gestire l'identità:
+- `POST /auth/register`: Crea un nuovo account con ruolo di base (`viewer`).
+- `POST /auth/login`: Autentica l'utente e restituisce `access_token` (JWT) e `refresh_token`.
+- `POST /auth/refresh`: Emette un nuovo access token tramite il refresh token.
+- `POST /auth/logout`: Revoca il refresh token.
+- `GET /auth/me`: Ritorna i dettagli dell'utente.
 
-- `SERVICE_TYPE`: `_karttiming._tcp.local.`
-- `SERVICE_NAME`: `Kart Live Timing._karttiming._tcp.local.`
-- `SERVICE_PORT`: `8000`
-- `API_TOKEN`: token di accesso per i WebSocket
-- `POLL_INTERVAL`: intervallo di polling
-- `REFRESH_EVERY`: numero di poll prima del refresh di pagina
-- `SESSION_IDLE_GRACE`: tempo di grazia prima di fermare una sessione inattiva
+La rotta `/admin/users` permette agli utenti con ruolo **admin** di cercare altri utenti e modificarne i ruoli (`viewer`, `race_director`, `admin`).
+Al primo avvio, l'applicazione (`db.init_db()`) crea automaticamente un utente **admin** di default con password `admin`.
 
-### URL predefiniti
+## API REST & WebSocket
 
-- `DEFAULT_URL`: `https://live.racefacer.com/ottobianomotorsport`
-- `SIMULATOR_URL`: `https://live.racefacer.com/simulator`
+### Endpoint REST (Auth)
+Tutti gli endpoint REST usano token Bearer per le chiamate protette.
 
-## Modalità simulatore
+### Endpoint WebSocket
 
-Se un client imposta l'URL `https://live.racefacer.com/simulator`, il server non usa Playwright.
-Invece legge i dati da:
+- `ws://<host>:8000/ws?token=<ACCESS_TOKEN>`
 
-- `../racefacer_sim/sim_data/live_timing.json`
+L'accesso al WebSocket richiede un **token JWT valido** passato come parametro di query. Se il token è assente o non valido, la connessione viene chiusa con codice `4401`.
 
-Questo permette di testare il server senza avviare un browser headless.
+#### Comandi WebSocket
+Riceve in JSON i comandi dal client:
+- `set_url`: Iscrive il client a un nuovo URL (avviando la sessione se non esiste). Risponde con `url_changed` o `error`.
+- `get_status`: Richiede lo stato corrente. Risponde con `status` (se sta facendo scraping e su quale URL).
 
-## WebSocket API
-
-### Endpoint
-
-- `ws://<host>:8000/ws`
-
-### Autenticazione
-
-Se `API_TOKEN` è impostato, il client deve fornire il token come parametro di query:
-
-```txt
-ws://localhost:8000/ws?token=miotokentest12345
-```
-
-Se il token è errato, la connessione viene chiusa con codice `4401`.
-
-### Comandi supportati
-
-Il server riceve messaggi JSON da client WebSocket. I comandi supportati sono:
-
-- `set_url`
-- `get_status`
-
-#### `set_url`
-
-Richiede il corpo:
-
-```json
-{
-  "command": "set_url",
-  "url": "https://live.racefacer.com/ottobianomotorsport"
-}
-```
-
-Risposte possibili:
-
-- `url_changed` quando l'URL è valido
-- `error` quando l'URL non è valido
-
-Dopo il cambio URL il client viene sottoscritto alla nuova sessione e riceve subito l'ultimo payload disponibile.
-
-#### `get_status`
-
-Richiede il corpo:
-
-```json
-{
-  "command": "get_status"
-}
-```
-
-Risposta:
-
-```json
-{
-  "type": "status",
-  "scraping": true,
-  "url": "https://..."
-}
-```
-
-### Messaggi inviati dal server
-
-Quando i dati cambiano, il server invia messaggi di tipo `timing_update` ai client collegati allo stesso URL:
-
-```json
-{
-  "type": "timing_update",
-  "url": "...",
-  "updated_at": "...",
-  "headers": [...],
-  "rows": [...]
-}
-```
-
-## Scoperta Bonjour / mDNS
-
-Il server annuncia il servizio locale con:
-
-- tipo: `_karttiming._tcp.local.`
-- nome: `Kart Live Timing._karttiming._tcp.local.`
-- porta: `8000`
-
-Questo consente ai client compatibili di scoprire automaticamente il server sulla stessa rete locale.
-
-## Persistenza dei dati
-
-I payload vengono salvati in `python_scraper_server/data/` con nomi file basati sull'hash dell'URL:
-
-- `data/live_timing_<hash>.json`
-
-I file vengono eliminati allo shutdown del server, all'avvio e quando una sessione resta senza client per `SESSION_IDLE_GRACE` secondi.
+Il server invia aggiornamenti asincroni:
+- `timing_update`: Inviato in broadcast a tutti i client iscritti a un determinato URL ogni volta che ci sono variazioni nei dati estratti.
 
 ## Avvio del server
 
@@ -167,13 +76,13 @@ python -m pip install -r requirements.txt
 python -m playwright install
 ```
 
-### Avvio Funnel tailscale (remote connections)
+### Esposizione su Tailscale
 
+Per rendere accessibile l'API ai dispositivi remoti in modo sicuro:
 ```bash
 tailscale funnel -bg 8000
 ```
-
-Avvio un tailscale funnel in background che indirizza il traffico esterno alla porta 8000 di localhost
+Questo apre il traffico esterno alla porta 8000 sulla propria macchina (es. `https://marcos-macbook-pro.tail71e118.ts.net`).
 
 ### Avvio
 
@@ -182,11 +91,8 @@ cd python_scraper_server
 python main.py
 ```
 
-Il server ascolta su `0.0.0.0:8000`.
+Il database SQLite verrà generato automaticamente nella cartella `data/` al primo avvio.
 
 ## Note
-
-- Il browser headless viene creato con Playwright Chromium.
-- I thread di scraping eseguono `sync_playwright` fuori dall'evento asincrono principale.
-- Le sessioni vengono fermate automaticamente quando non ci sono più client.
-- Il server supporta sia scraping reale che modalità simulatore.
+- Il server supporta una **modalità simulatore**: passando l'URL `https://live.racefacer.com/simulator`, il server leggerà dati fittizi dal file locale invece di lanciare Playwright.
+- Il codice mDNS (`discovery/bonjour.py`) è rimasto come riferimento, ma attualmente le connessioni esterne sono pensate per passare tramite Tailscale Funnel in modo protetto via HTTPS.
