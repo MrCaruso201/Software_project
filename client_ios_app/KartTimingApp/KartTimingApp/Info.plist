@@ -4,9 +4,5 @@
 <dict>
 	<key>NSAppTransportSecurity</key>
 	<dict/>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_karttiming._tcp.</string>
-	</array>
 </dict>
 </plist>

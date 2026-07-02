@@ -11,7 +11,8 @@ import SwiftUI
 struct KartTimingApp: App {
     var body: some Scene {
         WindowGroup {
-            ServerListView()
+            WelcomeView()
         }
     }
 }
+
