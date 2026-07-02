@@ -9,9 +9,17 @@ import SwiftUI
 
 @main
 struct KartTimingApp: App {
+    @StateObject private var authState = AuthState.shared
+
     var body: some Scene {
         WindowGroup {
-            WelcomeView()
+            if authState.isLoggedIn {
+                WelcomeView()
+                    .environmentObject(authState)
+            } else {
+                LoginView()
+                    .environmentObject(authState)
+            }
         }
     }
 }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TimingView: View {
     let server: DiscoveredServer
+    @EnvironmentObject var authState: AuthState
     @StateObject private var manager = KartTimingManager()
     @State private var showURLSheet = false
     @State private var expandedDriverId: String? = nil
@@ -47,6 +48,11 @@ struct TimingView: View {
         }
         .sheet(isPresented: $showURLSheet) {
             urlSheet
+        }
+        .alert("Operazione negata", isPresented: $manager.showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(manager.errorMessage ?? "Si è verificato un errore sul server.")
         }
         .onDisappear { manager.disconnect() }
     }

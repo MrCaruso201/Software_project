@@ -1,35 +1,42 @@
 """
-Autenticazione dei client WebSocket.
+Autenticazione dei client WebSocket tramite JWT.
 
-Attualmente basata su un token statico (API_TOKEN in config.py).
-In futuro questo modulo potrà essere esteso per supportare:
-  - JWT (verifica firma, scadenza, refresh token)
-  - Utenti su database (lookup per username/password)
-  - Ruoli e permessi (admin, viewer, ecc.)
+verify_websocket_token() legge il token dalla query string (?token=...),
+lo verifica con la chiave segreta e restituisce il payload JWT (che contiene
+user_id e role) oppure None se il token è mancante/invalido/scaduto.
+
+Il payload restituito viene poi usato in ws/router.py per:
+  1. Identificare l'utente connesso
+  2. Verificare il ruolo prima di eseguire comandi privilegiati (es. set_url)
 """
 
+from typing import Optional
+
 from fastapi import WebSocket
+from jose import JWTError
 
-from config import API_TOKEN
+from auth.jwt import verify_access_token
 
 
-async def verify_websocket_token(websocket: WebSocket) -> bool:
+async def verify_websocket_token(websocket: WebSocket) -> Optional[dict]:
     """
-    Verifica che il client WebSocket presenti un token valido.
+    Verifica il JWT nella query string del WebSocket.
 
-    Restituisce True se l'autenticazione ha successo, False altrimenti
-    (dopo aver chiuso la connessione con codice 4401).
+    Returns:
+        Il payload JWT (dict con 'sub', 'role', 'exp', ...) se valido.
+        None se il token è assente, invalido o scaduto (dopo aver chiuso la connessione).
 
-    Punto di estensione: sostituire il confronto statico con la verifica
-    di un JWT o una query al DB utenti senza toccare il resto del codice.
+    Punto di estensione: qui si possono aggiungere controlli aggiuntivi
+    (es. verifica che l'utente esista ancora nel DB, che non sia bannato, ecc.)
     """
-    if not API_TOKEN:
-        # Nessuna autenticazione configurata: tutti i client sono accettati.
-        return True
-
     token = websocket.query_params.get("token")
-    if token != API_TOKEN:
+    if not token:
         await websocket.close(code=4401)
-        return False
+        return None
 
-    return True
+    try:
+        payload = verify_access_token(token)
+        return payload
+    except JWTError:
+        await websocket.close(code=4401)
+        return None

@@ -6,11 +6,15 @@ class KartTimingManager: ObservableObject {
     @Published var isConnected: Bool = false
     @Published var currentURL: String = ""
     @Published var isScrapingActive: Bool = false
+    @Published var errorMessage: String? = nil
+    @Published var showError: Bool = false
 
     private var webSocketTask: URLSessionWebSocketTask?
+    private var currentServer: DiscoveredServer?
 
     func connect(to server: DiscoveredServer) {
         disconnect()
+        currentServer = server
         guard let url = server.wsURL else { return }
         let session = URLSession(configuration: .default)
         webSocketTask = session.webSocketTask(with: url)
@@ -31,14 +35,40 @@ class KartTimingManager: ObservableObject {
         }
     }
 
+    /// Riconnette al server con un nuovo DiscoveredServer (es. token aggiornato).
+    /// Chiamato da AuthState dopo un token refresh per ripristinare la sessione WebSocket.
+    func reconnect(to server: DiscoveredServer) {
+        connect(to: server)
+    }
+
     private func listen() {
         webSocketTask?.receive { [weak self] result in
+            guard let self else { return }
             switch result {
             case .success(let message):
-                if case .string(let text) = message { self?.handleMessage(text) }
-                self?.listen()
+                if case .string(let text) = message { self.handleMessage(text) }
+                self.listen()
             case .failure:
-                DispatchQueue.main.async { self?.isConnected = false }
+                let code = self.webSocketTask?.closeCode.rawValue
+                let storedServer = self.currentServer
+                DispatchQueue.main.async {
+                    self.isConnected = false
+                    if code == 4401, let storedServer {
+                        // Token scaduto: prova il refresh e riconnetti con il nuovo token
+                        Task {
+                            await AuthState.shared.handleTokenExpiry { newToken in
+                                let updatedServer = DiscoveredServer(
+                                    name:   storedServer.name,
+                                    host:   storedServer.host,
+                                    port:   storedServer.port,
+                                    useTLS: storedServer.useTLS,
+                                    token:  newToken
+                                )
+                                self.reconnect(to: updatedServer)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -68,7 +98,10 @@ class KartTimingManager: ObservableObject {
                 self.currentURL = json["url"] as? String ?? ""
 
             case "error":
-                print("Server error:", json["message"] ?? "")
+                if let msg = json["message"] as? String {
+                    self.errorMessage = msg
+                    self.showError = true
+                }
 
             default:
                 break

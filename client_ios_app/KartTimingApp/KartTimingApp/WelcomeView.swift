@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct WelcomeView: View {
+    @EnvironmentObject var authState: AuthState
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -16,24 +18,35 @@ struct WelcomeView: View {
                         .foregroundColor(.white)
                         .padding(.bottom, 40)
                     
-                    // 1. Pulsante Login
-                    NavigationLink(destination: Text("Schermata Login (In Arrivo)")) {
-                        HStack {
-                            Image(systemName: "person.crop.circle.fill")
-                                .font(.title3)
-                            Text("Login")
-                                .font(.title2.weight(.bold))
+                    // 1. Profilo / Logout
+                    VStack(spacing: 8) {
+                        Text("Loggato come \(authState.currentUser?.role.displayName ?? "Utente")")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.kartDim)
+                        
+                        Button {
+                            authState.logout()
+                        } label: {
+                            HStack {
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                    .font(.title3)
+                                Text("Logout")
+                                    .font(.title2.weight(.bold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(Color.kartPanel)
+                            .cornerRadius(16)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            )
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(Color.kartAccent)
-                        .cornerRadius(16)
-                        .shadow(color: Color.kartAccent.opacity(0.3), radius: 10, x: 0, y: 5)
                     }
                     
                     // 2. Pulsante per Live Timing
-                    NavigationLink(value: DiscoveredServer.remoteServer) {
+                    NavigationLink(value: WelcomeDestination.liveTiming) {
                         HStack {
                             Image(systemName: "stopwatch.fill")
                                 .font(.title3)
@@ -50,16 +63,58 @@ struct WelcomeView: View {
                         )
                         .cornerRadius(16)
                     }
+
+                    // 3. Pulsante "Gestisci Utenti" — solo admin
+                    if authState.currentUser?.role.canManageUsers == true {
+                        NavigationLink(value: WelcomeDestination.adminUsers) {
+                            HStack {
+                                Image(systemName: "person.badge.gear")
+                                    .font(.title3)
+                                Text("Gestisci Utenti")
+                                    .font(.title2.weight(.bold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.orange.opacity(0.7), Color.orange.opacity(0.4)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(16)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                            )
+                        }
+                    }
                     
                     Spacer()
                 }
                 .padding(.horizontal, 30)
             }
             // Necessario per colorare bene la barra di navigazione
-            .toolbarColorScheme(.dark, for: .navigationBar) 
-            .navigationDestination(for: DiscoveredServer.self) { server in
-                TimingView(server: server)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationDestination(for: WelcomeDestination.self) { destination in
+                switch destination {
+                case .liveTiming:
+                    TimingView(server: DiscoveredServer.remoteServer(token: authState.currentToken ?? ""))
+                case .adminUsers:
+                    AdminUsersView()
+                }
             }
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Destinazioni NavigationStack per WelcomeView
+// ---------------------------------------------------------------------------
+
+enum WelcomeDestination: Hashable {
+    case liveTiming
+    case adminUsers
+}
+
