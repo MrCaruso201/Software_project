@@ -44,6 +44,7 @@ from db.database import init_db
 from scraper.session import sessions
 from scraper.storage import clear_saved_timing_data
 from ws.router import router as ws_router
+from discovery.bonjour import start_bonjour, stop_bonjour
 
 
 # ---------------------------------------------------------------------------
@@ -56,9 +57,11 @@ async def lifespan(app: FastAPI):
     """Startup e shutdown dell'applicazione."""
     init_db()                   # crea le tabelle DB se non esistono
     clear_saved_timing_data()   # pulizia di eventuali residui da uno stop non pulito
+    await start_bonjour()
     yield
     for session in list(sessions.values()):
         session.stop()
+    await stop_bonjour()
     clear_saved_timing_data()
 
 

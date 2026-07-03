@@ -9,7 +9,8 @@ import SwiftUI
 
 @main
 struct KartTimingApp: App {
-    @StateObject private var authState = AuthState.shared
+    @StateObject private var authState    = AuthState.shared
+    @StateObject private var appEnv       = AppEnvironment.shared
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -17,9 +18,11 @@ struct KartTimingApp: App {
             if authState.isLoggedIn {
                 WelcomeView()
                     .environmentObject(authState)
+                    .environmentObject(appEnv)
             } else {
                 LoginView()
                     .environmentObject(authState)
+                    .environmentObject(appEnv)
             }
         }
         .onChange(of: scenePhase) { _, newPhase in

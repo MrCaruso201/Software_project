@@ -36,4 +36,15 @@ struct DiscoveredServer: Identifiable, Equatable, Hashable {
             token: token
         )
     }
+
+    /// Server locale — usato in DEV MODE (Bonjour/mDNS, senza TLS)
+    static func localServer(token: String) -> DiscoveredServer {
+        DiscoveredServer(
+            name: "Kartdromo (locale)",
+            host: AppEnvironment.shared.selectedLocalHost ?? "localhost",
+            port: AppEnvironment.shared.selectedLocalPort ?? 8000,
+            useTLS: false,
+            token: token
+        )
+    }
 }

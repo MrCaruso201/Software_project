@@ -17,8 +17,8 @@ enum AuthError: Error, LocalizedError {
 }
 
 struct AuthService {
-    // URL di base del server esposto via Tailscale Funnel
-    static let baseURL = "https://marcos-macbook-pro.tail71e118.ts.net"
+    // URL di base: dinamico — segue AppEnvironment (produzione o locale)
+    static var baseURL: String { AppEnvironment.shared.baseURL }
 
     // MARK: - Login
     static func login(username: String, password: String) async throws -> (accessToken: String, refreshToken: String) {

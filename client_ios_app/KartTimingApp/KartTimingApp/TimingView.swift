@@ -18,7 +18,7 @@ struct TimingView: View {
                 // Status bar
                 statusBar
 
-                if let k = selectedKartodromo {
+                if selectedKartodromo != nil {
                     // Classifica
                     if let timing = manager.timing, !timing.rows.isEmpty {
                         timingTable(timing: timing)

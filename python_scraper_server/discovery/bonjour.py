@@ -9,11 +9,12 @@ import asyncio
 import socket
 from typing import Optional
 
-from zeroconf import ServiceInfo, Zeroconf
+from zeroconf import ServiceInfo
+from zeroconf.asyncio import AsyncZeroconf
 
 from config import SERVICE_NAME, SERVICE_PORT, SERVICE_TYPE
 
-zeroconf_instance: Optional[Zeroconf] = None
+zeroconf_instance: Optional[AsyncZeroconf] = None
 
 
 def get_local_ip() -> str:
@@ -41,7 +42,7 @@ async def start_bonjour() -> None:
         server=f"{socket.gethostname()}.local.",
     )
 
-    zeroconf_instance = Zeroconf()
+    zeroconf_instance = AsyncZeroconf()
     await zeroconf_instance.async_register_service(info)
     print(f"✅ Bonjour attivo: '{SERVICE_NAME}' su {local_ip}:{SERVICE_PORT}")
 
@@ -49,6 +50,5 @@ async def start_bonjour() -> None:
 async def stop_bonjour() -> None:
     """Deregistra il servizio mDNS e chiude Zeroconf."""
     if zeroconf_instance:
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, zeroconf_instance.close)
+        await zeroconf_instance.async_close()
         print("🔴 Bonjour fermato")

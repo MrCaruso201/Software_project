@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     @EnvironmentObject var authState: AuthState
+    @EnvironmentObject var appEnv: AppEnvironment
     @State private var navigateToTiming = false
 
     var body: some View {
@@ -107,12 +108,12 @@ struct WelcomeView: View {
             // Necessario per colorare bene la barra di navigazione
             .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationDestination(isPresented: $navigateToTiming) {
-                TimingView(server: DiscoveredServer.remoteServer(token: authState.currentToken ?? ""))
+                TimingView(server: appEnv.server(token: authState.currentToken ?? ""))
             }
             .navigationDestination(for: WelcomeDestination.self) { destination in
                 switch destination {
                 case .liveTiming:
-                    TimingView(server: DiscoveredServer.remoteServer(token: authState.currentToken ?? ""))
+                    TimingView(server: appEnv.server(token: authState.currentToken ?? ""))
                 case .adminUsers:
                     AdminUsersView()
                 }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject var authState: AuthState
+    @EnvironmentObject var appEnv: AppEnvironment
     @State private var isLoginTab = true
 
     // Campi
@@ -116,6 +117,11 @@ struct LoginView: View {
                     }
                     .disabled(isLoadingGuest || isLoadingLogin)
                     .padding(.horizontal, 30)
+
+                    // ── DEV MODE ─────────────────────────────────────────────
+                    DevModeToggle(isEnabled: $appEnv.devModeEnabled)
+                        .padding(.horizontal, 30)
+                        .padding(.bottom, 16)
 
                     Spacer()
                 }
@@ -248,6 +254,164 @@ extension View {
         ZStack(alignment: alignment) {
             placeholder().opacity(shouldShow ? 1 : 0)
             self
+        }
+    }
+}
+
+
+// MARK: - DEV MODE Toggle
+
+struct DevModeToggle: View {
+    @Binding var isEnabled: Bool
+    @State private var showingServerSelection = false
+    @StateObject private var browser = ServerBrowser()
+
+    var body: some View {
+        VStack(spacing: 8) {
+            // Toggle row
+            HStack(spacing: 12) {
+                // Icona
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isEnabled
+                              ? Color.orange.opacity(0.25)
+                              : Color.kartPanel)
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(isEnabled ? .orange : .kartDim)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("DEV MODE")
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundColor(isEnabled ? .orange : .kartDim)
+                    Text("Connessione al server locale")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(.kartDim)
+                }
+
+                Spacer()
+
+                Toggle("", isOn: $isEnabled)
+                    .labelsHidden()
+                    .tint(.orange)
+                    .onChange(of: isEnabled) { oldValue, newValue in
+                        if newValue {
+                            showingServerSelection = true
+                        }
+                    }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.kartPanel)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                isEnabled ? Color.orange.opacity(0.5) : Color.white.opacity(0.08),
+                                lineWidth: 1
+                            )
+                    )
+            )
+            .animation(.easeInOut(duration: 0.2), value: isEnabled)
+
+            // Banner host locale (visibile solo quando attivo)
+            if isEnabled {
+                Button(action: { showingServerSelection = true }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "network")
+                            .font(.system(size: 11))
+                        let host = AppEnvironment.shared.selectedLocalHost ?? "Nessuno"
+                        let port = AppEnvironment.shared.selectedLocalPort ?? 8000
+                        Text("\(host):\(port)")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    }
+                    .foregroundColor(.orange.opacity(0.8))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.orange.opacity(0.12))
+                    .cornerRadius(8)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isEnabled)
+        .sheet(isPresented: $showingServerSelection) {
+            ServerSelectionView(browser: browser, isPresented: $showingServerSelection, isEnabled: $isEnabled)
+        }
+    }
+}
+
+
+// MARK: - Server Selection View
+
+struct ServerSelectionView: View {
+    @ObservedObject var browser: ServerBrowser
+    @Binding var isPresented: Bool
+    @Binding var isEnabled: Bool
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(header: Text("Server Locali (Bonjour)").foregroundColor(.kartDim)) {
+                    if browser.discoveredServers.isEmpty {
+                        HStack {
+                            ProgressView().padding(.trailing, 8)
+                            Text("Ricerca in corso...")
+                                .foregroundColor(.kartDim)
+                        }
+                    } else {
+                        ForEach(browser.discoveredServers) { server in
+                            Button(action: {
+                                AppEnvironment.shared.selectedLocalHost = server.host
+                                AppEnvironment.shared.selectedLocalPort = server.port
+                                isEnabled = true
+                                isPresented = false
+                            }) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(server.name)
+                                            .font(.headline)
+                                            .foregroundColor(.white)
+                                        Text("\(server.host):\(server.port)")
+                                            .font(.caption)
+                                            .foregroundColor(.kartDim)
+                                            .fontDesign(.monospaced)
+                                    }
+                                    Spacer()
+                                    if AppEnvironment.shared.selectedLocalHost == server.host {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.orange)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+                .listRowBackground(Color.kartPanel)
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.kartBG.ignoresSafeArea())
+            .navigationTitle("Seleziona Server")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Annulla") {
+                        isEnabled = false
+                        isPresented = false
+                    }
+                    .foregroundColor(.orange)
+                }
+            }
+        }
+        .onAppear {
+            browser.startBrowsing()
+        }
+        .onDisappear {
+            browser.stopBrowsing()
         }
     }
 }
