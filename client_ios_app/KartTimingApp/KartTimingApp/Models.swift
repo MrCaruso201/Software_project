@@ -27,6 +27,14 @@ struct DiscoveredServer: Identifiable, Equatable, Hashable {
         return comps.url
     }
 
+    var httpURL: URL? {
+        var comps = URLComponents()
+        comps.scheme = useTLS ? "https" : "http"
+        comps.host = host
+        comps.port = useTLS ? nil : port
+        return comps.url
+    }
+
     static func remoteServer(token: String) -> DiscoveredServer {
         DiscoveredServer(
             name: "Kartdromo (remoto)",

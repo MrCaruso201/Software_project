@@ -24,12 +24,7 @@ struct HomeView: View {
                 .tag(HomeTab.home)
                 
                 NavigationStack {
-                    Text("Eventi in costruzione")
-                        .foregroundColor(.kartDim)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.kartBG)
-                        .navigationTitle("Eventi")
-                        .navigationBarTitleDisplayMode(.inline)
+                    EventiView(server: appEnv.server(token: authState.currentToken ?? ""))
                 }
                 .tabItem {
                     Label("Eventi", systemImage: "calendar")

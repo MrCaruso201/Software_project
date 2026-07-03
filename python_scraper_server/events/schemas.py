@@ -5,13 +5,13 @@ from pydantic import BaseModel
 class EventBase(BaseModel):
     title: str
     event_date: datetime
-    registration_deadline: datetime
+    registration_deadline: Optional[datetime] = None
     location: str
-    max_participants: int
-    max_groups: int
-    min_people_per_group: int
-    max_people_per_group: int
-    registration_cost: float
+    max_participants: Optional[int] = None
+    max_groups: Optional[int] = None
+    min_people_per_group: Optional[int] = None
+    max_people_per_group: Optional[int] = None
+    registration_cost: Optional[float] = None
     weight_limit: Optional[float] = None
 
 class EventCreate(EventBase):

@@ -44,12 +44,12 @@ class Event(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False) # Titolo o nome dell'evento
     event_date = Column(DateTime, nullable=False) # data evento
-    registration_deadline = Column(DateTime, nullable=False) # data fine iscrizioni
+    registration_deadline = Column(DateTime, nullable=True) # data fine iscrizioni
     location = Column(String, nullable=False) # luogo evento
-    max_participants = Column(Integer, nullable=False) # massimo numero di partecipanti
-    max_groups = Column(Integer, nullable=False) # massimo numero gruppi
-    min_people_per_group = Column(Integer, nullable=False) # minimo numero di persone per gruppo
-    max_people_per_group = Column(Integer, nullable=False) # massimo numero di persone per gruppo
-    registration_cost = Column(Float, nullable=False) # costo di iscrizione a persona
+    max_participants = Column(Integer, nullable=True) # massimo numero di partecipanti
+    max_groups = Column(Integer, nullable=True) # massimo numero gruppi
+    min_people_per_group = Column(Integer, nullable=True) # minimo numero di persone per gruppo
+    max_people_per_group = Column(Integer, nullable=True) # massimo numero di persone per gruppo
+    registration_cost = Column(Float, nullable=True) # costo di iscrizione a persona
     weight_limit = Column(Float, nullable=True) # peso limite (opzionale)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
