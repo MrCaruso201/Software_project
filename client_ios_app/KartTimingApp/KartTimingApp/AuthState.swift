@@ -5,6 +5,8 @@ import Combine
 class AuthState: ObservableObject {
     @Published var isLoggedIn: Bool = false
     @Published var currentUser: LoggedInUser? = nil
+    /// true quando l'utente è entrato tramite "Live Timing senza accesso"
+    @Published var isGuestSession: Bool = false
 
     static let shared = AuthState()
 
@@ -17,12 +19,13 @@ class AuthState: ObservableObject {
         }
     }
 
-    func setLoginData(accessToken: String, refreshToken: String) {
+    func setLoginData(accessToken: String, refreshToken: String, guestSession: Bool = false) {
         KeychainService.save(key: "access_token", value: accessToken)
         KeychainService.save(key: "refresh_token", value: refreshToken)
         if let user = decodeJWT(accessToken) {
             self.currentUser = user
             self.isLoggedIn = true
+            self.isGuestSession = guestSession
         }
     }
 
@@ -36,6 +39,7 @@ class AuthState: ObservableObject {
         KeychainService.delete(key: "refresh_token")
         self.currentUser = nil
         self.isLoggedIn = false
+        self.isGuestSession = false
     }
 
     /// Tenta di rinfrescare il token. Chiamata quando WebSocket riceve 4401.

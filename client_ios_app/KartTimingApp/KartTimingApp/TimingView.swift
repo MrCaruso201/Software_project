@@ -3,6 +3,7 @@ import SwiftUI
 struct TimingView: View {
     let server: DiscoveredServer
     @EnvironmentObject var authState: AuthState
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var manager = KartTimingManager()
     @State private var showURLSheet = false
     @State private var expandedDriverId: String? = nil
@@ -34,8 +35,28 @@ struct TimingView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
+            // Back button custom: logout se sessione guest, dismiss normale altrimenti
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    if authState.isGuestSession {
+                        authState.logout()
+                    } else {
+                        dismiss()
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text(authState.isGuestSession ? "Esci" : "Indietro")
+                            .font(.system(size: 16))
+                    }
+                    .foregroundColor(.kartAccent)
+                }
+            }
+
             if selectedKartodromo != nil {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {

@@ -10,88 +10,121 @@ struct LoginView: View {
     @State private var password = ""
 
     // Stato UI
-    @State private var isLoading = false
+    @State private var isLoadingLogin = false
+    @State private var isLoadingGuest = false
     @State private var errorMessage: String? = nil
 
     var body: some View {
-        ZStack {
-            Color.kartBG.ignoresSafeArea()
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                Color.kartBG.ignoresSafeArea()
 
-            VStack(spacing: 32) {
-                // Logo o titolo
-                VStack(spacing: 8) {
-                    Image(systemName: "flag.checkered")
-                        .font(.system(size: 60))
-                        .foregroundColor(.kartAccent)
-                    Text("Race Manager")
-                        .font(.system(size: 28, weight: .heavy, design: .default))
-                        .foregroundColor(.white)
-                }
-                .padding(.top, 40)
-                .padding(.bottom, 20)
-
-                // Tab Switcher
-                HStack(spacing: 0) {
-                    TabButton(title: "Accedi", isSelected: isLoginTab) {
-                        withAnimation { isLoginTab = true; errorMessage = nil }
+                // Contenuto principale
+                VStack(spacing: 32) {
+                    // Logo o titolo
+                    VStack(spacing: 8) {
+                        Image(systemName: "flag.checkered")
+                            .font(.system(size: 60))
+                            .foregroundColor(.kartAccent)
+                        Text("Race Manager")
+                            .font(.system(size: 28, weight: .heavy, design: .default))
+                            .foregroundColor(.white)
                     }
-                    TabButton(title: "Registrati", isSelected: !isLoginTab) {
-                        withAnimation { isLoginTab = false; errorMessage = nil }
-                    }
-                }
-                .background(Color.kartPanel)
-                .cornerRadius(12)
-                .padding(.horizontal, 40)
+                    .padding(.top, 40)
+                    .padding(.bottom, 20)
 
-                // Campi di testo
-                VStack(spacing: 16) {
-                    CustomTextField(placeholder: "Username", text: $username, icon: "person")
-                    
-                    if !isLoginTab {
-                        CustomTextField(placeholder: "Email", text: $email, icon: "envelope")
-                            .keyboardType(.emailAddress)
-                    }
-
-                    CustomSecureField(placeholder: "Password", text: $password, icon: "lock")
-                }
-                .padding(.horizontal, 30)
-
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.kartRed)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 30)
-                }
-
-                // Pulsante d'azione
-                Button(action: submit) {
-                    HStack {
-                        if isLoading {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text(isLoginTab ? "Accedi" : "Crea account")
-                                .font(.title3.weight(.bold))
+                    // Tab Switcher
+                    HStack(spacing: 0) {
+                        TabButton(title: "Accedi", isSelected: isLoginTab) {
+                            withAnimation { isLoginTab = true; errorMessage = nil }
+                        }
+                        TabButton(title: "Registrati", isSelected: !isLoginTab) {
+                            withAnimation { isLoginTab = false; errorMessage = nil }
                         }
                     }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.kartAccent)
+                    .background(Color.kartPanel)
                     .cornerRadius(12)
-                    .shadow(color: Color.kartAccent.opacity(0.3), radius: 10, x: 0, y: 5)
-                }
-                .disabled(isLoading || username.isEmpty || password.isEmpty || (!isLoginTab && email.isEmpty))
-                .opacity((isLoading || username.isEmpty || password.isEmpty || (!isLoginTab && email.isEmpty)) ? 0.6 : 1.0)
-                .padding(.horizontal, 30)
+                    .padding(.horizontal, 40)
 
-                Spacer()
+                    // Campi di testo
+                    VStack(spacing: 16) {
+                        CustomTextField(placeholder: "Username", text: $username, icon: "person")
+
+                        if !isLoginTab {
+                            CustomTextField(placeholder: "Email", text: $email, icon: "envelope")
+                                .keyboardType(.emailAddress)
+                        }
+
+                        CustomSecureField(placeholder: "Password", text: $password, icon: "lock")
+                    }
+                    .padding(.horizontal, 30)
+
+                    if let errorMessage = errorMessage {
+                        Text(errorMessage)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.kartRed)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 30)
+                    }
+
+                    // Pulsante d'azione
+                    Button(action: submit) {
+                        HStack {
+                            if isLoadingLogin {
+                                ProgressView().tint(.white)
+                            } else {
+                                Text(isLoginTab ? "Accedi" : "Crea account")
+                                    .font(.title3.weight(.bold))
+                            }
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.kartAccent)
+                        .cornerRadius(12)
+                        .shadow(color: Color.kartAccent.opacity(0.3), radius: 10, x: 0, y: 5)
+                    }
+                    .disabled(isLoadingLogin || isLoadingGuest || username.isEmpty || password.isEmpty || (!isLoginTab && email.isEmpty))
+                    .opacity((isLoadingLogin || username.isEmpty || password.isEmpty || (!isLoginTab && email.isEmpty)) ? 0.6 : 1.0)
+                    .padding(.horizontal, 30)
+
+                    // ── Pulsante "Live Timing senza accesso" flottante ──────
+                    Button(action: loginAsGuest) {
+                        HStack(spacing: 10) {
+                            if isLoadingGuest {
+                                ProgressView().tint(.black)
+                            } else {
+                                Image(systemName: "flag.checkered")
+                                    .font(.system(size: 17, weight: .semibold))
+                                Text("Live Timing senza accesso")
+                                    .font(.title3.weight(.bold))
+                            }
+                        }
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.82, blue: 0.0),
+                                         Color(red: 1.0, green: 0.65, blue: 0.0)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(12)
+                        .shadow(color: Color(red: 1.0, green: 0.75, blue: 0.0).opacity(0.45), radius: 10, x: 0, y: 5)
+                    }
+                    .disabled(isLoadingGuest || isLoadingLogin)
+                    .padding(.horizontal, 30)
+
+                    Spacer()
+                }
             }
         }
     }
 
     private func submit() {
-        isLoading = true
+        isLoadingLogin = true
         errorMessage = nil
 
         Task {
@@ -101,7 +134,6 @@ struct LoginView: View {
                     authState.setLoginData(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken)
                 } else {
                     try await AuthService.register(username: username, email: email, password: password)
-                    // Dopo registrazione con successo, passa automaticamente al tab di login e compila campi
                     isLoginTab = true
                     errorMessage = "Registrazione completata. Ora puoi accedere."
                 }
@@ -110,10 +142,32 @@ struct LoginView: View {
             } catch {
                 errorMessage = "Si è verificato un errore imprevisto."
             }
-            isLoading = false
+            isLoadingLogin = false
+        }
+    }
+
+    private func loginAsGuest() {
+        isLoadingGuest = true
+        errorMessage = nil
+
+        Task {
+            do {
+                let tokens = try await AuthService.login(username: "viewer", password: "viewer")
+                authState.setLoginData(
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
+                    guestSession: true
+                )
+            } catch let err as AuthError {
+                errorMessage = err.localizedDescription
+            } catch {
+                errorMessage = "Impossibile accedere al Live Timing."
+            }
+            isLoadingGuest = false
         }
     }
 }
+
 
 // MARK: - Componenti UI
 

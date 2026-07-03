@@ -2,28 +2,29 @@ import SwiftUI
 
 struct WelcomeView: View {
     @EnvironmentObject var authState: AuthState
+    @State private var navigateToTiming = false
 
     var body: some View {
         NavigationStack {
             ZStack {
-                // Sfondo (usiamo lo stesso dell'app)
+                // Sfondo
                 Color.kartBG.ignoresSafeArea()
-                
+
                 VStack(spacing: 24) {
-                    
+
                     Spacer()
-                    
+
                     Text("Race Manager")
                         .font(.system(size: 40, weight: .heavy, design: .default))
                         .foregroundColor(.white)
                         .padding(.bottom, 40)
-                    
+
                     // 1. Profilo / Logout
                     VStack(spacing: 8) {
                         Text("Loggato come \(authState.currentUser?.role.displayName ?? "Utente")")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.kartDim)
-                        
+
                         Button {
                             authState.logout()
                         } label: {
@@ -44,8 +45,8 @@ struct WelcomeView: View {
                             )
                         }
                     }
-                    
-                    // 2. Pulsante per Live Timing
+
+                    // 2. Pulsante per Live Timing (loggato)
                     NavigationLink(value: WelcomeDestination.liveTiming) {
                         HStack {
                             Image(systemName: "stopwatch.fill")
@@ -63,6 +64,7 @@ struct WelcomeView: View {
                         )
                         .cornerRadius(16)
                     }
+                    .buttonStyle(.plain)
 
                     // 3. Pulsante "Gestisci Utenti" — solo admin
                     if authState.currentUser?.role.canManageUsers == true {
@@ -89,14 +91,24 @@ struct WelcomeView: View {
                                     .stroke(Color.orange.opacity(0.4), lineWidth: 1)
                             )
                         }
+                        .buttonStyle(.plain)
                     }
-                    
+
                     Spacer()
                 }
                 .padding(.horizontal, 30)
             }
+            .onAppear {
+                // Se l'utente ha fatto login come guest, vai direttamente al TimingView
+                if authState.isGuestSession {
+                    navigateToTiming = true
+                }
+            }
             // Necessario per colorare bene la barra di navigazione
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationDestination(isPresented: $navigateToTiming) {
+                TimingView(server: DiscoveredServer.remoteServer(token: authState.currentToken ?? ""))
+            }
             .navigationDestination(for: WelcomeDestination.self) { destination in
                 switch destination {
                 case .liveTiming:
@@ -117,4 +129,3 @@ enum WelcomeDestination: Hashable {
     case liveTiming
     case adminUsers
 }
-
