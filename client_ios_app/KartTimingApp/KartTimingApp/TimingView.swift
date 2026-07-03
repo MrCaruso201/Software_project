@@ -5,10 +5,10 @@ struct TimingView: View {
     @EnvironmentObject var authState: AuthState
     @Environment(\.dismiss) private var dismiss
     @StateObject private var manager = KartTimingManager()
-    @State private var showURLSheet = false
     @State private var expandedDriverId: String? = nil
     @State private var selectedKartodromo: Kartodromo? = nil
-    @State private var searchText = ""
+    @State private var showTrackPicker = false
+    @State private var trackSearch = ""
 
     var body: some View {
         ZStack {
@@ -18,19 +18,30 @@ struct TimingView: View {
                 // Status bar
                 statusBar
 
-                if selectedKartodromo == nil {
-                    kartodromoSelectionCard
-                    
-                    Spacer()
-                    emptyState
-                    Spacer()
-                } else {
+                if let k = selectedKartodromo {
                     // Classifica
                     if let timing = manager.timing, !timing.rows.isEmpty {
                         timingTable(timing: timing)
                     } else {
                         emptyState
                     }
+                } else {
+                    // Nessuna pista selezionata
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Image(systemName: "mappin.slash")
+                            .font(.system(size: 44))
+                            .foregroundColor(.kartDim)
+                        Text("Selezionare tracciato")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.kartDim)
+                    }
+                    Spacer()
+                }
+
+                // Barra LOGIN / REGISTER (solo per sessione guest)
+                if authState.isGuestSession {
+                    guestLoginBar
                 }
             }
         }
@@ -38,37 +49,55 @@ struct TimingView: View {
         .navigationBarBackButtonHidden(true)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            // Back button custom: logout se sessione guest, dismiss normale altrimenti
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    if authState.isGuestSession {
-                        authState.logout()
-                    } else {
+            // Back button (solo per utenti non-guest)
+            if !authState.isGuestSession {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
                         dismiss()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Indietro")
+                                .font(.system(size: 16))
+                        }
+                        .foregroundColor(.kartAccent)
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text(authState.isGuestSession ? "Esci" : "Indietro")
-                            .font(.system(size: 16))
-                    }
-                    .foregroundColor(.kartAccent)
                 }
             }
 
-            if selectedKartodromo != nil {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showURLSheet = true
-                    } label: {
-                        Image(systemName: "list.bullet.rectangle.portrait").foregroundColor(.kartAccent)
+            // Picker pista al centro della toolbar
+            ToolbarItem(placement: .principal) {
+                Button {
+                    trackSearch = ""
+                    showTrackPicker = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "flag.checkered")
+                            .font(.system(size: 12, weight: .bold))
+                        Text(selectedKartodromo.map { shortTrackName($0.nome) } ?? "SELEZIONA PISTA")
+                            .font(.system(size: 13, weight: .bold))
+                            .lineLimit(1)
                     }
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(red: 1.0, green: 0.82, blue: 0.0),
+                                     Color(red: 1.0, green: 0.65, blue: 0.0)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(Capsule())
+                    .shadow(color: Color(red: 1.0, green: 0.75, blue: 0.0).opacity(0.4), radius: 6, x: 0, y: 3)
+                }
+                .buttonStyle(.plain)
+                .sheet(isPresented: $showTrackPicker) {
+                    trackPickerSheet
                 }
             }
-        }
-        .sheet(isPresented: $showURLSheet) {
-            urlSheet
         }
         .alert("Operazione negata", isPresented: $manager.showError) {
             Button("OK", role: .cancel) { }
@@ -78,77 +107,102 @@ struct TimingView: View {
         .onDisappear { manager.disconnect() }
     }
 
-    // ── Selezione Kartodromo ──────────────────────────────────────────────
-    
-    private var filteredKartodromi: [Kartodromo] {
-        if searchText.isEmpty {
-            return KartodromiData.lista
-        } else {
-            return KartodromiData.lista.filter { $0.nome.lowercased().contains(searchText.lowercased()) }
+    // ── Track picker sheet ────────────────────────────────────────────────
+
+    /// Rimuove la parte tra parentesi dal nome (es. "Ottobiano Motorsport (Ottobiano, PV)" → "Ottobiano Motorsport")
+    private func shortTrackName(_ nome: String) -> String {
+        if let parenRange = nome.range(of: "(") {
+            return String(nome[nome.startIndex..<parenRange.lowerBound])
+                .trimmingCharacters(in: .whitespaces)
         }
+        return nome
     }
 
-    private var kartodromoSelectionCard: some View {
-        VStack(spacing: 0) {
-            // Barra di ricerca fissa in cima
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.kartDim)
-                TextField("Cerca kartodromo...", text: $searchText)
-                    .foregroundColor(.white)
-                    .autocorrectionDisabled()
-            }
-            .padding(14)
-            .background(Color.kartBG.opacity(0.5))
-            
-            Divider().background(Color.white.opacity(0.1))
-            
-            // Lista scrollabile
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(filteredKartodromi) { k in
-                        Button {
-                            let wasConnected = manager.isConnected
-                            selectedKartodromo = k
-                            
-                            if !wasConnected {
-                                manager.connect(to: server)
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    manager.sendCommand("set_url", extra: ["url": k.url])
-                                }
-                            } else {
+    private var filteredKartodromi: [Kartodromo] {
+        let q = trackSearch.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return KartodromiData.lista }
+        return KartodromiData.lista.filter { $0.nome.localizedCaseInsensitiveContains(q) }
+    }
+
+    private var trackPickerSheet: some View {
+        NavigationStack {
+            List {
+                // Voce deseleziona
+                Button {
+                    selectedKartodromo = nil
+                    manager.disconnect()
+                    showTrackPicker = false
+                } label: {
+                    HStack {
+                        Image(systemName: selectedKartodromo == nil ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(selectedKartodromo == nil ? .kartAccent : .kartDim)
+                        Text("-- SELEZIONA PISTA --")
+                            .italic()
+                            .foregroundColor(.primary)
+                    }
+                }
+
+                // Kartodromi filtrati
+                ForEach(filteredKartodromi) { k in
+                    Button {
+                        let wasConnected = manager.isConnected
+                        selectedKartodromo = k
+                        if !wasConnected {
+                            manager.connect(to: server)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                 manager.sendCommand("set_url", extra: ["url": k.url])
                             }
-                            showURLSheet = false
-                        } label: {
-                            HStack {
-                                Text(k.nome)
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.kartDim)
-                                    .font(.system(size: 12))
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .contentShape(Rectangle())
+                        } else {
+                            manager.sendCommand("set_url", extra: ["url": k.url])
                         }
-                        .buttonStyle(.plain)
-                        
-                        if k != filteredKartodromi.last {
-                            Divider().background(Color.white.opacity(0.06))
-                                .padding(.horizontal, 16)
+                        showTrackPicker = false
+                    } label: {
+                        HStack {
+                            Image(systemName: selectedKartodromo?.id == k.id ? "checkmark.circle.fill" : "flag.fill")
+                                .foregroundColor(selectedKartodromo?.id == k.id ? .kartAccent : .kartDim)
+                            Text(k.nome)
+                                .foregroundColor(.primary)
                         }
                     }
                 }
             }
-            .frame(maxHeight: 450)
+            .searchable(text: $trackSearch, placement: .navigationBarDrawer(displayMode: .always), prompt: "Cerca kartadromo…")
+            .navigationTitle("Seleziona pista")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annulla") { showTrackPicker = false }
+                }
+            }
         }
-        .background(Color.kartPanel)
-        .cornerRadius(12)
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
+    }
+
+    // ── Guest login bar ───────────────────────────────────────────────────
+
+    private var guestLoginBar: some View {
+        Button {
+            authState.logout()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "person.crop.circle.badge.plus")
+                    .font(.system(size: 18, weight: .semibold))
+                Text("LOGIN / REGISTER")
+                    .font(.system(size: 15, weight: .bold))
+                    .tracking(1)
+            }
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 1.0, green: 0.82, blue: 0.0),
+                             Color(red: 1.0, green: 0.65, blue: 0.0)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // ── Status bar ────────────────────────────────────────────────────────
@@ -454,31 +508,6 @@ struct TimingView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity)
-    }
-
-    // ── URL Sheet ─────────────────────────────────────────────────────────
-
-    private var urlSheet: some View {
-        NavigationStack {
-            ZStack {
-                Color.kartBG.ignoresSafeArea()
-                VStack {
-                    kartodromoSelectionCard
-                    Spacer()
-                }
-                .padding(.vertical, 20)
-            }
-            .navigationTitle("Cambia Kartodromo")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Annulla") { showURLSheet = false }
-                        .foregroundColor(.kartAccent)
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────

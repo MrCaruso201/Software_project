@@ -11,11 +11,19 @@ class AuthState: ObservableObject {
     static let shared = AuthState()
 
     init() {
-        // Al lancio, verifica se c'è un token salvato nel Keychain
+        // Al lancio, verifica se c'è un token salvato nel Keychain.
+        // Se l'account è "viewer" (sessione guest) i token vengono eliminati
+        // immediatamente: la sessione guest non deve essere ricordata.
         if let token = KeychainService.load(key: "access_token"),
            let user = decodeJWT(token) {
-            self.currentUser = user
-            self.isLoggedIn = true
+            if user.role == .viewer {
+                KeychainService.delete(key: "access_token")
+                KeychainService.delete(key: "refresh_token")
+                // Non impostiamo isLoggedIn → l'app mostra LoginView
+            } else {
+                self.currentUser = user
+                self.isLoggedIn = true
+            }
         }
     }
 
