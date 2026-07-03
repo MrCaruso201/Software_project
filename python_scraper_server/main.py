@@ -29,7 +29,7 @@ Struttura del progetto:
   scraper/session.py     → ScraperSession + registro globale sessioni
   ws/manager.py          → mappa client-URL, subscribe/unsubscribe, broadcast
   ws/router.py           → endpoint WebSocket e gestione comandi
-  discovery/bonjour.py   → (non usato) codice mDNS conservato per riferimento
+  discovery/bonjour.py   → implementa l'annuncio Bonjour
 """
 
 from contextlib import asynccontextmanager
@@ -45,6 +45,7 @@ from scraper.session import sessions
 from scraper.storage import clear_saved_timing_data
 from ws.router import router as ws_router
 from discovery.bonjour import start_bonjour, stop_bonjour
+from events.router import router as events_router
 
 
 # ---------------------------------------------------------------------------
@@ -81,6 +82,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(ws_router)
+app.include_router(events_router)
 
 
 # ---------------------------------------------------------------------------
