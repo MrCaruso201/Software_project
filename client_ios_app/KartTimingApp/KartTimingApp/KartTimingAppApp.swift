@@ -16,7 +16,7 @@ struct KartTimingApp: App {
     var body: some Scene {
         WindowGroup {
             if authState.isLoggedIn {
-                WelcomeView()
+                HomeView()
                     .environmentObject(authState)
                     .environmentObject(appEnv)
             } else {

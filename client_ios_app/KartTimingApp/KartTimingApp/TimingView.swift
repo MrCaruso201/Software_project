@@ -49,22 +49,7 @@ struct TimingView: View {
         .navigationBarBackButtonHidden(true)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            // Back button (solo per utenti non-guest)
-            if !authState.isGuestSession {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Indietro")
-                                .font(.system(size: 16))
-                        }
-                        .foregroundColor(.kartAccent)
-                    }
-                }
-            }
+            // Nessun back button necessario perché ora gestiamo la navigazione tramite la barra inferiore in HomeView
 
             // Picker pista al centro della toolbar
             ToolbarItem(placement: .principal) {
@@ -104,7 +89,6 @@ struct TimingView: View {
         } message: {
             Text(manager.errorMessage ?? "Si è verificato un errore sul server.")
         }
-        .onDisappear { manager.disconnect() }
     }
 
     // ── Track picker sheet ────────────────────────────────────────────────
