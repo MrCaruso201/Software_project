@@ -1,7 +1,7 @@
 """
 Endpoint REST di autenticazione.
 
-POST /auth/register  → crea account (ruolo viewer)
+POST /auth/register  → crea account (ruolo user)
 POST /auth/login     → login, restituisce access + refresh token
 POST /auth/refresh   → emette nuovo access token da refresh token valido
 POST /auth/logout    → revoca il refresh token
@@ -36,7 +36,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
-    """Crea un nuovo account con ruolo 'viewer'."""
+    """Crea un nuovo account con ruolo 'user'."""
     if not req.username.strip() or not req.email.strip() or not req.password:
         raise HTTPException(400, "Tutti i campi sono obbligatori")
 
@@ -49,7 +49,7 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
         username=req.username.strip(),
         email=req.email.strip().lower(),
         hashed_pw=hash_password(req.password),
-        role="viewer",
+        role="user",
     )
     db.add(user)
     db.commit()

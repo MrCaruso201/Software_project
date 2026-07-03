@@ -12,6 +12,7 @@ from enum import Enum
 class Role(str, Enum):
     """Ruoli disponibili nel sistema. Compatibile Python 3.9+."""
     VIEWER        = "viewer"
+    USER          = "user"
     RACE_DIRECTOR = "race_director"
     ADMIN         = "admin"
 
@@ -19,8 +20,9 @@ class Role(str, Enum):
 # Gerarchia: valore più alto = più permessi
 ROLE_HIERARCHY: dict[str, int] = {
     Role.VIEWER:        0,
-    Role.RACE_DIRECTOR: 1,
-    Role.ADMIN:         2,
+    Role.USER:          1,
+    Role.RACE_DIRECTOR: 2,
+    Role.ADMIN:         3,
 }
 
 

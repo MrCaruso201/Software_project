@@ -36,14 +36,16 @@ def get_db():
 def init_db() -> None:
     """Crea tutte le tabelle definite in db/models.py (idempotente: non sovrascrive).
     
-    Al primo avvio crea anche un utente admin di default (admin/admin) se non esiste.
+    Al primo avvio crea anche un utente admin di default (admin/admin) e un utente
+    viewer di default (viewer/viewer) se non esistono.
     """
     from db.models import Base, User  # import locale per evitare importazione circolare
     Base.metadata.create_all(bind=engine)
     print("✅ Database inizializzato.")
 
-    # --- Seed: utente admin di default ---
+    # --- Seed: utenti di default ---
     _seed_admin()
+    _seed_viewer()
 
 
 def _seed_admin() -> None:
@@ -66,5 +68,29 @@ def _seed_admin() -> None:
         db.add(admin_user)
         db.commit()
         print("🛡️  Utente admin creato (username=admin, password=admin).")
+    finally:
+        db.close()
+
+
+def _seed_viewer() -> None:
+    """Crea l'utente viewer con password 'viewer' se non esiste ancora nel DB."""
+    from auth.password import hash_password  # import locale per evitare circolarità
+    from db.models import User
+
+    db: Session = SessionLocal()
+    try:
+        existing = db.query(User).filter(User.username == "viewer").first()
+        if existing:
+            return  # già presente, niente da fare
+
+        viewer_user = User(
+            username  = "viewer",
+            email     = "viewer@viewer.com",
+            hashed_pw = hash_password("viewer"),
+            role      = "viewer",
+        )
+        db.add(viewer_user)
+        db.commit()
+        print("👁️  Utente viewer creato (username=viewer, password=viewer).")
     finally:
         db.close()

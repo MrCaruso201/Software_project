@@ -23,7 +23,7 @@ class User(Base):
     username   = Column(String, unique=True, nullable=False, index=True)
     email      = Column(String, unique=True, nullable=False, index=True)
     hashed_pw  = Column(String, nullable=False)   # bcrypt hash, mai plaintext
-    role       = Column(String, default="viewer", nullable=False)
+    role       = Column(String, default="user", nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
