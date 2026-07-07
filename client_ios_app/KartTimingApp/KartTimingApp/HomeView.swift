@@ -44,25 +44,19 @@ struct HomeView: View {
                 .tabItem { Label("Analisi", systemImage: "trophy.fill") }
                 .tag(HomeTab.analisi)
 
-                NavigationStack {
-                    SettingsView()
-                }
-                .tabItem { Label("Impostazioni", systemImage: "gearshape.fill") }
-                .tag(HomeTab.settings)
+                SettingsView()
+                    .tabItem { Label("Impostazioni", systemImage: "gearshape.fill") }
+                    .tag(HomeTab.settings)
 
                 if authState.currentUser?.role.canManageUsers == true {
-                    NavigationStack {
-                        AdminUsersView(server: appEnv.server(token: authState.currentToken ?? ""))
-                    }
-                    .tabItem { Label("Gestisci Utenti", systemImage: "person.2.fill") }
-                    .tag(HomeTab.admin)
+                    AdminUsersView(server: appEnv.server(token: authState.currentToken ?? ""))
+                        .tabItem { Label("Gestisci Utenti", systemImage: "person.2.fill") }
+                        .tag(HomeTab.admin)
 
-                    NavigationStack {
-                        AdminKartodromoView(server: appEnv.server(token: authState.currentToken ?? ""))
-                            .environmentObject(authState)
-                    }
-                    .tabItem { Label("Circuiti", systemImage: "flag.checkered.2.crossed") }
-                    .tag(HomeTab.circuiti)
+                    AdminKartodromoView(server: appEnv.server(token: authState.currentToken ?? ""))
+                        .environmentObject(authState)
+                        .tabItem { Label("Circuiti", systemImage: "flag.checkered.2.crossed") }
+                        .tag(HomeTab.circuiti)
                 }
             }
             .tint(Color(red: 1.0, green: 0.82, blue: 0.0))
