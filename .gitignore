@@ -6,3 +6,5 @@
 client_ios_app/**/*.xcuserstate
 client_ios_app/**/xcuserdata/
 client_ios_app/**/DerivedData/
+
+UserInterfaceState.xcuserstate
