@@ -65,7 +65,7 @@ struct HomeView: View {
                         AdminUsersView()
                     }
                     .tabItem {
-                        Label("Admin", systemImage: "person.badge.gear")
+                        Label("Gestisci Utenti", systemImage: "person.2.fill")
                     }
                     .tag(HomeTab.admin)
                 }
