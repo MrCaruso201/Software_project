@@ -127,20 +127,7 @@ struct ChangePasswordView: View {
         }
         .navigationTitle("Cambia password")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    .foregroundColor(.white)
-                }
-            }
-        }
+        .toolbar(.hidden, for: .tabBar)
         .alert("Password aggiornata", isPresented: $showSuccess) {
             Button("OK") { dismiss() }
         } message: {

@@ -44,20 +44,13 @@ struct HomeView: View {
                 .tabItem { Label("Analisi", systemImage: "trophy.fill") }
                 .tag(HomeTab.analisi)
 
-                SettingsView()
-                    .tabItem { Label("Impostazioni", systemImage: "gearshape.fill") }
-                    .tag(HomeTab.settings)
-
-                if authState.currentUser?.role.canManageUsers == true {
-                    AdminUsersView(server: appEnv.server(token: authState.currentToken ?? ""))
-                        .tabItem { Label("Gestisci Utenti", systemImage: "person.2.fill") }
-                        .tag(HomeTab.admin)
-
-                    AdminKartodromoView(server: appEnv.server(token: authState.currentToken ?? ""))
-                        .environmentObject(authState)
-                        .tabItem { Label("Circuiti", systemImage: "flag.checkered.2.crossed") }
-                        .tag(HomeTab.circuiti)
+                NavigationStack {
+                    SettingsView()
                 }
+                .tabItem { Label("Impostazioni", systemImage: "gearshape.fill") }
+                .tag(HomeTab.settings)
+
+                // Le view di amministrazione sono state spostate dentro SettingsView per evitare il tab "Altro" (>5 tabs)
             }
             .tint(Color(red: 1.0, green: 0.82, blue: 0.0))
         }
@@ -82,6 +75,4 @@ enum HomeTab {
     case timing
     case analisi
     case settings
-    case admin
-    case circuiti
 }
