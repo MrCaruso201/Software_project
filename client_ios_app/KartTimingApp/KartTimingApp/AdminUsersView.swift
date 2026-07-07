@@ -9,6 +9,7 @@ struct AdminUsersView: View {
     @State private var isLoading: Bool = false
     @State private var errorMessage: String? = nil
     @State private var successMessage: String? = nil
+    @State private var expandedUserId: Int? = nil
 
     // Debounce timer per non sparare richieste ad ogni carattere
     @State private var searchTask: Task<Void, Never>? = nil
@@ -24,44 +25,8 @@ struct AdminUsersView: View {
             Color.kartBG.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // ── Barra di ricerca ──────────────────────────────────────
-                HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.kartDim)
-                    TextField("Cerca per nome o email…", text: $searchText)
-                        .foregroundColor(.white)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .onChange(of: searchText) { _, _ in
-                            triggerSearch()
-                        }
-
-                    if !searchText.isEmpty {
-                        Button {
-                            searchText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.kartDim)
-                        }
-                    }
-                }
-                .padding(12)
-                .background(Color.kartPanel)
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
-
-                // ── Feedback messaggi ─────────────────────────────────────
-                if let err = errorMessage {
-                    feedbackBanner(text: err, isError: true)
-                } else if let ok = successMessage {
-                    feedbackBanner(text: ok, isError: false)
-                }
+                // ── Header Bar (Stile Eventi) ───────────────────────────────────
+                headerBar
 
                 // ── Lista utenti ──────────────────────────────────────────
                 if isLoading {
@@ -84,31 +49,98 @@ struct AdminUsersView: View {
                     Spacer()
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 10) {
+                        LazyVStack(spacing: 12) {
                             ForEach($users) { $user in
                                 UserCard(
                                     user: $user,
                                     availableRoles: availableRoles,
                                     currentUserId: authState.currentUser?.id,
+                                    isExpanded: expandedUserId == user.id,
+                                    onToggle: {
+                                        if expandedUserId == user.id {
+                                            expandedUserId = nil
+                                        } else {
+                                            expandedUserId = user.id
+                                        }
+                                    },
                                     onRoleChange: { newRole in
                                         changeRole(user: user, newRole: newRole)
                                     }
                                 )
                             }
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
+                        .padding(.top, 16)
+                        .padding(.bottom, 30)
                     }
                 }
             }
+            
+            // ── Feedback messaggi (in basso) ─────────────────────────────────
+            VStack {
+                Spacer()
+                if let err = errorMessage {
+                    feedbackBanner(text: err, isError: true)
+                        .padding(.bottom, 20)
+                } else if let ok = successMessage {
+                    feedbackBanner(text: ok, isError: false)
+                        .padding(.bottom, 20)
+                }
+            }
         }
-        .navigationTitle("Gestisci Utenti")
+        .navigationTitle("Utenti")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            // Barra ricerca stile Live Timing / Eventi
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.black)
+                    TextField("", text: $searchText, prompt: Text("CERCA UTENTI").foregroundColor(.black))
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.black)
+                        .multilineTextAlignment(.center)
+                        .disableAutocorrection(true)
+                        .textInputAutocapitalization(.never)
+                        .onChange(of: searchText) { _, _ in
+                            triggerSearch()
+                        }
+                }
+                .environment(\.colorScheme, .light)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(
+                    LinearGradient(
+                        colors: [Color(red: 1.0, green: 0.82, blue: 0.0),
+                                 Color(red: 1.0, green: 0.65, blue: 0.0)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .clipShape(Capsule())
+                .shadow(color: Color(red: 1.0, green: 0.75, blue: 0.0).opacity(0.4), radius: 6, x: 0, y: 3)
+            }
+        }
         .onAppear { triggerSearch() }
     }
 
     // MARK: - Helper Views
+
+    private var headerBar: some View {
+        HStack(spacing: 10) {
+            Text("Utenti a sistema")
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(.white)
+            Spacer()
+            Text("\(users.count) trovati")
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(.kartDim)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.kartPanel)
+    }
 
     @ViewBuilder
     private func feedbackBanner(text: String, isError: Bool) -> some View {
@@ -147,11 +179,28 @@ struct AdminUsersView: View {
         successMessage = nil
 
         do {
-            users = try await AuthService.fetchUsers(query: searchText, token: token)
+            let fetched = try await AuthService.fetchUsers(query: searchText, token: token)
+            users = fetched.sorted { u1, u2 in
+                let w1 = roleWeight(u1.role)
+                let w2 = roleWeight(u2.role)
+                if w1 == w2 {
+                    return u1.username.lowercased() < u2.username.lowercased()
+                }
+                return w1 < w2
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
         isLoading = false
+    }
+
+    private func roleWeight(_ role: String) -> Int {
+        switch role {
+        case "admin": return 0
+        case "race_director": return 1
+        case "viewer": return 2
+        default: return 3
+        }
     }
 
     private func changeRole(user: AdminUser, newRole: String) {
@@ -159,9 +208,19 @@ struct AdminUsersView: View {
         Task {
             do {
                 try await AuthService.updateUserRole(userId: user.id, role: newRole, token: token)
-                // Aggiorna localmente il ruolo per riflettere la modifica
+                // Aggiorna localmente il ruolo per riflettere la modifica e riordina
                 if let idx = users.firstIndex(where: { $0.id == user.id }) {
-                    await MainActor.run { users[idx].role = newRole }
+                    await MainActor.run { 
+                        users[idx].role = newRole 
+                        users.sort { u1, u2 in
+                            let w1 = roleWeight(u1.role)
+                            let w2 = roleWeight(u2.role)
+                            if w1 == w2 {
+                                return u1.username.lowercased() < u2.username.lowercased()
+                            }
+                            return w1 < w2
+                        }
+                    }
                 }
                 await MainActor.run {
                     successMessage = "Ruolo di \(user.username) aggiornato a \"\(newRole)\""
@@ -186,6 +245,8 @@ private struct UserCard: View {
     @Binding var user: AdminUser
     let availableRoles: [(label: String, value: String)]
     let currentUserId: Int?
+    let isExpanded: Bool
+    let onToggle: () -> Void
     let onRoleChange: (String) -> Void
 
     /// True quando la card rappresenta l'admin attualmente loggato
@@ -210,8 +271,8 @@ private struct UserCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Riga superiore: icona + username + email
+        VStack(spacing: 0) {
+            // ── Header (Sempre visibile) ─────────────────────────
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
@@ -222,71 +283,92 @@ private struct UserCard: View {
                         .foregroundColor(roleColor)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(user.username)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
-                    Text(user.email)
-                        .font(.system(size: 12))
-                        .foregroundColor(.kartDim)
+                    
+                    Text(roleLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(roleColor)
                 }
 
                 Spacer()
 
-                // Badge ruolo corrente
-                Text(roleLabel)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(roleColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(roleColor.opacity(0.15))
-                    .cornerRadius(8)
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .foregroundColor(.kartDim)
+                    .font(.system(size: 14, weight: .semibold))
             }
-
-            // Picker ruolo
-            HStack {
-                Text("Ruolo:")
-                    .font(.footnote)
-                    .foregroundColor(.kartDim)
-
-                if isLocked {
-                    // Picker bloccato: account corrente o superutente di sistema
-                    Spacer()
-                    HStack(spacing: 5) {
-                        Image(systemName: "lock.fill")
-                            .font(.caption)
-                        Text(lockLabel)
-                            .font(.caption)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(Color.kartPanel)
+            
+            // ── Corpo espanso ─────────────────────────────────────────
+            if isExpanded {
+                Divider().background(Color.white.opacity(0.1))
+                
+                VStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: "envelope.fill")
+                            .foregroundColor(.kartDim)
+                            .font(.system(size: 12))
+                        Text(user.email)
+                            .font(.system(size: 13))
+                            .foregroundColor(.white)
+                        Spacer()
                     }
-                    .foregroundColor(.kartDim)
-                } else {
-                    Picker("Ruolo", selection: $selectedRole) {
-                        ForEach(availableRoles, id: \.value) { r in
-                            Text(r.label).tag(r.value)
+                    
+                    if isLocked {
+                        HStack(spacing: 5) {
+                            Image(systemName: "lock.fill")
+                                .font(.caption)
+                            Text(lockLabel)
+                                .font(.caption)
                         }
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: selectedRole) { oldVal, newVal in
-                        if newVal != oldVal && newVal != user.role {
-                            onRoleChange(newVal)
+                        .foregroundColor(.kartDim)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    } else {
+                        // Slider base di iOS a tutta larghezza
+                        Picker("Ruolo", selection: $selectedRole) {
+                            ForEach(availableRoles, id: \.value) { r in
+                                Text(r.label).tag(r.value)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: selectedRole) { oldVal, newVal in
+                            if newVal != oldVal && newVal != user.role {
+                                onRoleChange(newVal)
+                            }
                         }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.kartPanel.opacity(0.95))
             }
         }
-        .padding(14)
-        .background(Color.kartPanel)
-        .cornerRadius(14)
+        .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.05), lineWidth: 1)
         )
+        .padding(.horizontal, 16)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                onToggle()
+            }
+        }
         .onAppear { selectedRole = user.role }
         .onChange(of: user.role) { _, newRole in selectedRole = newRole }
     }
 
     private var roleColor: Color {
-        switch user.role {
+        roleColorFor(user.role)
+    }
+
+    private func roleColorFor(_ role: String) -> Color {
+        switch role {
         case "admin":        return .orange
         case "race_director": return .cyan
         default:             return .gray

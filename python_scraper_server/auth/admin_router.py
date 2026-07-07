@@ -55,11 +55,27 @@ def search_users(
     Se q è vuoto restituisce tutti gli utenti (stesso comportamento di /admin/users).
     """
     if q.strip():
-        pattern = f"%{q.strip()}%"
+        q_lower = q.strip().lower()
+        pattern = f"%{q_lower}%"
+        
+        # Mappa i termini italiani ai ruoli nel database (supportando la ricerca parziale)
+        role_filters = []
+        if "spettatore".startswith(q_lower):
+            role_filters.append("viewer")
+        if "direttore".startswith(q_lower) or "gara".startswith(q_lower) or "direttore di gara".startswith(q_lower):
+            role_filters.append("race_director")
+        if "admin".startswith(q_lower):
+            role_filters.append("admin")
+            
+        role_condition = User.role.in_(role_filters) if role_filters else False
+
         users = (
             db.query(User)
             .filter(
-                User.username.ilike(pattern) | User.email.ilike(pattern)
+                User.username.ilike(pattern) | 
+                User.email.ilike(pattern) |
+                User.role.ilike(pattern) |
+                role_condition
             )
             .order_by(User.username)
             .all()
