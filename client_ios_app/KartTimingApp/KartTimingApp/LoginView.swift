@@ -133,7 +133,7 @@ struct LoginView: View {
         isLoadingLogin = true
         errorMessage = nil
 
-        Task {
+        let requestTask = Task {
             do {
                 if isLoginTab {
                     let tokens = try await AuthService.login(username: username, password: password)
@@ -150,13 +150,24 @@ struct LoginView: View {
             }
             isLoadingLogin = false
         }
+
+        Task {
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+            if !requestTask.isCancelled && isLoadingLogin {
+                requestTask.cancel()
+                await MainActor.run {
+                    isLoadingLogin = false
+                    errorMessage = "Connessione scaduta. Riprova."
+                }
+            }
+        }
     }
 
     private func loginAsGuest() {
         isLoadingGuest = true
         errorMessage = nil
 
-        Task {
+        let requestTask = Task {
             do {
                 let tokens = try await AuthService.login(username: "viewer", password: "viewer")
                 authState.setLoginData(
@@ -170,6 +181,17 @@ struct LoginView: View {
                 errorMessage = "Impossibile accedere al Live Timing."
             }
             isLoadingGuest = false
+        }
+
+        Task {
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+            if !requestTask.isCancelled && isLoadingGuest {
+                requestTask.cancel()
+                await MainActor.run {
+                    isLoadingGuest = false
+                    errorMessage = "Connessione scaduta. Riprova."
+                }
+            }
         }
     }
 }
