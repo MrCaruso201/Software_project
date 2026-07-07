@@ -6,6 +6,7 @@ import Foundation
 
 enum UserRole: String, Codable {
     case viewer       = "viewer"
+    case user         = "user"
     case raceDirector = "race_director"
     case admin        = "admin"
 
@@ -23,6 +24,7 @@ enum UserRole: String, Codable {
     var displayName: String {
         switch self {
         case .viewer:       return "Spettatore"
+        case .user:         return "Utente"
         case .raceDirector: return "Direttore di gara"
         case .admin:        return "Admin"
         }

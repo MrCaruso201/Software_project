@@ -16,6 +16,7 @@ struct AdminUsersView: View {
 
     private let availableRoles: [(label: String, value: String)] = [
         ("Spettatore",       "viewer"),
+        ("Utente", "user"),
         ("Direttore di Gara", "race_director"),
         ("Admin",            "admin"),
     ]
@@ -198,8 +199,9 @@ struct AdminUsersView: View {
         switch role {
         case "admin": return 0
         case "race_director": return 1
-        case "viewer": return 2
-        default: return 3
+        case "user": return 2
+        case "viewer": return 3
+        default: return 4
         }
     }
 
@@ -256,11 +258,15 @@ private struct UserCard: View {
     /// il cui ruolo non può essere modificato da nessun altro admin.
     private var isSuperuser: Bool { user.username == "admin" }
 
+    /// True quando la card rappresenta l'utente speciale per il solo live timing
+    private var isViewerUser: Bool { user.username == "viewer" }
+
     /// True quando il picker deve essere bloccato
-    private var isLocked: Bool { isSelf || isSuperuser }
+    private var isLocked: Bool { isSelf || isSuperuser || isViewerUser }
 
     private var lockLabel: String {
         if isSelf { return "Non modificabile (account corrente)" }
+        if isViewerUser { return "Utenza usata per la sola visualizzazione" }
         return "Non modificabile (superutente di sistema)"
     }
 
@@ -330,7 +336,7 @@ private struct UserCard: View {
                     } else {
                         // Slider base di iOS a tutta larghezza
                         Picker("Ruolo", selection: $selectedRole) {
-                            ForEach(availableRoles, id: \.value) { r in
+                            ForEach(availableRoles.filter { $0.value != "viewer" }, id: \.value) { r in
                                 Text(r.label).tag(r.value)
                             }
                         }
@@ -371,6 +377,7 @@ private struct UserCard: View {
         switch role {
         case "admin":        return .orange
         case "race_director": return .cyan
+        case "viewer":       return .green
         default:             return .gray
         }
     }
