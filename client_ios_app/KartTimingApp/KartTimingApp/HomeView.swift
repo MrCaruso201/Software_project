@@ -44,9 +44,11 @@ struct HomeView: View {
                 .tabItem { Label("Analisi", systemImage: "trophy.fill") }
                 .tag(HomeTab.analisi)
 
-                SettingsView()
-                    .tabItem { Label("Impostazioni", systemImage: "gearshape.fill") }
-                    .tag(HomeTab.settings)
+                NavigationStack {
+                    SettingsView()
+                }
+                .tabItem { Label("Impostazioni", systemImage: "gearshape.fill") }
+                .tag(HomeTab.settings)
 
                 if authState.currentUser?.role.canManageUsers == true {
                     AdminUsersView(server: appEnv.server(token: authState.currentToken ?? ""))
