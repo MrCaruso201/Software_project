@@ -9,6 +9,9 @@ struct TimingView: View {
     @State private var selectedKartodromo: Kartodromo? = nil
     @State private var showTrackPicker = false
     @State private var trackSearch = ""
+    @State private var kartodromi: [Kartodromo] = []
+    @State private var isLoadingTracks = false
+    @State private var trackLoadError: String? = nil
 
     var body: some View {
         ZStack {
@@ -104,8 +107,11 @@ struct TimingView: View {
 
     private var filteredKartodromi: [Kartodromo] {
         let q = trackSearch.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return KartodromiData.lista }
-        return KartodromiData.lista.filter { $0.nome.localizedCaseInsensitiveContains(q) }
+        guard !q.isEmpty else { return kartodromi }
+        return kartodromi.filter {
+            $0.nome.localizedCaseInsensitiveContains(q) ||
+            $0.luogo.localizedCaseInsensitiveContains(q)
+        }
     }
 
     private var trackPickerSheet: some View {
@@ -156,6 +162,37 @@ struct TimingView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annulla") { showTrackPicker = false }
+                }
+            }
+            .overlay {
+                if isLoadingTracks {
+                    ProgressView("Caricamento piste…")
+                        .padding()
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .alert("Impossibile caricare le piste", isPresented: Binding(
+                get: { trackLoadError != nil },
+                set: { if !$0 { trackLoadError = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(trackLoadError ?? "")
+            }
+            .onAppear {
+                guard let token = authState.currentToken else { return }
+                let base = AppEnvironment.shared.baseURL
+                Task {
+                    isLoadingTracks = true
+                    defer { isLoadingTracks = false }
+                    do {
+                        kartodromi = try await KartodromoService.fetchKartodromi(
+                            baseURL: base,
+                            accessToken: token
+                        )
+                    } catch {
+                        trackLoadError = error.localizedDescription
+                    }
                 }
             }
         }

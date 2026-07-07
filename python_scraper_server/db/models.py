@@ -4,6 +4,8 @@ Modelli ORM SQLAlchemy per il database.
 Tabelle:
   - users          → credenziali e ruoli degli utenti
   - refresh_tokens → refresh token hashati (per logout / revoca)
+  - events         → eventi/gare in calendario
+  - kartodromi     → kartodromi disponibili con URL live timing
 """
 
 from datetime import datetime, timezone
@@ -52,4 +54,15 @@ class Event(Base):
     max_people_per_group = Column(Integer, nullable=True) # massimo numero di persone per gruppo
     registration_cost = Column(Float, nullable=True) # costo di iscrizione a persona
     weight_limit = Column(Float, nullable=True) # peso limite (opzionale)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class Kartodromo(Base):
+    __tablename__ = "kartodromi"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    nome       = Column(String, nullable=False)            # nome del kartodromo
+    luogo      = Column(String, nullable=False, default="") # città e provincia (es. "Ottobiano, PV")
+    url        = Column(String, nullable=False, unique=True) # URL pagina live timing
+    attivo     = Column(Boolean, default=True, nullable=False) # se False viene nascosto nel client
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

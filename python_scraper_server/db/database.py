@@ -47,6 +47,9 @@ def init_db() -> None:
     _seed_admin()
     _seed_viewer()
 
+    # --- Seed: kartodromi di default ---
+    _seed_kartodromi()
+
 
 def _seed_admin() -> None:
     """Crea l'utente admin con password 'admin' se non esiste ancora nel DB."""
@@ -92,5 +95,30 @@ def _seed_viewer() -> None:
         db.add(viewer_user)
         db.commit()
         print("👁️  Utente viewer creato (username=viewer, password=viewer).")
+    finally:
+        db.close()
+
+
+def _seed_kartodromi() -> None:
+    """Popola la tabella kartodromi con i circuiti di default al primo avvio."""
+    from db.models import Kartodromo  # import locale per evitare circolarità
+
+    _DEFAULT_KARTODROMI = [
+        {"nome": "Simulatore",                   "luogo": "",                    "url": "https://live.racefacer.com/simulator"},
+        {"nome": "Ottobiano Motorsport",          "luogo": "Ottobiano, PV",       "url": "https://live.racefacer.com/ottobianomotorsport"},
+        {"nome": "Karting Club",                  "luogo": "Messina, ME",         "url": "https://live.racefacer.com/kartodromomessina"},
+        {"nome": "Orlando Kart Center",           "luogo": "Orlando, FL",         "url": "https://live.racefacer.com/orlandokartcenter"},
+        {"nome": "Misanino",                      "luogo": "Misano Adriatico, RN", "url": "https://www.apex-timing.com/live-timing/misanino-kart/"},
+    ]
+
+    db: Session = SessionLocal()
+    try:
+        for data in _DEFAULT_KARTODROMI:
+            existing = db.query(Kartodromo).filter(Kartodromo.url == data["url"]).first()
+            if existing:
+                continue  # già presente, niente da fare
+            db.add(Kartodromo(**data))
+        db.commit()
+        print("🏎️  Kartodromi di default caricati.")
     finally:
         db.close()

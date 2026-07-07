@@ -24,12 +24,14 @@ Struttura del progetto:
   auth/router.py         → endpoint /auth/*
   auth/admin_router.py   → endpoint /admin/* (solo admin)
   db/database.py         → connessione SQLite + init_db
-  db/models.py           → modelli SQLAlchemy (users, refresh_tokens)
+  db/models.py           → modelli SQLAlchemy (users, refresh_tokens, events, kartodromi)
   scraper/storage.py     → persistenza JSON su disco
   scraper/session.py     → ScraperSession + registro globale sessioni
   ws/manager.py          → mappa client-URL, subscribe/unsubscribe, broadcast
   ws/router.py           → endpoint WebSocket e gestione comandi
   discovery/bonjour.py   → implementa l'annuncio Bonjour
+  events/router.py       → endpoint /events/*
+  kartodromi/router.py   → endpoint /kartodromi/*
 """
 
 from contextlib import asynccontextmanager
@@ -46,6 +48,7 @@ from scraper.storage import clear_saved_timing_data
 from ws.router import router as ws_router
 from discovery.bonjour import start_bonjour, stop_bonjour
 from events.router import router as events_router
+from kartodromi.router import router as kartodromi_router
 
 
 # ---------------------------------------------------------------------------
@@ -83,6 +86,7 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(ws_router)
 app.include_router(events_router)
+app.include_router(kartodromi_router)
 
 
 # ---------------------------------------------------------------------------
