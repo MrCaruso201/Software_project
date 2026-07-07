@@ -9,8 +9,9 @@ Espone:
 """
 
 from pathlib import Path
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.exc import OperationalError
 
 # Il DB è nella cartella data/ del progetto, accanto ai file JSON di timing
 _DB_PATH = Path(__file__).parent.parent / "data" / "kart_timing.db"
@@ -43,12 +44,29 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     print("✅ Database inizializzato.")
 
+    # --- Migrazioni colonne aggiunte dopo la creazione iniziale ---
+    _apply_migrations()
+
     # --- Seed: utenti di default ---
     _seed_admin()
     _seed_viewer()
 
     # --- Seed: kartodromi di default ---
     _seed_kartodromi()
+
+
+def _apply_migrations() -> None:
+    """Aggiunge colonne al DB esistente senza sovrascrivere i dati (migration manuale)."""
+    migrations = [
+        "ALTER TABLE kartodromi ADD COLUMN sito_web TEXT NOT NULL DEFAULT ''",
+    ]
+    with engine.connect() as conn:
+        for stmt in migrations:
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+            except OperationalError:
+                pass  # colonna già presente, ignora
 
 
 def _seed_admin() -> None:

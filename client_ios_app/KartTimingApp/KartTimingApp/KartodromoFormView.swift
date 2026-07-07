@@ -12,6 +12,7 @@ struct KartodromoFormView: View {
     @State private var nome: String = ""
     @State private var luogo: String = ""
     @State private var url: String = ""
+    @State private var sitoWeb: String = ""
     @State private var attivo: Bool = true
 
     @State private var isSaving = false
@@ -55,6 +56,16 @@ struct KartodromoFormView: View {
                         TextField("Es. Lonato del Garda (BS)", text: $luogo)
                             .foregroundColor(.primary)
                     }
+                    HStack {
+                        Text("Sito Web")
+                            .foregroundColor(.secondary)
+                            .frame(width: 80, alignment: .leading)
+                        TextField("", text: $sitoWeb, prompt: Text("https://...").foregroundColor(.primary))
+                            .foregroundColor(.primary)
+                            .keyboardType(.URL)
+                            .autocapitalization(.none)
+                            .autocorrectionDisabled()
+                    }
                     Toggle(isOn: $attivo) {
                         Text("Circuito attivo")
                             .foregroundColor(.primary)
@@ -93,6 +104,7 @@ struct KartodromoFormView: View {
                     nome = k.nome
                     luogo = k.luogo
                     url = k.url
+                    sitoWeb = k.sitoWeb
                     attivo = k.attivo
                 }
             }
@@ -107,6 +119,7 @@ struct KartodromoFormView: View {
             "nome": nome.trimmingCharacters(in: .whitespaces),
             "luogo": luogo.trimmingCharacters(in: .whitespaces),
             "url": url.trimmingCharacters(in: .whitespaces),
+            "sito_web": sitoWeb.trimmingCharacters(in: .whitespaces),
             "attivo": attivo
         ]
 

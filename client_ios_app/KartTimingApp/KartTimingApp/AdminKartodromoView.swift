@@ -178,7 +178,7 @@ struct AdminKartodromoView: View {
                 Divider().background(Color.white.opacity(0.1))
 
                 VStack(alignment: .leading, spacing: 10) {
-                    // URL
+                    // URL timing
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "link")
                             .foregroundColor(.orange)
@@ -187,6 +187,19 @@ struct AdminKartodromoView: View {
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(.kartDim)
                             .lineLimit(2)
+                    }
+
+                    // Sito web (se presente)
+                    if !k.sitoWeb.isEmpty {
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "globe")
+                                .foregroundColor(.orange)
+                                .font(.system(size: 12))
+                            Text(k.sitoWeb)
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .foregroundColor(.kartDim)
+                                .lineLimit(2)
+                        }
                     }
 
                     // Pulsanti azione

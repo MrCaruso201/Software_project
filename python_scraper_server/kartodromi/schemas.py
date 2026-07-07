@@ -11,6 +11,7 @@ class KartodromoBase(BaseModel):
     nome: str
     luogo: str = ""
     url: str
+    sito_web: str = ""
     attivo: bool = True
 
 
@@ -22,6 +23,7 @@ class KartodromoUpdate(BaseModel):
     nome: Optional[str] = None
     luogo: Optional[str] = None
     url: Optional[str] = None
+    sito_web: Optional[str] = None
     attivo: Optional[bool] = None
 
 
