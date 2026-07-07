@@ -136,9 +136,8 @@ struct ChangePasswordView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
-                        Text("Impostazioni")
                     }
-                    .foregroundColor(.kartAccent)
+                    .foregroundColor(.white)
                 }
             }
         }
