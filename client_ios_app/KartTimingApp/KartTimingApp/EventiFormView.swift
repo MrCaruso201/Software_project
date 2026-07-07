@@ -8,6 +8,8 @@ struct EventiFormView: View {
     
     // Se `editingEvent` è nil, siamo in modalità Creazione.
     var editingEvent: RaceEvent?
+
+    @StateObject private var kartodromoVM = KartodromoViewModel()
     
     @State private var title: String = ""
     @State private var location: String = ""
@@ -47,8 +49,18 @@ struct EventiFormView: View {
                         Text("Luogo / Pista")
                             .foregroundColor(.secondary)
                             .frame(width: 130, alignment: .leading)
-                        TextField("Es. Lonato", text: $location)
-                            .foregroundColor(.primary)
+                        if kartodromoVM.isLoading {
+                            ProgressView().scaleEffect(0.8)
+                        } else {
+                            Picker("Seleziona Circuito", selection: $location) {
+                                Text("Seleziona...").tag("")
+                                ForEach(kartodromoVM.kartodromi, id: \.nome) { k in
+                                    Text(k.nome).tag(k.nome)
+                                }
+                            }
+                            .labelsHidden()
+                            .tint(.primary)
+                        }
                     }
                     // DatePicker con step di 15 minuti tramite minuteInterval
                     HStack {
@@ -134,6 +146,8 @@ struct EventiFormView: View {
                 }
             }
             .onAppear {
+                kartodromoVM.fetchAll(serverURL: server.httpURL, token: authState.currentToken)
+                
                 if let ev = editingEvent {
                     title = ev.title
                     location = ev.location
@@ -143,17 +157,23 @@ struct EventiFormView: View {
                     isoFull.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                     let isoBasic = ISO8601DateFormatter()
                     
+                    let dfT = DateFormatter()
+                    dfT.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+                    let dfT2 = DateFormatter()
+                    dfT2.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+                    let dfSpace = DateFormatter()
+                    dfSpace.dateFormat = "yyyy-MM-dd HH:mm:ss"
+                    
                     if let d = isoFull.date(from: ev.eventDate) {
                         eventDate = d
                     } else if let d = isoBasic.date(from: ev.eventDate) {
                         eventDate = d
-                    } else {
-                        // formato "2026-08-15 10:00:00"
-                        let df = DateFormatter()
-                        df.dateFormat = "yyyy-MM-dd HH:mm:ss"
-                        if let d = df.date(from: ev.eventDate) {
-                            eventDate = d
-                        }
+                    } else if let d = dfT.date(from: ev.eventDate) {
+                        eventDate = d
+                    } else if let d = dfT2.date(from: ev.eventDate) {
+                        eventDate = d
+                    } else if let d = dfSpace.date(from: ev.eventDate) {
+                        eventDate = d
                     }
                     
                     if let cost = ev.registrationCost { registrationCost = String(cost) }

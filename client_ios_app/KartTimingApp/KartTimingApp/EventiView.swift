@@ -168,7 +168,7 @@ struct EventiView: View {
                             if let part = event.maxParticipants {
                                 detailText(label: "Partecipanti", value: "Max \(part)")
                             } else {
-                                detailText(label: "Partecipanti", value: "Illimitati")
+                                detailText(label: "Partecipanti", value: "N/D")
                             }
                             if let grp = event.maxGroups {
                                 detailText(label: "Gruppi", value: "Max \(grp)")
@@ -181,12 +181,12 @@ struct EventiView: View {
                             if let cost = event.registrationCost {
                                 detailText(label: "Prezzo", value: "€ \(String(format: "%.2f", cost))")
                             } else {
-                                detailText(label: "Prezzo", value: "Gratis / N/D")
+                                detailText(label: "Prezzo", value: "N/D")
                             }
                             if let weight = event.weightLimit {
                                 detailText(label: "Peso", value: "Min \(String(format: "%.1f", weight))kg")
                             } else {
-                                detailText(label: "Peso", value: "Nessun limite")
+                                detailText(label: "Peso", value: "N/D")
                             }
                         }
                     }
