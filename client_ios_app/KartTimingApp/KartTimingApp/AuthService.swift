@@ -114,6 +114,26 @@ struct AuthService {
         }
         return detail
     }
+
+    // MARK: - Change Password
+    static func changePassword(oldPassword: String, newPassword: String, token: String) async throws {
+        guard let url = URL(string: "\(baseURL)/auth/change-password") else { throw AuthError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let body = ["old_password": oldPassword, "new_password": newPassword]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
+
+        if httpResponse.statusCode != 200 {
+            let errorMsg = parseErrorMessage(data: data)
+            throw AuthError.requestFailed(errorMsg)
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

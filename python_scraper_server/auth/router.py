@@ -1,11 +1,12 @@
 """
 Endpoint REST di autenticazione.
 
-POST /auth/register  → crea account (ruolo user)
-POST /auth/login     → login, restituisce access + refresh token
-POST /auth/refresh   → emette nuovo access token da refresh token valido
-POST /auth/logout    → revoca il refresh token
-GET  /auth/me        → info utente corrente (richiede access token valido)
+POST /auth/register         → crea account (ruolo user)
+POST /auth/login            → login, restituisce access + refresh token
+POST /auth/refresh          → emette nuovo access token da refresh token valido
+POST /auth/logout           → revoca il refresh token
+GET  /auth/me               → info utente corrente (richiede access token valido)
+POST /auth/change-password  → cambia la password dell'utente corrente
 """
 
 from datetime import datetime, timezone
@@ -22,6 +23,7 @@ from auth.jwt import (
 )
 from auth.password import hash_password, verify_password
 from auth.schemas import (
+    ChangePasswordRequest,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
@@ -127,3 +129,31 @@ def me(user_payload: dict = Depends(get_current_user), db: Session = Depends(get
         role       = user.role,
         created_at = user.created_at.isoformat(),
     )
+
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+def change_password(
+    req: ChangePasswordRequest,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Cambia la password dell'utente autenticato.
+    
+    Richiede la vecchia password per conferma. La nuova password deve
+    avere almeno 6 caratteri.
+    """
+    if len(req.new_password) < 3:
+        raise HTTPException(400, "La nuova password deve essere di almeno 3 caratteri")
+
+    user = db.query(User).filter(User.id == int(user_payload["sub"])).first()
+    if not user:
+        raise HTTPException(404, "Utente non trovato")
+
+    if not verify_password(req.old_password, user.hashed_pw):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "La vecchia password non è corretta")
+
+    user.hashed_pw = hash_password(req.new_password)
+    db.commit()
+
+    print(f"🔒 Password aggiornata per: {user.username}")
+    return {"message": "Password aggiornata con successo"}
