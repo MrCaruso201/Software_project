@@ -2,19 +2,21 @@ import Foundation
 
 // MARK: - Modello
 
-struct Kartodromo: Identifiable, Hashable, Decodable {
+struct Kartodromo: Identifiable, Hashable, Codable {
     let id: Int
     let nome: String
     let luogo: String
     let url: String
     let attivo: Bool
+    let createdAt: String
 
     enum CodingKeys: String, CodingKey {
         case id, nome, luogo, url, attivo
+        case createdAt = "created_at"
     }
 }
 
-// MARK: - Service
+// MARK: - Service (fetch pubblico — viewer)
 
 enum KartodromoServiceError: LocalizedError {
     case tokenMancante

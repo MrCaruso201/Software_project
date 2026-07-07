@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AdminUsersView: View {
+    let server: DiscoveredServer
     @EnvironmentObject var authState: AuthState
 
     @State private var searchText: String = ""

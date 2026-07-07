@@ -2,14 +2,14 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var authState: AuthState
-    
+
     var body: some View {
         ZStack {
             Color.kartBG.ignoresSafeArea()
-            
+
             VStack {
                 Spacer()
-                
+
                 Button {
                     authState.logout()
                 } label: {
@@ -30,7 +30,7 @@ struct SettingsView: View {
                     )
                 }
                 .padding(.horizontal, 30)
-                
+
                 Spacer()
             }
         }

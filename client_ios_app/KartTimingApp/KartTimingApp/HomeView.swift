@@ -62,12 +62,21 @@ struct HomeView: View {
                 
                 if authState.currentUser?.role.canManageUsers == true {
                     NavigationStack {
-                        AdminUsersView()
+                        AdminUsersView(server: appEnv.server(token: authState.currentToken ?? ""))
                     }
                     .tabItem {
-                        Label("Admin", systemImage: "person.badge.gear")
+                        Label("Gestione Utenti", systemImage: "person.2.fill")
                     }
                     .tag(HomeTab.admin)
+
+                    NavigationStack {
+                        AdminKartodromoView(server: appEnv.server(token: authState.currentToken ?? ""))
+                            .environmentObject(authState)
+                    }
+                    .tabItem {
+                        Label("Circuiti", systemImage: "flag.checkered.2.crossed")
+                    }
+                    .tag(HomeTab.circuiti)
                 }
             }
             // Colore dell'icona selezionata nella TabBar
@@ -95,5 +104,6 @@ enum HomeTab {
     case analisi
     case settings
     case admin
+    case circuiti
 }
 
