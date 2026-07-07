@@ -65,7 +65,7 @@ struct HomeView: View {
                         AdminUsersView(server: appEnv.server(token: authState.currentToken ?? ""))
                     }
                     .tabItem {
-                        Label("Gestione Utenti", systemImage: "person.2.fill")
+                        Label("Gestisci Utenti", systemImage: "person.2.fill")
                     }
                     .tag(HomeTab.admin)
 

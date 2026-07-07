@@ -89,6 +89,7 @@ struct AdminUsersView: View {
                                 UserCard(
                                     user: $user,
                                     availableRoles: availableRoles,
+                                    currentUserId: authState.currentUser?.id,
                                     onRoleChange: { newRole in
                                         changeRole(user: user, newRole: newRole)
                                     }
@@ -184,7 +185,23 @@ struct AdminUsersView: View {
 private struct UserCard: View {
     @Binding var user: AdminUser
     let availableRoles: [(label: String, value: String)]
+    let currentUserId: Int?
     let onRoleChange: (String) -> Void
+
+    /// True quando la card rappresenta l'admin attualmente loggato
+    private var isSelf: Bool { user.id == currentUserId }
+
+    /// True quando la card rappresenta il superutente di sistema (username "admin"),
+    /// il cui ruolo non può essere modificato da nessun altro admin.
+    private var isSuperuser: Bool { user.username == "admin" }
+
+    /// True quando il picker deve essere bloccato
+    private var isLocked: Bool { isSelf || isSuperuser }
+
+    private var lockLabel: String {
+        if isSelf { return "Non modificabile (account corrente)" }
+        return "Non modificabile (superutente di sistema)"
+    }
 
     @State private var selectedRole: String = ""
 
@@ -232,15 +249,27 @@ private struct UserCard: View {
                     .font(.footnote)
                     .foregroundColor(.kartDim)
 
-                Picker("Ruolo", selection: $selectedRole) {
-                    ForEach(availableRoles, id: \.value) { r in
-                        Text(r.label).tag(r.value)
+                if isLocked {
+                    // Picker bloccato: account corrente o superutente di sistema
+                    Spacer()
+                    HStack(spacing: 5) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                        Text(lockLabel)
+                            .font(.caption)
                     }
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: selectedRole) { oldVal, newVal in
-                    if newVal != oldVal && newVal != user.role {
-                        onRoleChange(newVal)
+                    .foregroundColor(.kartDim)
+                } else {
+                    Picker("Ruolo", selection: $selectedRole) {
+                        ForEach(availableRoles, id: \.value) { r in
+                            Text(r.label).tag(r.value)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: selectedRole) { oldVal, newVal in
+                        if newVal != oldVal && newVal != user.role {
+                            onRoleChange(newVal)
+                        }
                     }
                 }
             }
