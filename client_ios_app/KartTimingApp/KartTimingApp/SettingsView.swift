@@ -7,9 +7,33 @@ struct SettingsView: View {
         ZStack {
             Color.kartBG.ignoresSafeArea()
 
-            VStack {
+            VStack(spacing: 14) {
                 Spacer()
 
+                // ── Cambia Password ──────────────────────────────────────
+                NavigationLink {
+                    ChangePasswordView()
+                        .environmentObject(authState)
+                } label: {
+                    HStack {
+                        Image(systemName: "lock.rotation")
+                            .font(.title3)
+                        Text("Cambia password")
+                            .font(.title2.weight(.bold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.kartPanel)
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
+                }
+                .padding(.horizontal, 30)
+
+                // ── Logout ───────────────────────────────────────────────
                 Button {
                     authState.logout()
                 } label: {
@@ -36,5 +60,6 @@ struct SettingsView: View {
         }
         .navigationTitle("Impostazioni")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
     }
 }
