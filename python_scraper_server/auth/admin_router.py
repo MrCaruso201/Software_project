@@ -3,6 +3,9 @@ Endpoint amministrativi (riservati al ruolo admin).
 
 GET   /admin/users              → lista tutti gli utenti
 PATCH /admin/users/{id}/role    → modifica il ruolo di un utente
+
+Regola speciale: l'utente con username "admin" è il superutente di sistema
+e il suo ruolo non può essere modificato tramite API, nemmeno da altri admin.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -84,7 +87,11 @@ def update_role(
     db: Session = Depends(get_db),
     _caller = Depends(require_role(Role.ADMIN)),
 ):
-    """Modifica il ruolo di un utente. Solo gli admin possono farlo."""
+    """Modifica il ruolo di un utente. Solo gli admin possono farlo.
+    
+    Eccezione: l'utente con username 'admin' è il superutente di sistema
+    e il suo ruolo non può essere modificato tramite questa API.
+    """
     valid_roles = [r.value for r in Role]
     if body.role not in valid_roles:
         raise HTTPException(400, f"Ruolo non valido: '{body.role}'. Valori accettati: {valid_roles}")
@@ -92,6 +99,13 @@ def update_role(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(404, "Utente non trovato")
+
+    # Superutente protetto: il ruolo di 'admin' non è modificabile via API
+    if user.username == "admin":
+        raise HTTPException(
+            403,
+            "Il ruolo del superutente 'admin' non può essere modificato."
+        )
 
     old_role   = user.role
     user.role  = body.role
