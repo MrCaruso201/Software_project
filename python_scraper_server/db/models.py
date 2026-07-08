@@ -11,7 +11,7 @@ Tabelle:
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, ForeignKey, Integer, String, Float
+    Boolean, Column, DateTime, ForeignKey, Integer, String, Float, UniqueConstraint
 )
 from sqlalchemy.orm import declarative_base
 
@@ -67,3 +67,17 @@ class Kartodromo(Base):
     sito_web   = Column(String, nullable=False, default="") # URL sito ufficiale del kartodromo
     attivo     = Column(Boolean, default=True, nullable=False) # se False viene nascosto nel client
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class EventRegistration(Base):
+    __tablename__ = "event_registrations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String, default="pending_payment", nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'event_id', name='uq_user_event'),
+    )

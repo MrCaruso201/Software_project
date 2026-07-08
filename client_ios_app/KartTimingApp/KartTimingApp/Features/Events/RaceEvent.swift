@@ -52,3 +52,39 @@ struct RaceEvent: Identifiable, Codable {
         return String(eventDate.prefix(10))
     }
 }
+
+struct EventRegistrationResponse: Codable {
+    let id: Int
+    let userId: Int
+    let eventId: Int
+    let status: String
+    let createdAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case eventId = "event_id"
+        case status
+        case createdAt = "created_at"
+    }
+}
+
+struct EventRegistrationWithUserResponse: Codable, Identifiable {
+    let id: Int
+    let userId: Int
+    let eventId: Int
+    let status: String
+    let createdAt: String
+    let username: String
+    let email: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case eventId = "event_id"
+        case status
+        case createdAt = "created_at"
+        case username
+        case email
+    }
+}

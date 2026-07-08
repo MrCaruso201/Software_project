@@ -12,10 +12,14 @@ struct EventiView: View {
     enum ActiveSheet: Identifiable {
         case new
         case edit(RaceEvent)
+        case register(RaceEvent)
+        case manageRegistrations(RaceEvent)
         var id: String {
             switch self {
             case .new: return "new"
             case .edit(let e): return "edit-\(e.id)"
+            case .register(let e): return "register-\(e.id)"
+            case .manageRegistrations(let e): return "manage-\(e.id)"
             }
         }
     }
@@ -124,11 +128,20 @@ struct EventiView: View {
                 EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: nil)
             case .edit(let event):
                 EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: event)
+            case .register(let event):
+                EventRegistrationSheetView(server: server, viewModel: viewModel, event: event)
+                    .environmentObject(authState)
+            case .manageRegistrations(let event):
+                AdminEventRegistrationsView(server: server, viewModel: viewModel, event: event)
+                    .environmentObject(authState)
             }
         }
         .onAppear {
             if viewModel.events.isEmpty {
                 viewModel.fetchEvents(serverURL: server.httpURL)
+            }
+            if let token = authState.currentToken {
+                viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
             }
         }
     }
@@ -235,19 +248,48 @@ struct EventiView: View {
                                     .foregroundColor(.black)
                                     .cornerRadius(8)
                             }
-                        } else {
-                            // Utente normale: pulsante Iscriviti
+                            
+                            // Admin: pulsante Gestisci Iscrizioni
                             Button {
-                                // Azione Iscriviti
+                                activeSheet = .manageRegistrations(event)
                             } label: {
-                                Text("Iscriviti")
+                                Text("Iscrizioni")
                                     .font(.system(size: 12, weight: .bold))
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
-                                    .background(Color.kartAccent)
-                                    .foregroundColor(.black)
+                                    .background(Color.white.opacity(0.1))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                    )
+                            }
+                        } else {
+                            // Utente normale: pulsante Iscriviti/Annulla/Confermata
+                            let status = viewModel.userRegistrations[event.id]
+                            let isPending = status == "pending_payment"
+                            let isConfirmed = status == "confirmed"
+                            let isRegistered = status != nil
+                            
+                            Button {
+                                if isPending {
+                                    if let token = authState.currentToken {
+                                        viewModel.unregisterFromEvent(serverURL: server.httpURL, eventId: event.id, token: token) { _, _ in }
+                                    }
+                                } else if !isRegistered {
+                                    activeSheet = .register(event)
+                                }
+                            } label: {
+                                Text(isConfirmed ? "Confermata" : (isPending ? "In Attesa / Annulla" : "Iscriviti"))
+                                    .font(.system(size: 12, weight: .bold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(isConfirmed ? Color.green : (isPending ? Color.orange : Color.kartAccent))
+                                    .foregroundColor(isConfirmed ? .white : (isPending ? .white : .black))
                                     .cornerRadius(8)
                             }
+                            .disabled(isConfirmed)
                         }
                     }
                 }
