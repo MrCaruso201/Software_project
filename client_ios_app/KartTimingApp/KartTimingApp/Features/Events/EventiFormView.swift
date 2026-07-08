@@ -24,6 +24,8 @@ struct EventiFormView: View {
     @State private var weightLimit: String = ""
     
     @State private var isSaving = false
+    @State private var isDeleting = false
+    @State private var showDeleteConfirm = false
     
     // Intervalli da 15 minuti: stride genera gli orari selezionabili nel DatePicker
     private static let minuteInterval = 15
@@ -79,7 +81,6 @@ struct EventiFormView: View {
                             .foregroundColor(.secondary)
                             .frame(width: 130, alignment: .leading)
                         TextField("Es. 150.00", text: $registrationCost)
-                            .keyboardType(.decimalPad)
                             .foregroundColor(.primary)
                     }
                     HStack {
@@ -87,7 +88,6 @@ struct EventiFormView: View {
                             .foregroundColor(.secondary)
                             .frame(width: 130, alignment: .leading)
                         TextField("Es. 60", text: $maxParticipants)
-                            .keyboardType(.numberPad)
                             .foregroundColor(.primary)
                     }
                     HStack {
@@ -95,7 +95,6 @@ struct EventiFormView: View {
                             .foregroundColor(.secondary)
                             .frame(width: 130, alignment: .leading)
                         TextField("Es. 3", text: $maxGroups)
-                            .keyboardType(.numberPad)
                             .foregroundColor(.primary)
                     }
                     HStack {
@@ -103,7 +102,6 @@ struct EventiFormView: View {
                             .foregroundColor(.secondary)
                             .frame(width: 130, alignment: .leading)
                         TextField("Es. 10", text: $minPeoplePerGroup)
-                            .keyboardType(.numberPad)
                             .foregroundColor(.primary)
                     }
                     HStack {
@@ -111,7 +109,6 @@ struct EventiFormView: View {
                             .foregroundColor(.secondary)
                             .frame(width: 130, alignment: .leading)
                         TextField("Es. 20", text: $maxPeoplePerGroup)
-                            .keyboardType(.numberPad)
                             .foregroundColor(.primary)
                     }
                     HStack {
@@ -119,7 +116,6 @@ struct EventiFormView: View {
                             .foregroundColor(.secondary)
                             .frame(width: 130, alignment: .leading)
                         TextField("Es. 85.0", text: $weightLimit)
-                            .keyboardType(.decimalPad)
                             .foregroundColor(.primary)
                     }
                 }
@@ -133,6 +129,22 @@ struct EventiFormView: View {
                     }
                     .foregroundColor(.red)
                 }
+                // Pulsante Elimina — visibile solo in modalità modifica
+                if editingEvent != nil {
+                    ToolbarItem(placement: .bottomBar) {
+                        if isDeleting {
+                            ProgressView()
+                        } else {
+                            Button(role: .destructive) {
+                                showDeleteConfirm = true
+                            } label: {
+                                Text("Elimina")
+                                    .foregroundColor(.red)
+                                    .font(.system(size: 15, weight: .semibold))
+                            }
+                        }
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
                         ProgressView()
@@ -144,6 +156,14 @@ struct EventiFormView: View {
                         .foregroundColor(isFormValid ? .kartAccent : .gray)
                     }
                 }
+            }
+            .alert("Elimina Evento", isPresented: $showDeleteConfirm) {
+                Button("Elimina", role: .destructive) {
+                    deleteEvent()
+                }
+                Button("Annulla", role: .cancel) { }
+            } message: {
+                Text("Sei sicuro di voler eliminare questo evento? L'azione non può essere annullata.")
             }
             .onAppear {
                 kartodromoVM.fetchAll(serverURL: server.httpURL, token: authState.currentToken)
@@ -226,6 +246,19 @@ struct EventiFormView: View {
                 isSaving = false
                 if success { dismiss() }
             }
+        }
+    }
+    
+    private func deleteEvent() {
+        guard let ev = editingEvent else { return }
+        isDeleting = true
+        viewModel.deleteEvent(
+            serverURL: server.httpURL,
+            eventId: ev.id,
+            token: authState.currentToken
+        ) { success in
+            isDeleting = false
+            if success { dismiss() }
         }
     }
 }

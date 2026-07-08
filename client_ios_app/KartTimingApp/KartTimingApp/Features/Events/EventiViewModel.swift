@@ -108,4 +108,29 @@ class EventiViewModel: ObservableObject {
             }
         }.resume()
     }
+    
+    func deleteEvent(serverURL: URL?, eventId: Int, token: String?, completion: @escaping (Bool) -> Void) {
+        guard let serverURL = serverURL else {
+            completion(false)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)")
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        if let token = token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let httpRes = response as? HTTPURLResponse, (httpRes.statusCode == 200 || httpRes.statusCode == 204) {
+                    self.events.removeAll { $0.id == eventId }
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
 }
