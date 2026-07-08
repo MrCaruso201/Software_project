@@ -13,6 +13,10 @@ struct KartTimingApp: App {
     @StateObject private var appEnv       = AppEnvironment.shared
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        KeyboardDismissManager.shared.setupGlobalTapToDismissKeyboard()
+    }
+
     var body: some Scene {
         WindowGroup {
             if authState.isLoggedIn {

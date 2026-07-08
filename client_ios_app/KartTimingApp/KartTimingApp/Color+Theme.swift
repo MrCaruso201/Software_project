@@ -8,3 +8,9 @@ extension Color {
     static let kartRed     = Color(red: 0.93, green: 0.27, blue: 0.27)
     static let kartDim     = Color.white.opacity(0.35)
 }
+
+extension View {
+    func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+}

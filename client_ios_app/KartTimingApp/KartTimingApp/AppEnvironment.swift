@@ -55,3 +55,48 @@ class AppEnvironment: ObservableObject {
         devModeEnabled ? .localServer(token: token) : .remoteServer(token: token)
     }
 }
+
+#if canImport(UIKit)
+import UIKit
+
+class KeyboardDismissManager: NSObject, UIGestureRecognizerDelegate {
+    static let shared = KeyboardDismissManager()
+    
+    func setupGlobalTapToDismissKeyboard() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+              let window = windowScene.windows.first else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.setupGlobalTapToDismissKeyboard()
+            }
+            return
+        }
+        
+        let tapGesture = UITapGestureRecognizer(target: window, action: #selector(UIView.endEditing))
+        tapGesture.requiresExclusiveTouchType = false
+        tapGesture.cancelsTouchesInView = false
+        tapGesture.delegate = self
+        window.addGestureRecognizer(tapGesture)
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if let view = touch.view {
+            let className = String(describing: type(of: view))
+            if className.contains("TextField") || 
+               className.contains("TextView") || 
+               className.contains("Button") || 
+               className.contains("Picker") || 
+               className.contains("Slider") ||
+               className.contains("Switch") ||
+               className.contains("Cell") ||
+               view is UIControl {
+                return false
+            }
+        }
+        return true
+    }
+}
+#endif
