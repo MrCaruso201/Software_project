@@ -134,6 +134,57 @@ struct AuthService {
             throw AuthError.requestFailed(errorMsg)
         }
     }
+    
+    // MARK: - Update Profile
+    static func updateProfile(firstName: String, lastName: String, token: String) async throws {
+        guard let url = URL(string: "\(baseURL)/auth/me") else { throw AuthError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let body: [String: String?] = [
+            "first_name": firstName.isEmpty ? nil : firstName,
+            "last_name": lastName.isEmpty ? nil : lastName
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
+
+        if httpResponse.statusCode != 200 {
+            let errorMsg = parseErrorMessage(data: data)
+            throw AuthError.requestFailed(errorMsg)
+        }
+    }
+    
+    // MARK: - Upload Avatar
+    static func uploadAvatar(imageData: Data, token: String) async throws {
+        guard let url = URL(string: "\(baseURL)/auth/me/avatar") else { throw AuthError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"avatar.jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
+        
+        if httpResponse.statusCode != 200 {
+            let errorMsg = parseErrorMessage(data: data)
+            throw AuthError.requestFailed(errorMsg)
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

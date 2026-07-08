@@ -29,6 +29,9 @@ class RefreshRequest(BaseModel):
 class UserResponse(BaseModel):
     id: int
     username: str
+    first_name: str | None = None
+    last_name: str | None = None
+    profile_picture_url: str | None = None
     email: str
     role: str
     created_at: str
@@ -37,3 +40,7 @@ class UserResponse(BaseModel):
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
+
+class UserUpdateRequest(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None

@@ -16,7 +16,7 @@ struct HomeView: View {
             TabView(selection: $selectedTab) {
 
                 NavigationStack {
-                    homePlaceholder
+                    UserHomeView(server: appEnv.server(token: authState.currentToken ?? ""))
                 }
                 .tabItem { Label("Home", systemImage: "house.fill") }
                 .tag(HomeTab.home)
@@ -56,17 +56,7 @@ struct HomeView: View {
         }
     }
 
-    private var homePlaceholder: some View {
-        VStack {
-            Text("Area in costruzione")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.kartDim)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.kartBG)
-        .navigationTitle("Home")
-        .navigationBarTitleDisplayMode(.inline)
-    }
+
 }
 
 enum HomeTab {

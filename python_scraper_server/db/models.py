@@ -23,6 +23,9 @@ class User(Base):
 
     id         = Column(Integer, primary_key=True, index=True)
     username   = Column(String, unique=True, nullable=False, index=True)
+    first_name = Column(String, nullable=True)
+    last_name  = Column(String, nullable=True)
+    profile_picture_url = Column(String, nullable=True)
     email      = Column(String, unique=True, nullable=False, index=True)
     hashed_pw  = Column(String, nullable=False)   # bcrypt hash, mai plaintext
     role       = Column(String, default="user", nullable=False)

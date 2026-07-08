@@ -11,6 +11,30 @@ struct SettingsView: View {
             VStack(spacing: 14) {
                 Spacer()
 
+                // ── Informazioni Personali ───────────────────────────────
+                NavigationLink {
+                    EditProfileView()
+                        .environmentObject(authState)
+                        .environmentObject(appEnv)
+                } label: {
+                    HStack {
+                        Image(systemName: "person.crop.circle.badge.checkmark")
+                            .font(.title3)
+                        Text("Informazioni Personali")
+                            .font(.title2.weight(.bold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.kartPanel)
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
+                }
+                .padding(.horizontal, 30)
+
                 // ── Cambia Password ──────────────────────────────────────
                 NavigationLink {
                     ChangePasswordView()

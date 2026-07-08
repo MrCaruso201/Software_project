@@ -9,9 +9,10 @@ GET  /auth/me               → info utente corrente (richiede access token vali
 POST /auth/change-password  → cambia la password dell'utente corrente
 """
 
+import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 
 from auth.dependencies import get_current_user
@@ -29,6 +30,7 @@ from auth.schemas import (
     RegisterRequest,
     TokenResponse,
     UserResponse,
+    UserUpdateRequest,
 )
 from db.database import get_db
 from db.models import RefreshToken, User
@@ -125,6 +127,81 @@ def me(user_payload: dict = Depends(get_current_user), db: Session = Depends(get
     return UserResponse(
         id         = user.id,
         username   = user.username,
+        first_name = user.first_name,
+        last_name  = user.last_name,
+        profile_picture_url = user.profile_picture_url,
+        email      = user.email,
+        role       = user.role,
+        created_at = user.created_at.isoformat(),
+    )
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    req: UserUpdateRequest,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Aggiorna le informazioni (nome/cognome) dell'utente corrente."""
+    user = db.query(User).filter(User.id == int(user_payload["sub"])).first()
+    if not user:
+        raise HTTPException(404, "Utente non trovato")
+
+    if req.first_name is not None:
+        user.first_name = req.first_name
+    if req.last_name is not None:
+        user.last_name = req.last_name
+        
+    db.commit()
+    db.refresh(user)
+    
+    return UserResponse(
+        id         = user.id,
+        username   = user.username,
+        first_name = user.first_name,
+        last_name  = user.last_name,
+        profile_picture_url = user.profile_picture_url,
+        email      = user.email,
+        role       = user.role,
+        created_at = user.created_at.isoformat(),
+    )
+
+@router.post("/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Carica e aggiorna l'immagine del profilo dell'utente corrente."""
+    user_id = int(user_payload["sub"])
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "Utente non trovato")
+        
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(400, "Il file deve essere un'immagine")
+
+    # Salva il file
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    filename = f"avatar_{user_id}.{ext}"
+    
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    filepath = os.path.join(BASE_DIR, "data", "profile_pictures", filename)
+    
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+        
+    # Aggiorna il db
+    user.profile_picture_url = f"/static/profile_pictures/{filename}"
+    db.commit()
+    db.refresh(user)
+    
+    return UserResponse(
+        id         = user.id,
+        username   = user.username,
+        first_name = user.first_name,
+        last_name  = user.last_name,
+        profile_picture_url = user.profile_picture_url,
         email      = user.email,
         role       = user.role,
         created_at = user.created_at.isoformat(),

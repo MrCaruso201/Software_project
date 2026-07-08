@@ -39,6 +39,8 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 from auth.admin_router import router as admin_router
 from auth.router import router as auth_router
@@ -87,6 +89,12 @@ app.include_router(admin_router)
 app.include_router(ws_router)
 app.include_router(events_router)
 app.include_router(kartodromi_router)
+
+# Serve file statici (come le immagini di profilo)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+os.makedirs(os.path.join(DATA_DIR, "profile_pictures"), exist_ok=True)
+app.mount("/static", StaticFiles(directory=DATA_DIR), name="static")
 
 
 # ---------------------------------------------------------------------------
