@@ -13,7 +13,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from auth.roles import Role, has_permission
 from auth.token import verify_websocket_token
-from config import DEFAULT_URL, MAX_CONCURRENT_SESSIONS, is_url_allowed
+from config import MAX_CONCURRENT_SESSIONS, is_url_allowed
 from scraper.session import sessions
 from ws.manager import client_url, subscribe_client, unsubscribe_client
 
@@ -32,19 +32,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
     user_role = user_payload.get("role", Role.VIEWER)
 
-    # Ogni client parte iscritto alla sorgente di default
-    session = subscribe_client(websocket, DEFAULT_URL, loop)
     print(
-        f"📱 Client connesso (ruolo={user_role}) su '{DEFAULT_URL}'. "
-        f"Totale client: {len(client_url)}"
+        f"📱 Client connesso (ruolo={user_role}). "
+        f"Nessun tracciato selezionato inizialmente. Totale client: {len(client_url) + 1}"
     )
-
-    # Invia subito gli ultimi dati disponibili (se presenti)
-    if session.last_payload:
-        try:
-            await websocket.send_text(json.dumps(session.last_payload, ensure_ascii=False))
-        except Exception:
-            pass
 
     try:
         while True:
@@ -101,12 +92,12 @@ async def websocket_endpoint(websocket: WebSocket):
             # Comando: get_status
             # ------------------------------------------------------------------
             elif command == "get_status":
-                current         = client_url.get(websocket, DEFAULT_URL)
-                current_session = sessions.get(current)
+                current         = client_url.get(websocket)
+                current_session = sessions.get(current) if current else None
                 await websocket.send_text(json.dumps({
                     "type":     "status",
                     "scraping": bool(current_session and current_session.running),
-                    "url":      current,
+                    "url":      current or "",
                     "role":     user_role,
                 }))
 

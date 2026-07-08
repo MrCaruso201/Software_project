@@ -15,13 +15,6 @@ SERVICE_NAME = "Kart Live Timing._karttiming._tcp.local."
 SERVICE_PORT = 8000
 
 # ---------------------------------------------------------------------------
-# Autenticazione
-# ---------------------------------------------------------------------------
-
-# Token statico per autenticare i client. In futuro sarà sostituito da JWT.
-API_TOKEN = "miotokentest12345"
-
-# ---------------------------------------------------------------------------
 # Scraping
 # ---------------------------------------------------------------------------
 
@@ -38,7 +31,7 @@ MAX_CONCURRENT_SESSIONS = 5
 # URL
 # ---------------------------------------------------------------------------
 
-DEFAULT_URL = "https://live.racefacer.com/ottobianomotorsport"
+#DEFAULT_URL = "https://live.racefacer.com/ottobianomotorsport"
 SIMULATOR_URL = "https://live.racefacer.com/simulator"
 
 # Domini che i client possono richiedere via "set_url". Chiunque abbia il
