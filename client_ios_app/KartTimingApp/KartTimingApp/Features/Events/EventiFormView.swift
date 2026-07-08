@@ -22,6 +22,7 @@ struct EventiFormView: View {
     @State private var minPeoplePerGroup: String = ""
     @State private var maxPeoplePerGroup: String = ""
     @State private var weightLimit: String = ""
+    @State private var description: String = ""
     
     @State private var isSaving = false
     @State private var isDeleting = false
@@ -119,6 +120,25 @@ struct EventiFormView: View {
                             .foregroundColor(.primary)
                     }
                 }
+
+                // ── Descrizione ───────────────────────────────────────────────
+                Section(header: Text("Descrizione").foregroundColor(.primary)) {
+                    TextEditor(text: $description)
+                        .frame(minHeight: 120)
+                        .foregroundColor(.primary)
+                        .overlay(
+                            Group {
+                                if description.isEmpty {
+                                    Text("Scrivi una descrizione libera dell'evento...")
+                                        .foregroundColor(.secondary)
+                                        .padding(.top, 8)
+                                        .padding(.leading, 5)
+                                        .allowsHitTesting(false)
+                                }
+                            },
+                            alignment: .topLeading
+                        )
+                }
             }
             .navigationTitle(editingEvent == nil ? "Nuovo Evento" : "Modifica Evento")
             .navigationBarTitleDisplayMode(.inline)
@@ -202,6 +222,7 @@ struct EventiFormView: View {
                     if let minP = ev.minPeoplePerGroup { minPeoplePerGroup = String(minP) }
                     if let maxP = ev.maxPeoplePerGroup { maxPeoplePerGroup = String(maxP) }
                     if let w = ev.weightLimit { weightLimit = String(w) }
+                    if let desc = ev.description { description = desc }
                 }
             }
         }
@@ -226,6 +247,8 @@ struct EventiFormView: View {
         if let minP = Int(minPeoplePerGroup) { data["min_people_per_group"] = minP }
         if let maxP = Int(maxPeoplePerGroup) { data["max_people_per_group"] = maxP }
         if let w = Double(weightLimit) { data["weight_limit"] = w }
+        let trimmedDesc = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedDesc.isEmpty { data["description"] = trimmedDesc }
         
         if let ev = editingEvent {
             viewModel.updateEvent(

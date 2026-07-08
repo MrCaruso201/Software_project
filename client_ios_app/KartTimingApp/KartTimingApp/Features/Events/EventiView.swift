@@ -12,10 +12,12 @@ struct EventiView: View {
     enum ActiveSheet: Identifiable {
         case new
         case edit(RaceEvent)
+        case detail(RaceEvent)
         var id: String {
             switch self {
             case .new: return "new"
             case .edit(let e): return "edit-\(e.id)"
+            case .detail(let e): return "detail-\(e.id)"
             }
         }
     }
@@ -124,6 +126,8 @@ struct EventiView: View {
                 EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: nil)
             case .edit(let event):
                 EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: event)
+            case .detail(let event):
+                EventDetailView(event: event)
             }
         }
         .onAppear {
@@ -207,7 +211,7 @@ struct EventiView: View {
                     // Pulsanti
                     HStack(spacing: 12) {
                         Button {
-                            // Azione Maggiori Info
+                            activeSheet = .detail(event)
                         } label: {
                             Text("Maggiori info")
                                 .font(.system(size: 12, weight: .bold))

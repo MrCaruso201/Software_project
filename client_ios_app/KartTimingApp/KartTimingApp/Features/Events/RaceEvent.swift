@@ -12,6 +12,7 @@ struct RaceEvent: Identifiable, Codable {
     let maxPeoplePerGroup: Int?
     let registrationCost: Double?
     let weightLimit: Double?
+    let description: String?
     let createdAt: String
     
     enum CodingKeys: String, CodingKey {
@@ -26,6 +27,7 @@ struct RaceEvent: Identifiable, Codable {
         case maxPeoplePerGroup = "max_people_per_group"
         case registrationCost = "registration_cost"
         case weightLimit = "weight_limit"
+        case description
         case createdAt = "created_at"
     }
 

@@ -59,6 +59,7 @@ def _apply_migrations() -> None:
     """Aggiunge colonne al DB esistente senza sovrascrivere i dati (migration manuale)."""
     migrations = [
         "ALTER TABLE kartodromi ADD COLUMN sito_web TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE events ADD COLUMN description TEXT",
     ]
     with engine.connect() as conn:
         for stmt in migrations:

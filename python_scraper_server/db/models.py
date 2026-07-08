@@ -11,7 +11,7 @@ Tabelle:
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, ForeignKey, Integer, String, Float
+    Boolean, Column, DateTime, ForeignKey, Integer, String, Float, Text
 )
 from sqlalchemy.orm import declarative_base
 
@@ -54,6 +54,7 @@ class Event(Base):
     max_people_per_group = Column(Integer, nullable=True) # massimo numero di persone per gruppo
     registration_cost = Column(Float, nullable=True) # costo di iscrizione a persona
     weight_limit = Column(Float, nullable=True) # peso limite (opzionale)
+    description = Column(Text, nullable=True) # testo libero descrittivo dell'evento
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 

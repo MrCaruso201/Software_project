@@ -13,6 +13,7 @@ class EventBase(BaseModel):
     max_people_per_group: Optional[int] = None
     registration_cost: Optional[float] = None
     weight_limit: Optional[float] = None
+    description: Optional[str] = None
 
 class EventCreate(EventBase):
     pass
@@ -28,6 +29,7 @@ class EventUpdate(BaseModel):
     max_people_per_group: Optional[int] = None
     registration_cost: Optional[float] = None
     weight_limit: Optional[float] = None
+    description: Optional[str] = None
 
 class EventResponse(EventBase):
     id: int

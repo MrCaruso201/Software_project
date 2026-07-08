@@ -7,10 +7,20 @@ struct AdminKartodromoView: View {
 
     @State private var searchText = ""
     @State private var expandedId: Int? = nil
-    @State private var showForm = false
-    @State private var kartodromoToEdit: Kartodromo? = nil
     @State private var kartodromoToDelete: Kartodromo? = nil
     @State private var showDeleteAlert = false
+
+    enum ActiveSheet: Identifiable {
+        case new
+        case edit(Kartodromo)
+        var id: String {
+            switch self {
+            case .new: return "new"
+            case .edit(let k): return "edit-\(k.id)"
+            }
+        }
+    }
+    @State private var activeSheet: ActiveSheet? = nil
 
     var filtered: [Kartodromo] {
         let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
@@ -99,8 +109,7 @@ struct AdminKartodromoView: View {
 
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    kartodromoToEdit = nil
-                    showForm = true
+                    activeSheet = .new
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 18, weight: .bold))
@@ -108,13 +117,23 @@ struct AdminKartodromoView: View {
                 }
             }
         }
-        .sheet(isPresented: $showForm) {
-            KartodromoFormView(
-                server: server,
-                authState: authState,
-                viewModel: viewModel,
-                editingKartodromo: kartodromoToEdit
-            )
+        .sheet(item: $activeSheet) { sheetType in
+            switch sheetType {
+            case .new:
+                KartodromoFormView(
+                    server: server,
+                    authState: authState,
+                    viewModel: viewModel,
+                    editingKartodromo: nil
+                )
+            case .edit(let k):
+                KartodromoFormView(
+                    server: server,
+                    authState: authState,
+                    viewModel: viewModel,
+                    editingKartodromo: k
+                )
+            }
         }
         .alert("Elimina circuito", isPresented: $showDeleteAlert, presenting: kartodromoToDelete) { k in
             Button("Elimina", role: .destructive) { deleteKartodromo(k) }
@@ -205,8 +224,7 @@ struct AdminKartodromoView: View {
                     // Pulsanti azione
                     HStack(spacing: 12) {
                         Button {
-                            kartodromoToEdit = k
-                            showForm = true
+                            activeSheet = .edit(k)
                         } label: {
                             Text("Modifica")
                                 .font(.system(size: 12, weight: .bold))
