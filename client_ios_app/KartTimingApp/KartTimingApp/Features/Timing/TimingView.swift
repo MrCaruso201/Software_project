@@ -12,6 +12,7 @@ struct TimingView: View {
     @State private var kartodromi: [Kartodromo] = []
     @State private var isLoadingTracks = false
     @State private var trackLoadError: String? = nil
+    @State private var navigateToPilot = false
 
     var body: some View {
         ZStack {
@@ -86,6 +87,23 @@ struct TimingView: View {
                     trackPickerSheet
                 }
             }
+
+            // Pulsante area pilota — visibile solo agli utenti con ruolo "user"
+            if authState.currentUser?.role == .user, selectedKartodromo != nil {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        navigateToPilot = true
+                    } label: {
+                        Image(systemName: "car.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+        }
+        .navigationDestination(isPresented: $navigateToPilot) {
+            PilotView()
+                .environmentObject(manager)
         }
         .alert("Operazione negata", isPresented: $manager.showError) {
             Button("OK", role: .cancel) { }
@@ -93,6 +111,7 @@ struct TimingView: View {
             Text(manager.errorMessage ?? "Si è verificato un errore sul server.")
         }
     }
+
 
     // ── Track picker sheet ────────────────────────────────────────────────
 
