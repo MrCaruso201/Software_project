@@ -15,6 +15,7 @@ struct EventiView: View {
         case detail(RaceEvent)
         case register(RaceEvent)
         case manageRegistrations(RaceEvent)
+        case payment(RaceEvent)
         var id: String {
             switch self {
             case .new: return "new"
@@ -22,6 +23,7 @@ struct EventiView: View {
             case .detail(let e): return "detail-\(e.id)"
             case .register(let e): return "register-\(e.id)"
             case .manageRegistrations(let e): return "manage-\(e.id)"
+            case .payment(let e): return "payment-\(e.id)"
             }
         }
     }
@@ -138,6 +140,9 @@ struct EventiView: View {
             case .manageRegistrations(let event):
                 AdminEventRegistrationsView(server: server, viewModel: viewModel, event: event)
                     .environmentObject(authState)
+            case .payment(let event):
+                PaymentInfoSheetView(event: event)
+                    .environmentObject(authState)
             }
         }
         .onAppear {
@@ -222,8 +227,9 @@ struct EventiView: View {
                     .padding(.bottom, 4)
                     
                     // Pulsanti
-                    HStack(spacing: 12) {
-                        Button {
+                    VStack(spacing: 12) {
+                        HStack(spacing: 12) {
+                            Button {
                             activeSheet = .detail(event)
                         } label: {
                             Text("Maggiori info")
@@ -294,6 +300,24 @@ struct EventiView: View {
                                     .cornerRadius(8)
                             }
                             .disabled(isConfirmed)
+                        }
+                        }
+                        
+                        // Bottone di Pagamento visibile solo agli user normali in attesa
+                        if authState.currentUser?.role.canManageUsers != true {
+                            if viewModel.userRegistrations[event.id] == "pending_payment" {
+                                Button {
+                                    activeSheet = .payment(event)
+                                } label: {
+                                    Text("Procedi al pagamento")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 20)
+                                        .background(Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(8)
+                                }
+                            }
                         }
                     }
                 }
