@@ -6,9 +6,24 @@
 //
 
 import SwiftUI
+import UIKit
+
+// MARK: - AppDelegate (gestione orientamento)
+class AppDelegate: NSObject, UIApplicationDelegate {
+    /// Imposta il valore qui per bloccare l'orientamento globalmente.
+    static var orientationLock: UIInterfaceOrientationMask = .portrait
+
+    func application(
+        _ application: UIApplication,
+        supportedInterfaceOrientationsFor window: UIWindow?
+    ) -> UIInterfaceOrientationMask {
+        return AppDelegate.orientationLock
+    }
+}
 
 @main
 struct KartTimingApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authState    = AuthState.shared
     @StateObject private var appEnv       = AppEnvironment.shared
     @Environment(\.scenePhase) private var scenePhase
