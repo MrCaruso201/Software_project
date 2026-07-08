@@ -3,6 +3,7 @@ import Combine
 
 class EventiViewModel: ObservableObject {
     @Published var events: [RaceEvent] = []
+    @Published var userRegistrations: [Int: String] = [:]
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
     
@@ -126,6 +127,178 @@ class EventiViewModel: ObservableObject {
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, (httpRes.statusCode == 200 || httpRes.statusCode == 204) {
                     self.events.removeAll { $0.id == eventId }
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Registration Methods
+    
+    func fetchUserRegistrations(serverURL: URL?, token: String?) {
+        guard let serverURL = serverURL, let token = token else { return }
+        
+        let url = serverURL.appendingPathComponent("events/registrations/me")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                guard let data = data, error == nil else { return }
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
+                    do {
+                        let regs = try JSONDecoder().decode([EventRegistrationResponse].self, from: data)
+                        var newDict = [Int: String]()
+                        for r in regs {
+                            newDict[r.eventId] = r.status
+                        }
+                        self.userRegistrations = newDict
+                    } catch {
+                        print("Errore decodifica registrazioni:", error)
+                    }
+                }
+            }
+        }.resume()
+    }
+    
+    func registerToEvent(serverURL: URL?, eventId: Int, token: String?, completion: @escaping (Bool, String?) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false, "Parametri mancanti")
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/register")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(false, error.localizedDescription)
+                    return
+                }
+                
+                if let httpRes = response as? HTTPURLResponse {
+                    if httpRes.statusCode == 201 {
+                        self.userRegistrations[eventId] = "pending_payment"
+                        completion(true, nil)
+                    } else {
+                        // try to parse error
+                        var msg = "Errore durante l'iscrizione"
+                        if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let detail = json["detail"] as? String {
+                            msg = detail
+                        }
+                        completion(false, msg)
+                    }
+                } else {
+                    completion(false, "Risposta non valida dal server")
+                }
+            }
+        }.resume()
+    }
+    
+    func unregisterFromEvent(serverURL: URL?, eventId: Int, token: String?, completion: @escaping (Bool, String?) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false, "Parametri mancanti")
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/register")
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(false, error.localizedDescription)
+                    return
+                }
+                
+                if let httpRes = response as? HTTPURLResponse, (httpRes.statusCode == 200 || httpRes.statusCode == 204) {
+                    self.userRegistrations.removeValue(forKey: eventId)
+                    completion(true, nil)
+                } else {
+                    var msg = "Errore durante l'annullamento"
+                    if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let detail = json["detail"] as? String {
+                        msg = detail
+                    }
+                    completion(false, msg)
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Admin Registration Methods
+    
+    func fetchEventRegistrations(serverURL: URL?, eventId: Int, token: String?, completion: @escaping ([EventRegistrationWithUserResponse]?) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(nil)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/registrations")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                guard let data = data, error == nil else {
+                    completion(nil)
+                    return
+                }
+                
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
+                    let regs = try? JSONDecoder().decode([EventRegistrationWithUserResponse].self, from: data)
+                    completion(regs)
+                } else {
+                    completion(nil)
+                }
+            }
+        }.resume()
+    }
+    
+    func confirmRegistration(serverURL: URL?, eventId: Int, userId: Int, token: String?, completion: @escaping (Bool) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/registrations/\(userId)/confirm")
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
+    
+    func adminDeleteRegistration(serverURL: URL?, eventId: Int, userId: Int, token: String?, completion: @escaping (Bool) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/registrations/\(userId)")
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let httpRes = response as? HTTPURLResponse, (httpRes.statusCode == 200 || httpRes.statusCode == 204) {
                     completion(true)
                 } else {
                     completion(false)
