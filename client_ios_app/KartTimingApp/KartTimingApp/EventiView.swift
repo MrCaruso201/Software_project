@@ -9,9 +9,17 @@ struct EventiView: View {
     @State private var expandedEventId: Int? = nil
     
     // Gestione Form e Modifica
-    @State private var isEditMode = false
-    @State private var showForm = false
-    @State private var eventToEdit: RaceEvent? = nil
+    enum ActiveSheet: Identifiable {
+        case new
+        case edit(RaceEvent)
+        var id: String {
+            switch self {
+            case .new: return "new"
+            case .edit(let e): return "edit-\(e.id)"
+            }
+        }
+    }
+    @State private var activeSheet: ActiveSheet? = nil
     
     var filteredEvents: [RaceEvent] {
         let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
@@ -101,8 +109,7 @@ struct EventiView: View {
             if authState.currentUser?.role.canManageUsers == true {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        eventToEdit = nil
-                        showForm = true
+                        activeSheet = .new
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 18, weight: .bold))
@@ -111,8 +118,13 @@ struct EventiView: View {
                 }
             }
         }
-        .sheet(isPresented: $showForm) {
-            EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: eventToEdit)
+        .sheet(item: $activeSheet) { sheetType in
+            switch sheetType {
+            case .new:
+                EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: nil)
+            case .edit(let event):
+                EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: event)
+            }
         }
         .onAppear {
             if viewModel.events.isEmpty {
@@ -213,8 +225,7 @@ struct EventiView: View {
                         if authState.currentUser?.role.canManageUsers == true {
                             // Admin: pulsante Modifica
                             Button {
-                                eventToEdit = event
-                                showForm = true
+                                activeSheet = .edit(event)
                             } label: {
                                 Text("Modifica")
                                     .font(.system(size: 12, weight: .bold))
@@ -253,16 +264,11 @@ struct EventiView: View {
         .padding(.horizontal, 16)
         .contentShape(Rectangle())
         .onTapGesture {
-            if isEditMode {
-                eventToEdit = event
-                showForm = true
-            } else {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    if isExpanded {
-                        expandedEventId = nil
-                    } else {
-                        expandedEventId = event.id
-                    }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                if isExpanded {
+                    expandedEventId = nil
+                } else {
+                    expandedEventId = event.id
                 }
             }
         }
