@@ -60,6 +60,11 @@ def _apply_migrations() -> None:
     migrations = [
         "ALTER TABLE kartodromi ADD COLUMN sito_web TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE events ADD COLUMN description TEXT",
+        # Colonne squadra per event_registrations
+        "ALTER TABLE event_registrations ADD COLUMN team_name TEXT",
+        "ALTER TABLE event_registrations ADD COLUMN team_id TEXT",
+        "ALTER TABLE event_registrations ADD COLUMN is_team_leader INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE event_registrations ADD COLUMN member_email TEXT",
     ]
     with engine.connect() as conn:
         for stmt in migrations:
@@ -68,6 +73,68 @@ def _apply_migrations() -> None:
                 conn.commit()
             except OperationalError:
                 pass  # colonna già presente, ignora
+
+    # SQLite non supporta ALTER COLUMN: ricreiamo la tabella se user_id è ancora NOT NULL
+    _migrate_event_registrations_nullable_userid()
+
+
+def _migrate_event_registrations_nullable_userid() -> None:
+    """Rende user_id nullable in event_registrations.
+    SQLite non ha ALTER COLUMN: ricreiamo la tabella via sqlite3 raw (no ORM).
+    Rimuoviamo anche il UNIQUE(user_id, event_id) perché non ha senso con NULL."""
+    import sqlite3
+    # Ricava il path del file SQLite dall'URL del motore
+    db_path = str(engine.url).replace("sqlite:///", "")
+    
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=OFF")
+
+        # Controlla se user_id è ancora NOT NULL
+        info = conn.execute("PRAGMA table_info(event_registrations)").fetchall()
+        user_id_col = next((r for r in info if r[1] == "user_id"), None)
+        if user_id_col is None:
+            print("⚠️  Colonna user_id non trovata in event_registrations")
+            return
+        if user_id_col[3] == 0:
+            print("ℹ️  user_id già nullable, nessuna migrazione necessaria.")
+            return
+
+        print(f"🔄 Migrazione: user_id in event_registrations è NOT NULL, ricreazione tabella...")
+
+        conn.execute("DROP TABLE IF EXISTS event_registrations_new")
+        conn.execute("""
+            CREATE TABLE event_registrations_new (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                event_id     INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+                status       TEXT NOT NULL DEFAULT 'pending_payment',
+                team_name    TEXT,
+                team_id      TEXT,
+                is_team_leader INTEGER NOT NULL DEFAULT 0,
+                member_email TEXT,
+                created_at   DATETIME
+            )
+        """)
+        conn.execute("""
+            INSERT INTO event_registrations_new
+                (id, user_id, event_id, status, team_name, team_id,
+                 is_team_leader, member_email, created_at)
+            SELECT id, user_id, event_id, status, team_name, team_id,
+                   is_team_leader, member_email, created_at
+            FROM event_registrations
+        """)
+        conn.execute("DROP TABLE event_registrations")
+        conn.execute("ALTER TABLE event_registrations_new RENAME TO event_registrations")
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.commit()
+        print("✅ Migrazione event_registrations completata: user_id ora nullable.")
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Errore migrazione event_registrations: {e}")
+    finally:
+        conn.close()
 
 
 def _seed_admin() -> None:

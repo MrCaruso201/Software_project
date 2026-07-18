@@ -77,9 +77,14 @@ class EventRegistration(Base):
     __tablename__ = "event_registrations"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # Nullable per email non registrate
     event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
     status = Column(String, default="pending_payment", nullable=False)
+    # Campi squadra
+    team_name = Column(String, nullable=True)        # nome della squadra (solo per gare a squadre)
+    team_id = Column(String, nullable=True)          # UUID condiviso da tutti i membri del team
+    is_team_leader = Column(Boolean, default=False, nullable=False)  # True per chi ha registrato il team
+    member_email = Column(String, nullable=True)     # email del membro (anche non registrato)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (

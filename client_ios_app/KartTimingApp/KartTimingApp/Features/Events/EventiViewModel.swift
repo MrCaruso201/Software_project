@@ -164,7 +164,14 @@ class EventiViewModel: ObservableObject {
         }.resume()
     }
     
-    func registerToEvent(serverURL: URL?, eventId: Int, token: String?, completion: @escaping (Bool, String?) -> Void) {
+    func registerToEvent(
+        serverURL: URL?,
+        eventId: Int,
+        token: String?,
+        teamName: String? = nil,
+        memberEmails: [String]? = nil,
+        completion: @escaping (Bool, String?) -> Void
+    ) {
         guard let serverURL = serverURL, let token = token else {
             completion(false, "Parametri mancanti")
             return
@@ -174,6 +181,16 @@ class EventiViewModel: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        // Se si tratta di una gara a squadre, invia il body JSON
+        if let teamName = teamName {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let body: [String: Any] = [
+                "team_name": teamName,
+                "member_emails": memberEmails ?? []
+            ]
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
+        }
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
@@ -187,7 +204,6 @@ class EventiViewModel: ObservableObject {
                         self.userRegistrations[eventId] = "pending_payment"
                         completion(true, nil)
                     } else {
-                        // try to parse error
                         var msg = "Errore durante l'iscrizione"
                         if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let detail = json["detail"] as? String {
                             msg = detail
@@ -263,6 +279,35 @@ class EventiViewModel: ObservableObject {
         }.resume()
     }
     
+    func fetchTeamRegistrations(serverURL: URL?, eventId: Int, token: String?, completion: @escaping ([TeamRegistrationResponse]?) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(nil)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/registrations/teams")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                guard let data = data, error == nil else {
+                    completion(nil)
+                    return
+                }
+                
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
+                    let decoder = JSONDecoder()
+                    let teams = try? decoder.decode([TeamRegistrationResponse].self, from: data)
+                    completion(teams)
+                } else {
+                    completion(nil)
+                }
+            }
+        }.resume()
+    }
+    
     func confirmRegistration(serverURL: URL?, eventId: Int, userId: Int, token: String?, completion: @escaping (Bool) -> Void) {
         guard let serverURL = serverURL, let token = token else {
             completion(false)
@@ -292,6 +337,52 @@ class EventiViewModel: ObservableObject {
         }
         
         let url = serverURL.appendingPathComponent("events/\(eventId)/registrations/\(userId)")
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let httpRes = response as? HTTPURLResponse, (httpRes.statusCode == 200 || httpRes.statusCode == 204) {
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Team Admin Methods
+    
+    func adminConfirmTeamRegistration(serverURL: URL?, eventId: Int, teamId: String, token: String?, completion: @escaping (Bool) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/registrations/team/\(teamId)/confirm")
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
+    
+    func adminDeleteTeamRegistration(serverURL: URL?, eventId: Int, teamId: String, token: String?, completion: @escaping (Bool) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/registrations/team/\(teamId)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

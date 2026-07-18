@@ -31,6 +31,11 @@ struct RaceEvent: Identifiable, Codable {
         case createdAt = "created_at"
     }
 
+    /// True se la gara è a squadre (max_people_per_group > 1)
+    var isTeamEvent: Bool {
+        return (maxPeoplePerGroup ?? 1) > 1
+    }
+
     var formattedDate: String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -55,11 +60,17 @@ struct RaceEvent: Identifiable, Codable {
     }
 }
 
+// MARK: - Registration Response (singola iscrizione)
+
 struct EventRegistrationResponse: Codable {
     let id: Int
-    let userId: Int
+    let userId: Int?
     let eventId: Int
     let status: String
+    let teamName: String?
+    let teamId: String?
+    let isTeamLeader: Bool
+    let memberEmail: String?
     let createdAt: String
     
     enum CodingKeys: String, CodingKey {
@@ -67,26 +78,84 @@ struct EventRegistrationResponse: Codable {
         case userId = "user_id"
         case eventId = "event_id"
         case status
+        case teamName = "team_name"
+        case teamId = "team_id"
+        case isTeamLeader = "is_team_leader"
+        case memberEmail = "member_email"
         case createdAt = "created_at"
     }
 }
 
+// MARK: - Registration With User Response (per admin - vista flat)
+
 struct EventRegistrationWithUserResponse: Codable, Identifiable {
     let id: Int
-    let userId: Int
+    let userId: Int?
     let eventId: Int
     let status: String
+    let teamName: String?
+    let teamId: String?
+    let isTeamLeader: Bool
+    let memberEmail: String?
     let createdAt: String
-    let username: String
-    let email: String
+    let username: String?
+    let email: String?
+    let profilePictureUrl: String?
     
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
         case eventId = "event_id"
         case status
+        case teamName = "team_name"
+        case teamId = "team_id"
+        case isTeamLeader = "is_team_leader"
+        case memberEmail = "member_email"
         case createdAt = "created_at"
         case username
         case email
+        case profilePictureUrl = "profile_picture_url"
+    }
+}
+
+// MARK: - Team Registration Response (per admin - vista raggruppata per team)
+
+struct TeamMemberResponse: Codable, Identifiable {
+    let registrationId: Int
+    let userId: Int?
+    let username: String?
+    let email: String?
+    let isTeamLeader: Bool
+    let status: String
+    let profilePictureUrl: String?
+    
+    var id: Int { registrationId }
+    
+    enum CodingKeys: String, CodingKey {
+        case registrationId = "registration_id"
+        case userId = "user_id"
+        case username
+        case email
+        case isTeamLeader = "is_team_leader"
+        case status
+        case profilePictureUrl = "profile_picture_url"
+    }
+}
+
+struct TeamRegistrationResponse: Codable, Identifiable {
+    let teamId: String
+    let teamName: String
+    let eventId: Int
+    let members: [TeamMemberResponse]
+    let overallStatus: String
+    
+    var id: String { teamId }
+    
+    enum CodingKeys: String, CodingKey {
+        case teamId = "team_id"
+        case teamName = "team_name"
+        case eventId = "event_id"
+        case members
+        case overallStatus = "overall_status"
     }
 }

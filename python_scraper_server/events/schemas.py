@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 
 class EventBase(BaseModel):
@@ -38,24 +38,61 @@ class EventResponse(EventBase):
     class Config:
         from_attributes = True
 
+# ── Iscrizione individuale ─────────────────────────────────────────────────────
+
 class EventRegistrationResponse(BaseModel):
     id: int
-    user_id: int
+    user_id: Optional[int]
     event_id: int
     status: str
+    team_name: Optional[str] = None
+    team_id: Optional[str] = None
+    is_team_leader: bool = False
+    member_email: Optional[str] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+# ── Iscrizione con dati utente (per admin) ────────────────────────────────────
 
 class EventRegistrationWithUserResponse(BaseModel):
     id: int
-    user_id: int
+    user_id: Optional[int]
     event_id: int
     status: str
+    team_name: Optional[str] = None
+    team_id: Optional[str] = None
+    is_team_leader: bool = False
+    member_email: Optional[str] = None
     created_at: datetime
-    username: str
-    email: str
+    username: Optional[str] = None
+    email: Optional[str] = None
+    profile_picture_url: Optional[str] = None  # URL relativo es. /static/profile_pictures/xxx.jpg
 
     class Config:
         from_attributes = True
+
+# ── Squadra aggregata (per admin) ─────────────────────────────────────────────
+
+class TeamMemberResponse(BaseModel):
+    registration_id: int
+    user_id: Optional[int]
+    username: Optional[str]
+    email: Optional[str]
+    is_team_leader: bool
+    status: str
+    profile_picture_url: Optional[str] = None
+
+class TeamRegistrationResponse(BaseModel):
+    team_id: str
+    team_name: str
+    event_id: int
+    members: List[TeamMemberResponse]
+    overall_status: str  # "confirmed" se almeno 1 confermato, altrimenti "pending_payment"
+
+# ── Request body per iscrizione a squadre ────────────────────────────────────
+
+class TeamRegistrationRequest(BaseModel):
+    team_name: str
+    member_emails: List[str]  # email degli altri partecipanti (escluso il leader)

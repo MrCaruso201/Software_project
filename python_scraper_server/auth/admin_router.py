@@ -39,6 +39,7 @@ def list_users(
             email      = u.email,
             role       = u.role,
             created_at = u.created_at.isoformat(),
+            profile_picture_url = u.profile_picture_url,
         )
         for u in users
     ]
@@ -90,6 +91,7 @@ def search_users(
             email      = u.email,
             role       = u.role,
             created_at = u.created_at.isoformat(),
+            profile_picture_url = u.profile_picture_url,
         )
         for u in users
     ]

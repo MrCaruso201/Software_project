@@ -54,6 +54,7 @@ struct AdminUsersView: View {
                             ForEach($users) { $user in
                                 UserCard(
                                     user: $user,
+                                    server: server,
                                     availableRoles: availableRoles,
                                     currentUserId: authState.currentUser?.id,
                                     isExpanded: expandedUserId == user.id,
@@ -245,11 +246,24 @@ struct AdminUsersView: View {
 
 private struct UserCard: View {
     @Binding var user: AdminUser
+    let server: DiscoveredServer
     let availableRoles: [(label: String, value: String)]
     let currentUserId: Int?
     let isExpanded: Bool
     let onToggle: () -> Void
     let onRoleChange: (String) -> Void
+    
+    private func profileImageURL() -> URL? {
+        guard let picPath = user.profilePictureUrl else { return nil }
+        guard let base = server.httpURL.flatMap({ url -> URL? in
+            var comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            comps?.path = ""
+            comps?.query = nil
+            return comps?.url
+        }) else { return nil }
+        let clean = picPath.hasPrefix("/") ? String(picPath.dropFirst()) : picPath
+        return base.appendingPathComponent(clean)
+    }
 
     /// True quando la card rappresenta l'admin attualmente loggato
     private var isSelf: Bool { user.id == currentUserId }
@@ -275,18 +289,42 @@ private struct UserCard: View {
     private var roleLabel: String {
         availableRoles.first(where: { $0.value == user.role })?.label ?? user.role
     }
+    
+    private var initialsAvatar: some View {
+        ZStack {
+            Circle()
+                .fill(roleColor.opacity(0.2))
+                .frame(width: 42, height: 42)
+            Text(String(user.username.prefix(1)).uppercased())
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(roleColor)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            // ── Header (Sempre visibile) ─────────────────────────
+            // ── Header (Sempre visibile) ───────────────────
             HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(roleColor.opacity(0.2))
-                        .frame(width: 42, height: 42)
-                    Text(String(user.username.prefix(1)).uppercased())
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(roleColor)
+                // Foto profilo o iniziale
+                if let url = profileImageURL() {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable()
+                                .scaledToFill()
+                                .frame(width: 42, height: 42)
+                                .clipShape(Circle())
+                        case .failure:
+                            initialsAvatar
+                        default:
+                            Circle()
+                                .fill(roleColor.opacity(0.2))
+                                .frame(width: 42, height: 42)
+                                .overlay(ProgressView().scaleEffect(0.5))
+                        }
+                    }
+                } else {
+                    initialsAvatar
                 }
 
                 VStack(alignment: .leading, spacing: 4) {

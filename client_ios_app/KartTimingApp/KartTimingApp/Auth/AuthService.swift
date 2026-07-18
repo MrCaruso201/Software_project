@@ -197,6 +197,12 @@ struct AdminUser: Codable, Identifiable {
     let email: String
     var role: String
     let created_at: String
+    let profilePictureUrl: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, username, email, role, created_at
+        case profilePictureUrl = "profile_picture_url"
+    }
 }
 
 // ---------------------------------------------------------------------------
