@@ -6,12 +6,17 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E4904157871A4C71B8041BFF /* EventTeamEditSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CCE40328790C30F15E8FC3E /* EventTeamEditSheetView.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		6CCE40328790C30F15E8FC3E /* EventTeamEditSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EventTeamEditSheetView.swift; path = KartTimingApp/Features/Events/EventTeamEditSheetView.swift; sourceTree = SOURCE_ROOT; };
 		A9B364DA2FEE8404000B6D9E /* KartTimingApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KartTimingApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A9B364E92FEE850F000B6D9E /* Exceptions for "KartTimingApp" folder in "KartTimingApp" target */ = {
+		A9B364E92FEE850F000B6D9E = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -21,14 +26,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A9B364DC2FEE8404000B6D9E /* KartTimingApp */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				A9B364E92FEE850F000B6D9E /* Exceptions for "KartTimingApp" folder in "KartTimingApp" target */,
-			);
-			path = KartTimingApp;
-			sourceTree = "<group>";
-		};
+		A9B364DC2FEE8404000B6D9E /* KartTimingApp */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A9B364E92FEE850F000B6D9E, ); path = KartTimingApp; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,6 +45,7 @@
 			children = (
 				A9B364DC2FEE8404000B6D9E /* KartTimingApp */,
 				A9B364DB2FEE8404000B6D9E /* Products */,
+				6CCE40328790C30F15E8FC3E /* EventTeamEditSheetView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -132,6 +131,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E4904157871A4C71B8041BFF /* EventTeamEditSheetView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

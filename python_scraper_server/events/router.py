@@ -217,8 +217,142 @@ def unregister_from_event(event_id: int, user_payload: dict = Depends(get_curren
     else:
         db.delete(reg)
     
+    
     db.commit()
     return None
+
+
+@router.get("/{event_id}/registrations/team/{team_id}", response_model=TeamRegistrationResponse)
+def get_my_team_registration(
+    event_id: int,
+    team_id: str,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = int(user_payload["sub"])
+    
+    # Verifica che l'utente faccia parte del team
+    my_reg = db.query(EventRegistration).filter(
+        EventRegistration.team_id == team_id,
+        EventRegistration.event_id == event_id,
+        EventRegistration.user_id == user_id
+    ).first()
+    
+    if not my_reg:
+        raise HTTPException(status_code=403, detail="Non fai parte di questo team")
+        
+    members = db.query(EventRegistration).filter(
+        EventRegistration.team_id == team_id,
+        EventRegistration.event_id == event_id
+    ).all()
+    
+    if not members:
+        raise HTTPException(status_code=404, detail="Team non trovato")
+        
+    team_name = members[0].team_name or "Squadra Senza Nome"
+    member_responses = []
+    
+    for m in members:
+        user = db.query(User).filter(User.id == m.user_id).first() if m.user_id else None
+        member_responses.append(TeamMemberResponse(
+            registration_id=m.id,
+            user_id=m.user_id,
+            username=user.username if user else None,
+            email=m.member_email or (user.email if user else None),
+            is_team_leader=m.is_team_leader,
+            status=m.status,
+            profile_picture_url=user.profile_picture_url if user else None,
+        ))
+        
+    leader = next((m for m in members if m.is_team_leader), None)
+    overall_status = leader.status if leader else "pending_payment"
+    
+    return TeamRegistrationResponse(
+        team_id=team_id,
+        team_name=team_name,
+        event_id=event_id,
+        members=member_responses,
+        overall_status=overall_status,
+    )
+
+
+@router.put("/{event_id}/registrations/team/{team_id}", response_model=EventRegistrationResponse)
+def update_team_registration(
+    event_id: int,
+    team_id: str,
+    team_data: TeamRegistrationRequest,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = int(user_payload["sub"])
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    leader_reg = db.query(EventRegistration).filter(
+        EventRegistration.team_id == team_id,
+        EventRegistration.event_id == event_id,
+        EventRegistration.is_team_leader == True
+    ).first()
+    
+    if not leader_reg:
+        raise HTTPException(status_code=404, detail="Team non trovato o non sei il leader")
+        
+    if leader_reg.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Solo il capogruppo può modificare il team")
+        
+    # Rimosso check se confermata: permettiamo modifiche anche da pagata
+    expected_members = event.max_people_per_group - 1
+    if len(team_data.member_emails) > expected_members:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Troppi membri: massimo {event.max_people_per_group} per squadra"
+        )
+        
+    # Elimina vecchi membri non leader
+    db.query(EventRegistration).filter(
+        EventRegistration.team_id == team_id,
+        EventRegistration.is_team_leader == False
+    ).delete()
+    
+    # Aggiorna nome team
+    leader_reg.team_name = team_data.team_name.strip()
+    
+    # Inserisci nuovi membri
+    for email in team_data.member_emails:
+        email = email.strip().lower()
+        if not email:
+            continue
+            
+        member_user = db.query(User).filter(User.email == email).first()
+        member_user_id = member_user.id if member_user else None
+        
+        if member_user_id:
+            already = db.query(EventRegistration).filter(
+                EventRegistration.user_id == member_user_id,
+                EventRegistration.event_id == event_id,
+                EventRegistration.team_id != team_id # Non è già in questo team (teoricamente impossibile qui perché l'abbiamo svuotato)
+            ).first()
+            if already:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"L'utente con email {email} è già iscritto a questo evento in un'altra squadra"
+                )
+                
+        member_reg = EventRegistration(
+            user_id=member_user_id,
+            event_id=event_id,
+            team_name=team_data.team_name.strip(),
+            team_id=team_id,
+            is_team_leader=False,
+            member_email=email,
+            status=leader_reg.status
+        )
+        db.add(member_reg)
+
+    db.commit()
+    db.refresh(leader_reg)
+    return leader_reg
 
 
 # ── Vista admin: iscrizioni flat ──────────────────────────────────────────────

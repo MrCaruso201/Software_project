@@ -3,7 +3,7 @@ import Combine
 
 class EventiViewModel: ObservableObject {
     @Published var events: [RaceEvent] = []
-    @Published var userRegistrations: [Int: String] = [:]
+    @Published var userRegistrations: [Int: EventRegistrationResponse] = [:]
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
     
@@ -151,9 +151,9 @@ class EventiViewModel: ObservableObject {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     do {
                         let regs = try JSONDecoder().decode([EventRegistrationResponse].self, from: data)
-                        var newDict = [Int: String]()
+                        var newDict = [Int: EventRegistrationResponse]()
                         for r in regs {
-                            newDict[r.eventId] = r.status
+                            newDict[r.eventId] = r
                         }
                         self.userRegistrations = newDict
                     } catch {
@@ -201,7 +201,9 @@ class EventiViewModel: ObservableObject {
                 
                 if let httpRes = response as? HTTPURLResponse {
                     if httpRes.statusCode == 201 {
-                        self.userRegistrations[eventId] = "pending_payment"
+                        if let data = data, let reg = try? JSONDecoder().decode(EventRegistrationResponse.self, from: data) {
+                            self.userRegistrations[eventId] = reg
+                        }
                         completion(true, nil)
                     } else {
                         var msg = "Errore durante l'iscrizione"
@@ -244,6 +246,59 @@ class EventiViewModel: ObservableObject {
                         msg = detail
                     }
                     completion(false, msg)
+                }
+            }
+        }.resume()
+    }
+    
+    func updateTeamRegistration(
+        serverURL: URL?,
+        eventId: Int,
+        teamId: String,
+        token: String?,
+        teamName: String,
+        memberEmails: [String],
+        completion: @escaping (Bool, String?) -> Void
+    ) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false, "Parametri mancanti")
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/registrations/team/\(teamId)")
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "team_name": teamName,
+            "member_emails": memberEmails
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(false, error.localizedDescription)
+                    return
+                }
+                
+                if let httpRes = response as? HTTPURLResponse {
+                    if httpRes.statusCode == 200 {
+                        if let data = data, let reg = try? JSONDecoder().decode(EventRegistrationResponse.self, from: data) {
+                            self.userRegistrations[eventId] = reg
+                        }
+                        completion(true, nil)
+                    } else {
+                        var msg = "Errore durante l'aggiornamento"
+                        if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let detail = json["detail"] as? String {
+                            msg = detail
+                        }
+                        completion(false, msg)
+                    }
+                } else {
+                    completion(false, "Risposta non valida dal server")
                 }
             }
         }.resume()

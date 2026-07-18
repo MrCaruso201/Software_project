@@ -118,7 +118,7 @@ struct EventRegistrationSheetView: View {
 
 // MARK: - Header Section
 
-private struct RegistrationHeaderSection: View {
+struct RegistrationHeaderSection: View {
     let event: RaceEvent
     let isTeamEvent: Bool
 
@@ -234,7 +234,7 @@ private struct DetailRowView: View {
 
 // MARK: - Error Banner
 
-private struct RegistrationErrorBanner: View {
+struct RegistrationErrorBanner: View {
     let message: String
 
     var body: some View {
@@ -353,7 +353,7 @@ struct TeamFormSection: View {
                         get: { memberEmails[index] },
                         set: { memberEmails[index] = $0 }
                     ),
-                    canRemove: memberEmails.count > 1,
+                    canRemove: true,
                     onRemove: {
                         withAnimation(.spring(response: 0.3)) {
                             removeMember(at: index)
