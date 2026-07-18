@@ -76,35 +76,35 @@ struct EventDetailView: View {
                             if let deadline = event.registrationDeadline, !deadline.isEmpty {
                                 infoRow(label: "Scadenza Iscrizioni", value: formattedDeadline(deadline), icon: "clock.badge.exclamationmark")
                             }
+                            let priceLabel = event.isTeamEvent ? "Prezzo per squadra" : "Prezzo"
+                            if let cost = event.registrationCost {
+                                infoRow(label: priceLabel, value: "€ \(String(format: "%.2f", cost))", icon: "eurosign")
+                            } else {
+                                infoRow(label: priceLabel, value: "Gratuito", icon: "eurosign", dimmed: true)
+                            }
                         }
 
                         // ── Partecipanti ────────────────────────────────────
                         infoSection(title: "Partecipanti & Gruppi", icon: "person.3") {
+                            let partLabel = event.isTeamEvent ? "Max Squadre" : "Max Partecipanti"
+                            let partIcon = event.isTeamEvent ? "person.3.fill" : "person.fill"
                             if let max = event.maxParticipants {
-                                infoRow(label: "Max Partecipanti", value: "\(max)", icon: "person.fill")
+                                infoRow(label: partLabel, value: "\(max)", icon: partIcon)
                             } else {
-                                infoRow(label: "Max Partecipanti", value: "Non definito", icon: "person.fill", dimmed: true)
+                                infoRow(label: partLabel, value: "Non definito", icon: partIcon, dimmed: true)
                             }
-                            if let grp = event.maxGroups {
-                                infoRow(label: "Max Gruppi", value: "\(grp)", icon: "rectangle.3.group")
-                            } else {
-                                infoRow(label: "Max Gruppi", value: "Non definito", icon: "rectangle.3.group", dimmed: true)
-                            }
-                            if let minP = event.minPeoplePerGroup {
-                                infoRow(label: "Min Persone x Gruppo", value: "\(minP)", icon: "person.2")
-                            }
-                            if let maxP = event.maxPeoplePerGroup {
-                                infoRow(label: "Max Persone x Gruppo", value: "\(maxP)", icon: "person.2.fill")
+                            if event.isTeamEvent {
+                                if let minP = event.minPeoplePerGroup {
+                                    infoRow(label: "Min Persone per Squadra", value: "\(minP)", icon: "person.2")
+                                }
+                                if let maxP = event.maxPeoplePerGroup {
+                                    infoRow(label: "Max Persone per Squadra", value: "\(maxP)", icon: "person.2.fill")
+                                }
                             }
                         }
 
-                        // ── Costi & Requisiti ───────────────────────────────
-                        infoSection(title: "Costi & Requisiti", icon: "eurosign.circle") {
-                            if let cost = event.registrationCost {
-                                infoRow(label: "Costo Iscrizione", value: "€ \(String(format: "%.2f", cost))", icon: "eurosign")
-                            } else {
-                                infoRow(label: "Costo Iscrizione", value: "Non definito", icon: "eurosign", dimmed: true)
-                            }
+                        // ── Requisiti ───────────────────────────────
+                        infoSection(title: "Requisiti", icon: "list.clipboard") {
                             if let weight = event.weightLimit {
                                 infoRow(label: "Peso Minimo", value: "\(String(format: "%.1f", weight)) kg", icon: "scalemass")
                             } else {
@@ -139,14 +139,18 @@ struct EventDetailView: View {
                 Image(systemName: "flag.checkered.2.crossed")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.kartAccent)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(event.title)
                         .font(.system(size: 22, weight: .black))
                         .foregroundColor(.white)
                         .lineLimit(3)
-                    Text(event.location)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.kartDim)
+                    Text(event.isTeamEvent ? "GARA A SQUADRE" : "GARA INDIVIDUALE")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(event.isTeamEvent ? Color.kartAccent.opacity(0.15) : Color.blue.opacity(0.15))
+                        .foregroundColor(event.isTeamEvent ? .kartAccent : .blue)
+                        .cornerRadius(4)
                 }
             }
 

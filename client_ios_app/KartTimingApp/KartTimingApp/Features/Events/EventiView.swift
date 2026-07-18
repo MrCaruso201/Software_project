@@ -204,28 +204,17 @@ struct EventiView: View {
                     // Dettagli Evento
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            if let part = event.maxParticipants {
-                                detailText(label: "Partecipanti", value: "Max \(part)")
-                            } else {
-                                detailText(label: "Partecipanti", value: "N/D")
-                            }
-                            if let grp = event.maxGroups {
-                                detailText(label: "Gruppi", value: "Max \(grp)")
-                            } else {
-                                detailText(label: "Gruppi", value: "N/D")
-                            }
+                            Text(event.isTeamEvent ? "GARA A SQUADRE" : "GARA INDIVIDUALE")
+                                .font(.caption.bold())
+                                .foregroundColor(event.isTeamEvent ? .kartAccent : .blue)
                         }
                         Spacer()
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .trailing, spacing: 4) {
+                            let priceLabel = event.isTeamEvent ? "Prezzo per squadra" : "Prezzo"
                             if let cost = event.registrationCost {
-                                detailText(label: "Prezzo", value: "€ \(String(format: "%.2f", cost))")
+                                detailText(label: priceLabel, value: "€ \(String(format: "%.2f", cost))")
                             } else {
-                                detailText(label: "Prezzo", value: "N/D")
-                            }
-                            if let weight = event.weightLimit {
-                                detailText(label: "Peso", value: "Min \(String(format: "%.1f", weight))kg")
-                            } else {
-                                detailText(label: "Peso", value: "N/D")
+                                detailText(label: priceLabel, value: "N/D")
                             }
                         }
                     }
