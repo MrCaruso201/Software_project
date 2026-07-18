@@ -52,11 +52,11 @@ class Event(Base):
     registration_deadline = Column(DateTime, nullable=True) # data fine iscrizioni
     location = Column(String, nullable=False) # luogo evento
     max_participants = Column(Integer, nullable=True) # massimo numero di partecipanti
-    max_groups = Column(Integer, nullable=True) # massimo numero gruppi
     min_people_per_group = Column(Integer, nullable=True) # minimo numero di persone per gruppo
     max_people_per_group = Column(Integer, nullable=True) # massimo numero di persone per gruppo
     registration_cost = Column(Float, nullable=True) # costo di iscrizione a persona
     weight_limit = Column(Float, nullable=True) # peso limite (opzionale)
+    kart = Column(String, nullable=True) # tipo di kart (es. CRG, Sodi, ecc.)
     description = Column(Text, nullable=True) # testo libero descrittivo dell'evento
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 

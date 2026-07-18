@@ -45,6 +45,45 @@ class KartodromoViewModel: ObservableObject {
         }.resume()
     }
 
+    // MARK: - Fetch Active (GET /kartodromi/ — viewers)
+
+    func fetchActive(serverURL: URL?, token: String?) {
+        guard let serverURL = serverURL else {
+            errorMessage = "Nessun server disponibile"
+            return
+        }
+        let url = serverURL.appendingPathComponent("kartodromi/")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let token = token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                if let error = error {
+                    self.errorMessage = "Errore di rete: \(error.localizedDescription)"
+                    return
+                }
+                guard let data = data else {
+                    self.errorMessage = "Nessun dato ricevuto"
+                    return
+                }
+                do {
+                    let decoder = JSONDecoder()
+                    self.kartodromi = try decoder.decode([Kartodromo].self, from: data)
+                } catch {
+                    self.errorMessage = "Errore di decodifica."
+                }
+            }
+        }.resume()
+    }
+
     // MARK: - Create (POST /kartodromi/)
 
     func create(serverURL: URL?, data: [String: Any], token: String?, completion: @escaping (Bool) -> Void) {

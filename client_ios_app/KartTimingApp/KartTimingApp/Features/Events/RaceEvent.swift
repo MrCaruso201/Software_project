@@ -7,11 +7,11 @@ struct RaceEvent: Identifiable, Codable {
     let registrationDeadline: String?
     let location: String
     let maxParticipants: Int?
-    let maxGroups: Int?
     let minPeoplePerGroup: Int?
     let maxPeoplePerGroup: Int?
     let registrationCost: Double?
     let weightLimit: Double?
+    let kart: String?
     let description: String?
     let createdAt: String
     
@@ -22,11 +22,11 @@ struct RaceEvent: Identifiable, Codable {
         case registrationDeadline = "registration_deadline"
         case location
         case maxParticipants = "max_participants"
-        case maxGroups = "max_groups"
         case minPeoplePerGroup = "min_people_per_group"
         case maxPeoplePerGroup = "max_people_per_group"
         case registrationCost = "registration_cost"
         case weightLimit = "weight_limit"
+        case kart
         case description
         case createdAt = "created_at"
     }
@@ -37,26 +37,36 @@ struct RaceEvent: Identifiable, Codable {
     }
 
     var formattedDate: String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: eventDate) {
-            let outFormatter = DateFormatter()
-            outFormatter.dateStyle = .medium
-            outFormatter.timeStyle = .short
-            outFormatter.locale = Locale(identifier: "it_IT")
-            return outFormatter.string(from: date)
+        if let date = Self.parseDate(from: eventDate) {
+            return Self.format(date)
         }
+        return eventDate
+    }
+    
+    private static func parseDate(from string: String) -> Date? {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = isoFormatter.date(from: string) { return d }
         
-        let fallbackFormatter = ISO8601DateFormatter()
-        if let date = fallbackFormatter.date(from: eventDate) {
-            let outFormatter = DateFormatter()
-            outFormatter.dateStyle = .medium
-            outFormatter.timeStyle = .short
-            outFormatter.locale = Locale(identifier: "it_IT")
-            return outFormatter.string(from: date)
-        }
+        let isoFallback = ISO8601DateFormatter()
+        if let d = isoFallback.date(from: string) { return d }
         
-        return String(eventDate.prefix(10))
+        let df1 = DateFormatter()
+        df1.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        if let d = df1.date(from: string) { return d }
+        
+        let df2 = DateFormatter()
+        df2.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        if let d = df2.date(from: string) { return d }
+        
+        return nil
+    }
+
+    private static func format(_ date: Date) -> String {
+        let outFormatter = DateFormatter()
+        outFormatter.dateFormat = "d MMM yyyy, HH:mm"
+        outFormatter.locale = Locale(identifier: "it_IT")
+        return outFormatter.string(from: date)
     }
 }
 

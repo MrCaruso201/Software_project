@@ -135,7 +135,7 @@ struct EventiView: View {
             case .edit(let event):
                 EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: event)
             case .detail(let event):
-                EventDetailView(event: event)
+                EventDetailView(server: server, event: event)
             case .register(let event):
                 EventRegistrationSheetView(server: server, viewModel: viewModel, event: event)
                     .environmentObject(authState)

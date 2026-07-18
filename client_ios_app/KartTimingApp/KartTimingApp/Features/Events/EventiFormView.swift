@@ -18,10 +18,10 @@ struct EventiFormView: View {
     // Campi opzionali
     @State private var registrationCost: String = ""
     @State private var maxParticipants: String = ""
-    @State private var maxGroups: String = ""
     @State private var minPeoplePerGroup: String = ""
     @State private var maxPeoplePerGroup: String = ""
     @State private var weightLimit: String = ""
+    @State private var kart: String = ""
     @State private var description: String = ""
     
     @State private var isSaving = false
@@ -92,21 +92,14 @@ struct EventiFormView: View {
                             .foregroundColor(.primary)
                     }
                     HStack {
-                        Text("Max Gruppi")
-                            .foregroundColor(.secondary)
-                            .frame(width: 130, alignment: .leading)
-                        TextField("Es. 3", text: $maxGroups)
-                            .foregroundColor(.primary)
-                    }
-                    HStack {
-                        Text("Min x Gruppo")
+                        Text("Min per Gruppo")
                             .foregroundColor(.secondary)
                             .frame(width: 130, alignment: .leading)
                         TextField("Es. 10", text: $minPeoplePerGroup)
                             .foregroundColor(.primary)
                     }
                     HStack {
-                        Text("Max x Gruppo")
+                        Text("Max per Gruppo")
                             .foregroundColor(.secondary)
                             .frame(width: 130, alignment: .leading)
                         TextField("Es. 20", text: $maxPeoplePerGroup)
@@ -117,6 +110,13 @@ struct EventiFormView: View {
                             .foregroundColor(.secondary)
                             .frame(width: 130, alignment: .leading)
                         TextField("Es. 85.0", text: $weightLimit)
+                            .foregroundColor(.primary)
+                    }
+                    HStack {
+                        Text("Kart")
+                            .foregroundColor(.secondary)
+                            .frame(width: 130, alignment: .leading)
+                        TextField("Es. Sodi SR5", text: $kart)
                             .foregroundColor(.primary)
                     }
                 }
@@ -218,10 +218,10 @@ struct EventiFormView: View {
                     
                     if let cost = ev.registrationCost { registrationCost = String(cost) }
                     if let part = ev.maxParticipants { maxParticipants = String(part) }
-                    if let grp = ev.maxGroups { maxGroups = String(grp) }
                     if let minP = ev.minPeoplePerGroup { minPeoplePerGroup = String(minP) }
                     if let maxP = ev.maxPeoplePerGroup { maxPeoplePerGroup = String(maxP) }
                     if let w = ev.weightLimit { weightLimit = String(w) }
+                    if let k = ev.kart { kart = k }
                     if let desc = ev.description { description = desc }
                 }
             }
@@ -232,7 +232,9 @@ struct EventiFormView: View {
         isSaving = true
         
         // Invia la data come ISO8601 — il backend FastAPI la accetta
-        let formatter = ISO8601DateFormatter()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        formatter.timeZone = TimeZone.current
         let dateString = formatter.string(from: eventDate)
         
         var data: [String: Any] = [
@@ -243,10 +245,11 @@ struct EventiFormView: View {
         
         if let cost = Double(registrationCost) { data["registration_cost"] = cost }
         if let part = Int(maxParticipants) { data["max_participants"] = part }
-        if let grp = Int(maxGroups) { data["max_groups"] = grp }
         if let minP = Int(minPeoplePerGroup) { data["min_people_per_group"] = minP }
         if let maxP = Int(maxPeoplePerGroup) { data["max_people_per_group"] = maxP }
         if let w = Double(weightLimit) { data["weight_limit"] = w }
+        let trimmedKart = kart.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedKart.isEmpty { data["kart"] = trimmedKart }
         let trimmedDesc = description.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedDesc.isEmpty { data["description"] = trimmedDesc }
         

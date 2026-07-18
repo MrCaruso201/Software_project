@@ -108,14 +108,14 @@ def register_for_event(
         if existing:
             raise HTTPException(status_code=400, detail="Già iscritto a questo evento")
         
-        # Controlla capienza gruppi
-        if event.max_groups is not None:
+        # Controlla capienza gruppi (max_participants funge da max_squadre)
+        if event.max_participants is not None:
             existing_teams = db.query(EventRegistration.team_id).filter(
                 EventRegistration.event_id == event_id,
                 EventRegistration.team_id.isnot(None),
                 EventRegistration.is_team_leader == True
             ).distinct().count()
-            if existing_teams >= event.max_groups:
+            if existing_teams >= event.max_participants:
                 raise HTTPException(status_code=400, detail="Numero massimo di squadre raggiunto")
 
         # Genera UUID per il team

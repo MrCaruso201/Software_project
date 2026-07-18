@@ -3,7 +3,9 @@ import SwiftUI
 struct EventDetailView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authState: AuthState
+    let server: DiscoveredServer
     let event: RaceEvent
+    @StateObject private var kartodromoVM = KartodromoViewModel()
 
     var body: some View {
         NavigationStack {
@@ -71,8 +73,19 @@ struct EventDetailView: View {
 
                         // ── Dettagli principali ─────────────────────────────
                         infoSection(title: "Dettagli Evento", icon: "calendar") {
-                            infoRow(label: "Data", value: event.formattedDate, icon: "calendar")
-                            infoRow(label: "Luogo / Pista", value: event.location, icon: "mappin.and.ellipse")
+                            infoRow(label: "Data e Ora", value: event.formattedDate, icon: "calendar")
+                            let locParts = event.location.components(separatedBy: " - ")
+                            if locParts.count >= 2 {
+                                infoRow(label: "Pista", value: locParts[0], icon: "flag.checkered")
+                                infoRow(label: "Luogo", value: locParts[1...].joined(separator: " - "), icon: "mappin.and.ellipse")
+                            } else {
+                                if let k = kartodromoVM.kartodromi.first(where: { $0.nome == event.location }) {
+                                    infoRow(label: "Pista", value: k.nome, icon: "flag.checkered")
+                                    infoRow(label: "Luogo", value: k.luogo, icon: "mappin.and.ellipse")
+                                } else {
+                                    infoRow(label: "Pista / Luogo", value: event.location, icon: "mappin.and.ellipse")
+                                }
+                            }
                             if let deadline = event.registrationDeadline, !deadline.isEmpty {
                                 infoRow(label: "Scadenza Iscrizioni", value: formattedDeadline(deadline), icon: "clock.badge.exclamationmark")
                             }
@@ -80,7 +93,13 @@ struct EventDetailView: View {
                             if let cost = event.registrationCost {
                                 infoRow(label: priceLabel, value: "€ \(String(format: "%.2f", cost))", icon: "eurosign")
                             } else {
-                                infoRow(label: priceLabel, value: "Gratuito", icon: "eurosign", dimmed: true)
+                                infoRow(label: priceLabel, value: "Non definito", icon: "eurosign", dimmed: true)
+                            }
+                            
+                            if let kartType = event.kart, !kartType.isEmpty {
+                                infoRow(label: "Kart", value: kartType, icon: "steeringwheel")
+                            } else {
+                                infoRow(label: "Kart", value: "Non definito", icon: "steeringwheel", dimmed: true)
                             }
                         }
 
@@ -129,6 +148,9 @@ struct EventDetailView: View {
                 }
             }
         }
+        .onAppear {
+            kartodromoVM.fetchActive(serverURL: server.httpURL, token: authState.currentToken)
+        }
     }
 
     // MARK: - Hero card
@@ -139,18 +161,11 @@ struct EventDetailView: View {
                 Image(systemName: "flag.checkered.2.crossed")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.kartAccent)
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(event.title)
                         .font(.system(size: 22, weight: .black))
                         .foregroundColor(.white)
                         .lineLimit(3)
-                    Text(event.isTeamEvent ? "GARA A SQUADRE" : "GARA INDIVIDUALE")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(event.isTeamEvent ? Color.kartAccent.opacity(0.15) : Color.blue.opacity(0.15))
-                        .foregroundColor(event.isTeamEvent ? .kartAccent : .blue)
-                        .cornerRadius(4)
                 }
             }
 
@@ -158,27 +173,25 @@ struct EventDetailView: View {
                 .background(Color.white.opacity(0.08))
 
             HStack(spacing: 0) {
-                heroStat(value: event.formattedDate, label: "Data Evento", icon: "calendar")
+                heroStat(value: event.formattedDate, icon: "calendar")
                 Spacer()
                 Divider()
                     .frame(height: 36)
                     .background(Color.white.opacity(0.1))
                 Spacer()
                 if let cost = event.registrationCost {
-                    heroStat(value: "€ \(String(format: "%.0f", cost))", label: "Quota", icon: "eurosign.circle.fill")
+                    heroStat(value: "€ \(String(format: "%.0f", cost))", icon: "eurosign.circle.fill")
                 } else {
-                    heroStat(value: "—", label: "Quota", icon: "eurosign.circle.fill")
+                    heroStat(value: "—", icon: "eurosign.circle.fill")
                 }
                 Spacer()
                 Divider()
                     .frame(height: 36)
                     .background(Color.white.opacity(0.1))
                 Spacer()
-                if let max = event.maxParticipants {
-                    heroStat(value: "\(max)", label: "Max Piloti", icon: "person.fill")
-                } else {
-                    heroStat(value: "∞", label: "Max Piloti", icon: "person.fill")
-                }
+                let typeValue = event.isTeamEvent ? "GARA\nA SQUADRE" : "GARA\nINDIVIDUALE"
+                let typeIcon = event.isTeamEvent ? "person.3.fill" : "person.fill"
+                heroStat(value: typeValue, icon: typeIcon)
             }
         }
         .padding(16)
@@ -199,7 +212,7 @@ struct EventDetailView: View {
         )
     }
 
-    private func heroStat(value: String, label: String, icon: String) -> some View {
+    private func heroStat(value: String, icon: String) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.system(size: 12))
@@ -209,9 +222,6 @@ struct EventDetailView: View {
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.kartDim)
         }
         .frame(maxWidth: .infinity)
     }
@@ -285,13 +295,22 @@ struct EventDetailView: View {
         let isoFull = ISO8601DateFormatter()
         isoFull.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let isoBasic = ISO8601DateFormatter()
+        
+        let df1 = DateFormatter()
+        df1.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        
+        let df2 = DateFormatter()
+        df2.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        
         let fmt = DateFormatter()
         fmt.dateStyle = .medium
-        fmt.timeStyle = .short
+        fmt.timeStyle = .none
         fmt.locale = Locale(identifier: "it_IT")
 
         if let d = isoFull.date(from: raw) { return fmt.string(from: d) }
         if let d = isoBasic.date(from: raw) { return fmt.string(from: d) }
-        return String(raw.prefix(10))
+        if let d = df1.date(from: raw) { return fmt.string(from: d) }
+        if let d = df2.date(from: raw) { return fmt.string(from: d) }
+        return raw
     }
 }
