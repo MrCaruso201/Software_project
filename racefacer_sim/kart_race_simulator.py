@@ -90,7 +90,7 @@ def simulate_lap(base_time: float, sigma: float, lap_num: int) -> float:
 # ─── Stato pilota ─────────────────────────────────────────────────────────────
 
 class Driver:
-    def __init__(self, name: str, kart: str, base_time: float, sigma: float):
+    def __init__(self, name: str, kart: str, base_time: float, sigma: float, grid_pos: int):
         self.name      = name
         self.kart      = kart
         self.base_time = base_time
@@ -99,8 +99,17 @@ class Driver:
         self.lap_count: int         = 0
         self.lap_times: List[float] = []
 
-        # Uscita dal pit sfasata tra 0 e 30 secondi (uscite non contemporanee)
-        self.next_event: float = random.uniform(0.0, 30.0)
+        # Track position (tempo in cui ha tagliato il traguardo l'ultima volta)
+        self.last_cross_time: float = 0.0
+
+        # Simula una partenza in griglia: 0.5s di scarto tra ogni posizione
+        self.initial_offset: float = grid_pos * 0.5
+        
+        # Genera in anticipo il tempo del primo giro
+        self.current_lap_time: float = simulate_lap(base_time, sigma, 1)
+
+        # Il primo evento sarà il momento in cui taglierà il primo traguardo
+        self.next_event: float = self.initial_offset + self.current_lap_time
 
     @property
     def best_lap(self) -> Optional[float]:
@@ -132,10 +141,10 @@ def build_snapshot(
       P  | Kart | Driver | Lap Time (ultimo) | Gap (dal leader) | Int (dal precedente)
       Best (miglior personale) | Laps | (vuoto)
     """
-    # Ordina chi ha completato almeno un giro per posizione in gara (laps desc, total_time asc)
+    # Ordina chi ha completato almeno un giro per posizione in pista (laps desc, last_cross_time asc)
     ranked   : List[Driver] = sorted(
         [d for d in drivers if d.lap_count > 0],
-        key=lambda d: (-d.lap_count, d.total_time),
+        key=lambda d: (-d.lap_count, d.last_cross_time),
     )
     no_time  : List[Driver] = [d for d in drivers if d.lap_count == 0]
     classified = ranked + no_time
@@ -152,23 +161,35 @@ def build_snapshot(
                 gap_str = "-"
                 int_str = "-"
             else:
-                # Gap = distacco dal leader (se stesso giro: gap tempo, se giro diverso: gap giri)
+                # Gap = distacco dal leader in tempo assoluto di attraversamento
                 assert leader is not None
-                if driver.lap_count == leader.lap_count:
-                    gap_val = driver.total_time - leader.total_time
+                laps_behind_leader = leader.lap_count - driver.lap_count
+                if laps_behind_leader == 0:
+                    gap_val = driver.last_cross_time - leader.last_cross_time
+                    gap_str = f"+{gap_val:.3f}"
+                elif laps_behind_leader == 1:
+                    # Stesso giro in corso, mostriamo il distacco al giro precedente completato da entrambi
+                    leader_time_at_d_lap = leader.initial_offset + sum(leader.lap_times[:driver.lap_count])
+                    gap_val = driver.last_cross_time - leader_time_at_d_lap
                     gap_str = f"+{gap_val:.3f}"
                 else:
-                    laps_behind = leader.lap_count - driver.lap_count
-                    gap_str = f"+{laps_behind} Laps" if laps_behind > 1 else "+1 Lap"
+                    # Se il leader è avanti di 2 o più conteggi, ha effettivamente doppiato il pilota
+                    laps_down = laps_behind_leader - 1
+                    gap_str = f"+{laps_down} Laps" if laps_down > 1 else "+1 Lap"
 
                 # Int = distacco dal pilota immediatamente davanti (prev_driver)
-                prev_driver = ranked[pos - 2]
-                if driver.lap_count == prev_driver.lap_count:
-                    int_val = driver.total_time - prev_driver.total_time
+                prev_driver = classified[pos - 2]
+                laps_behind_prev = prev_driver.lap_count - driver.lap_count
+                if laps_behind_prev == 0:
+                    int_val = driver.last_cross_time - prev_driver.last_cross_time
+                    int_str = f"+{int_val:.3f}"
+                elif laps_behind_prev == 1:
+                    prev_time_at_d_lap = prev_driver.initial_offset + sum(prev_driver.lap_times[:driver.lap_count])
+                    int_val = driver.last_cross_time - prev_time_at_d_lap
                     int_str = f"+{int_val:.3f}"
                 else:
-                    laps_behind = prev_driver.lap_count - driver.lap_count
-                    int_str = f"+{laps_behind} Laps" if laps_behind > 1 else "+1 Lap"
+                    laps_down = laps_behind_prev - 1
+                    int_str = f"+{laps_down} Laps" if laps_down > 1 else "+1 Lap"
         else:
             last_str = "-"
             best_str = "-"
@@ -214,7 +235,7 @@ def run_simulation(
     parent = os.path.dirname(os.path.abspath(output_file))
     os.makedirs(parent, exist_ok=True)
 
-    drivers          = [Driver(**d) for d in DRIVERS]
+    drivers          = [Driver(**d, grid_pos=i) for i, d in enumerate(DRIVERS)]
     session_duration = duration_minutes * 60
     session_start    = datetime.now()
 
@@ -245,9 +266,14 @@ def run_simulation(
 
         # ── Completa il giro ──────────────────────────────────────────────────
         driver.lap_count += 1
-        lap_t = simulate_lap(driver.base_time, driver.sigma, driver.lap_count)
+        lap_t = driver.current_lap_time
         driver.lap_times.append(lap_t)
-        driver.next_event = sim_time + lap_t   # pianifica il prossimo giro
+        driver.last_cross_time = sim_time
+        
+        # Pianifica il PROSSIMO giro
+        next_lap_t = simulate_lap(driver.base_time, driver.sigma, driver.lap_count + 1)
+        driver.current_lap_time = next_lap_t
+        driver.next_event = sim_time + next_lap_t
 
         # ── Sovrascrive il singolo file JSON ─────────────────────────────────
         snapshot = build_snapshot(drivers, session_start, sim_time)
@@ -276,7 +302,7 @@ def run_simulation(
 
     finished = sorted(
         [d for d in drivers if d.lap_count > 0],
-        key=lambda d: (-d.lap_count, d.total_time),
+        key=lambda d: (-d.lap_count, d.last_cross_time),
     )
     no_time_final = [d for d in drivers if d.lap_count == 0]
 
@@ -287,7 +313,7 @@ def run_simulation(
             gap_str = "Leader"
         else:
             if d.lap_count == leader.lap_count:
-                gap_str = f"+{d.total_time - leader.total_time:>8.3f}s"
+                gap_str = f"+{d.last_cross_time - leader.last_cross_time:>8.3f}s"
             else:
                 laps_behind = leader.lap_count - d.lap_count
                 gap_str = f"+{laps_behind} giri" if laps_behind > 1 else "+1 giro"
