@@ -10,7 +10,8 @@ from db.models import Event, EventRegistration, User
 from events.schemas import (
     EventCreate, EventUpdate, EventResponse,
     EventRegistrationResponse, EventRegistrationWithUserResponse,
-    TeamRegistrationRequest, TeamRegistrationResponse, TeamMemberResponse
+    TeamRegistrationRequest, TeamRegistrationResponse, TeamMemberResponse,
+    AdminIndividualRegistrationRequest, AdminTeamRegistrationRequest
 )
 from auth.dependencies import get_current_user
 from auth.roles import Role, has_permission
@@ -109,14 +110,16 @@ def register_for_event(
             raise HTTPException(status_code=400, detail="Già iscritto a questo evento")
         
         # Controlla capienza gruppi (max_participants funge da max_squadre)
+        initial_status = "pending_payment"
         if event.max_participants is not None:
             existing_teams = db.query(EventRegistration.team_id).filter(
                 EventRegistration.event_id == event_id,
                 EventRegistration.team_id.isnot(None),
-                EventRegistration.is_team_leader == True
+                EventRegistration.is_team_leader == True,
+                EventRegistration.status != "waitlist"
             ).distinct().count()
             if existing_teams >= event.max_participants:
-                raise HTTPException(status_code=400, detail="Numero massimo di squadre raggiunto")
+                initial_status = "waitlist"
 
         # Genera UUID per il team
         new_team_id = str(uuid.uuid4())
@@ -133,6 +136,7 @@ def register_for_event(
             team_id=new_team_id,
             is_team_leader=True,
             member_email=leader_email,
+            status=initial_status
         )
         db.add(leader_reg)
         
@@ -164,6 +168,7 @@ def register_for_event(
                 team_id=new_team_id,
                 is_team_leader=False,
                 member_email=email,
+                status=initial_status
             )
             db.add(member_reg)
         
@@ -173,10 +178,14 @@ def register_for_event(
 
     else:
         # Gara individuale: logica originale
+        initial_status = "pending_payment"
         if event.max_participants is not None:
-            count = db.query(EventRegistration).filter(EventRegistration.event_id == event_id).count()
+            count = db.query(EventRegistration).filter(
+                EventRegistration.event_id == event_id,
+                EventRegistration.status != "waitlist"
+            ).count()
             if count >= event.max_participants:
-                raise HTTPException(status_code=400, detail="Event is full")
+                initial_status = "waitlist"
                 
         existing = db.query(EventRegistration).filter(
             EventRegistration.user_id == user_id,
@@ -185,7 +194,7 @@ def register_for_event(
         if existing:
             raise HTTPException(status_code=400, detail="Already registered")
             
-        reg = EventRegistration(user_id=user_id, event_id=event_id)
+        reg = EventRegistration(user_id=user_id, event_id=event_id, status=initial_status)
         db.add(reg)
         db.commit()
         db.refresh(reg)
@@ -230,15 +239,16 @@ def get_my_team_registration(
     db: Session = Depends(get_db)
 ):
     user_id = int(user_payload["sub"])
+    is_admin = has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR)
     
-    # Verifica che l'utente faccia parte del team
+    # Verifica che l'utente faccia parte del team o sia admin
     my_reg = db.query(EventRegistration).filter(
         EventRegistration.team_id == team_id,
         EventRegistration.event_id == event_id,
         EventRegistration.user_id == user_id
     ).first()
     
-    if not my_reg:
+    if not my_reg and not is_admin:
         raise HTTPException(status_code=403, detail="Non fai parte di questo team")
         
     members = db.query(EventRegistration).filter(
@@ -285,6 +295,8 @@ def update_team_registration(
     db: Session = Depends(get_db)
 ):
     user_id = int(user_payload["sub"])
+    is_admin = has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR)
+    
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -296,10 +308,10 @@ def update_team_registration(
     ).first()
     
     if not leader_reg:
-        raise HTTPException(status_code=404, detail="Team non trovato o non sei il leader")
+        raise HTTPException(status_code=404, detail="Team non trovato")
         
-    if leader_reg.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Solo il capogruppo può modificare il team")
+    if leader_reg.user_id != user_id and not is_admin:
+        raise HTTPException(status_code=403, detail="Solo il capogruppo o un admin può modificare il team")
         
     # Rimosso check se confermata: permettiamo modifiche anche da pagata
     expected_members = event.max_people_per_group - 1
@@ -317,6 +329,24 @@ def update_team_registration(
     
     # Aggiorna nome team
     leader_reg.team_name = team_data.team_name.strip()
+    
+    if is_admin and team_data.leader_email:
+        new_leader_email = team_data.leader_email.strip().lower()
+        if new_leader_email != leader_reg.member_email:
+            new_leader_user = db.query(User).filter(User.email == new_leader_email).first()
+            if new_leader_user:
+                already = db.query(EventRegistration).filter(
+                    EventRegistration.user_id == new_leader_user.id,
+                    EventRegistration.event_id == event_id,
+                    EventRegistration.team_id != team_id
+                ).first()
+                if already:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"L'utente {new_leader_email} è già in un altro team"
+                    )
+            leader_reg.user_id = new_leader_user.id if new_leader_user else None
+            leader_reg.member_email = new_leader_email
     
     # Inserisci nuovi membri
     for email in team_data.member_emails:
@@ -438,13 +468,13 @@ def get_event_team_registrations(event_id: int, user_payload: dict = Depends(get
 
 # ── Admin: conferma iscrizione ────────────────────────────────────────────────
 
-@router.patch("/{event_id}/registrations/{user_id}/confirm", response_model=EventRegistrationResponse)
-def confirm_registration(event_id: int, user_id: int, user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.patch("/{event_id}/registrations/{registration_id}/confirm", response_model=EventRegistrationResponse)
+def confirm_registration(event_id: int, registration_id: int, user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
         
     reg = db.query(EventRegistration).filter(
-        EventRegistration.user_id == user_id,
+        EventRegistration.id == registration_id,
         EventRegistration.event_id == event_id
     ).first()
     if not reg:
@@ -463,16 +493,42 @@ def confirm_registration(event_id: int, user_id: int, user_payload: dict = Depen
     db.refresh(reg)
     return reg
 
-
-# ── Admin: elimina iscrizione ─────────────────────────────────────────────────
-
-@router.delete("/{event_id}/registrations/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def admin_delete_registration(event_id: int, user_id: int, user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.patch("/{event_id}/registrations/{registration_id}/unconfirm", response_model=EventRegistrationResponse)
+def unconfirm_registration(event_id: int, registration_id: int, user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
         
     reg = db.query(EventRegistration).filter(
-        EventRegistration.user_id == user_id,
+        EventRegistration.id == registration_id,
+        EventRegistration.event_id == event_id
+    ).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+        
+    if reg.status != "confirmed":
+        raise HTTPException(status_code=400, detail="Only confirmed registrations can be unconfirmed")
+    
+    if reg.team_id and reg.is_team_leader:
+        db.query(EventRegistration).filter(
+            EventRegistration.team_id == reg.team_id,
+            EventRegistration.event_id == event_id
+        ).update({"status": "pending_payment"})
+    else:
+        reg.status = "pending_payment"
+    
+    db.commit()
+    db.refresh(reg)
+    return reg
+
+# ── Admin: elimina iscrizione ─────────────────────────────────────────────────
+
+@router.delete("/{event_id}/registrations/{registration_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_registration(event_id: int, registration_id: int, user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+    reg = db.query(EventRegistration).filter(
+        EventRegistration.id == registration_id,
         EventRegistration.event_id == event_id
     ).first()
     if not reg:
@@ -527,3 +583,218 @@ def admin_confirm_team_registration(event_id: int, team_id: str, user_payload: d
     
     db.commit()
     return {"detail": "Team confirmed"}
+
+@router.patch("/{event_id}/registrations/team/{team_id}/unconfirm", status_code=status.HTTP_200_OK)
+def admin_unconfirm_team_registration(event_id: int, team_id: str, user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    updated = db.query(EventRegistration).filter(
+        EventRegistration.team_id == team_id,
+        EventRegistration.event_id == event_id,
+        EventRegistration.status == "confirmed"
+    ).update({"status": "pending_payment"})
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Team registration not found or not confirmed")
+    
+    db.commit()
+    return {"detail": "Team unconfirmed"}
+
+
+# ── Admin: accetta da lista d'attesa ──────────────────────────────────────────
+
+@router.patch("/{event_id}/registrations/{registration_id}/accept_waitlist", response_model=EventRegistrationResponse)
+def accept_waitlist_registration(event_id: int, registration_id: int, user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+    reg = db.query(EventRegistration).filter(
+        EventRegistration.id == registration_id,
+        EventRegistration.event_id == event_id
+    ).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+        
+    if reg.status != "waitlist":
+        raise HTTPException(status_code=400, detail="Registration is not in waitlist")
+    
+    if reg.team_id and reg.is_team_leader:
+        db.query(EventRegistration).filter(
+            EventRegistration.team_id == reg.team_id,
+            EventRegistration.event_id == event_id
+        ).update({"status": "pending_payment"})
+    else:
+        reg.status = "pending_payment"
+    
+    db.commit()
+    db.refresh(reg)
+    return reg
+
+@router.patch("/{event_id}/registrations/team/{team_id}/accept_waitlist", status_code=status.HTTP_200_OK)
+def admin_accept_waitlist_team_registration(event_id: int, team_id: str, user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    updated = db.query(EventRegistration).filter(
+        EventRegistration.team_id == team_id,
+        EventRegistration.event_id == event_id,
+        EventRegistration.status == "waitlist"
+    ).update({"status": "pending_payment"})
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Team registration not found or not in waitlist")
+    
+    db.commit()
+    return {"detail": "Team moved to pending_payment"}
+
+
+# ── Admin: sposta in lista d'attesa ──────────────────────────────────────────
+
+@router.patch("/{event_id}/registrations/{registration_id}/move_to_waitlist", response_model=EventRegistrationResponse)
+def move_to_waitlist_registration(event_id: int, registration_id: int, user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+    reg = db.query(EventRegistration).filter(
+        EventRegistration.id == registration_id,
+        EventRegistration.event_id == event_id
+    ).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+        
+    if reg.status != "pending_payment":
+        raise HTTPException(status_code=400, detail="Only pending_payment registrations can be moved to waitlist")
+    
+    if reg.team_id and reg.is_team_leader:
+        db.query(EventRegistration).filter(
+            EventRegistration.team_id == reg.team_id,
+            EventRegistration.event_id == event_id
+        ).update({"status": "waitlist"})
+    else:
+        reg.status = "waitlist"
+    
+    db.commit()
+    db.refresh(reg)
+    return reg
+
+@router.patch("/{event_id}/registrations/team/{team_id}/move_to_waitlist", status_code=status.HTTP_200_OK)
+def admin_move_to_waitlist_team_registration(event_id: int, team_id: str, user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    updated = db.query(EventRegistration).filter(
+        EventRegistration.team_id == team_id,
+        EventRegistration.event_id == event_id,
+        EventRegistration.status == "pending_payment"
+    ).update({"status": "waitlist"})
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Team registration not found or not in pending_payment")
+    
+    db.commit()
+    return {"detail": "Team moved to waitlist"}
+
+
+# ── Admin: Iscrizione Manuale ────────────────────────────────────────────────
+
+@router.post("/{event_id}/admin_register/individual", response_model=EventRegistrationResponse, status_code=status.HTTP_201_CREATED)
+def admin_register_individual(
+    event_id: int,
+    req: AdminIndividualRegistrationRequest,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    email = req.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    
+    if user:
+        existing = db.query(EventRegistration).filter(
+            EventRegistration.user_id == user.id,
+            EventRegistration.event_id == event_id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="L'utente è già iscritto a questo evento")
+            
+    reg = EventRegistration(
+        user_id=user.id if user else None,
+        event_id=event_id,
+        status="pending_payment",
+        member_email=email
+    )
+    db.add(reg)
+    db.commit()
+    db.refresh(reg)
+    return reg
+
+@router.post("/{event_id}/admin_register/team", response_model=EventRegistrationResponse, status_code=status.HTTP_201_CREATED)
+def admin_register_team(
+    event_id: int,
+    req: AdminTeamRegistrationRequest,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    new_team_id = str(uuid.uuid4())
+    leader_email = req.leader_email.strip().lower()
+    leader_user = db.query(User).filter(User.email == leader_email).first()
+    
+    if leader_user:
+        existing = db.query(EventRegistration).filter(
+            EventRegistration.user_id == leader_user.id,
+            EventRegistration.event_id == event_id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail=f"Il caposquadra {leader_email} è già iscritto")
+            
+    leader_reg = EventRegistration(
+        user_id=leader_user.id if leader_user else None,
+        event_id=event_id,
+        team_name=req.team_name.strip(),
+        team_id=new_team_id,
+        is_team_leader=True,
+        member_email=leader_email,
+        status="pending_payment"
+    )
+    db.add(leader_reg)
+    
+    for email in req.member_emails:
+        email = email.strip().lower()
+        if not email: continue
+        
+        member_user = db.query(User).filter(User.email == email).first()
+        if member_user:
+            already = db.query(EventRegistration).filter(
+                EventRegistration.user_id == member_user.id,
+                EventRegistration.event_id == event_id
+            ).first()
+            if already:
+                raise HTTPException(status_code=400, detail=f"Il membro {email} è già iscritto all'evento")
+                
+        member_reg = EventRegistration(
+            user_id=member_user.id if member_user else None,
+            event_id=event_id,
+            team_name=req.team_name.strip(),
+            team_id=new_team_id,
+            is_team_leader=False,
+            member_email=email,
+            status="pending_payment"
+        )
+        db.add(member_reg)
+        
+    db.commit()
+    db.refresh(leader_reg)
+    return leader_reg

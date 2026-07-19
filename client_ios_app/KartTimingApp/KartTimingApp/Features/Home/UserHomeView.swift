@@ -137,8 +137,9 @@ struct UserHomeView: View {
                 .foregroundColor(.white)
             
             let pendingRegs = viewModel.registrations.filter { $0.status == "pending_payment" }
+            let waitlistRegs = viewModel.registrations.filter { $0.status == "waitlist" }
             
-            if pendingRegs.isEmpty && viewModel.totalRegistrations == 0 {
+            if pendingRegs.isEmpty && waitlistRegs.isEmpty && viewModel.totalRegistrations == 0 {
                 Text("Non hai ancora effettuato nessuna iscrizione.")
                     .font(.subheadline)
                     .foregroundColor(.kartDim)
@@ -159,12 +160,18 @@ struct UserHomeView: View {
                                 .foregroundColor(.green)
                             Text("Hai \(confirmedCount) iscrizion\(confirmedCount == 1 ? "e" : "i") confermat\(confirmedCount == 1 ? "a" : "e").")
                                 .font(.subheadline)
-                                .foregroundColor(.white)
-                            Spacer()
+                                .foregroundColor(.kartDim)
                         }
-                        .padding(12)
-                        .background(Color.white.opacity(0.05))
-                        .cornerRadius(8)
+                        .padding(.top, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    
+                    if !waitlistRegs.isEmpty {
+                        ForEach(waitlistRegs, id: \.id) { reg in
+                            if let event = viewModel.events.first(where: { $0.id == reg.eventId }) {
+                                waitlistEventRow(event: event)
+                            }
+                        }
                     }
                 }
             }
@@ -175,38 +182,46 @@ struct UserHomeView: View {
     }
     
     private func pendingEventRow(event: RaceEvent) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "exclamationmark.circle.fill")
-                    .foregroundColor(.orange)
-                Text("Pagamento in sospeso")
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.orange)
-            }
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+                .font(.system(size: 20))
             
-            Text(event.title)
-                .font(.body)
-                .foregroundColor(.white)
-            
-            Button {
-                activePaymentEvent = event
-            } label: {
-                Text("Paga Ora")
-                    .font(.system(size: 14, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.blue)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(event.title)
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.white)
-                    .cornerRadius(8)
+                Text("In attesa di pagamento")
+                    .font(.system(size: 12))
+                    .foregroundColor(.orange)
             }
+            Spacer()
         }
         .padding(12)
-        .background(Color.orange.opacity(0.1))
-        .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-        )
+        .background(Color.kartPanel)
+        .cornerRadius(10)
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.3), lineWidth: 1))
+    }
+    
+    private func waitlistEventRow(event: RaceEvent) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "clock.fill")
+                .foregroundColor(.purple)
+                .font(.system(size: 20))
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(event.title)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.white)
+                Text("In Lista d'Attesa")
+                    .font(.system(size: 12))
+                    .foregroundColor(.purple)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.kartPanel)
+        .cornerRadius(10)
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.purple.opacity(0.3), lineWidth: 1))
     }
 }

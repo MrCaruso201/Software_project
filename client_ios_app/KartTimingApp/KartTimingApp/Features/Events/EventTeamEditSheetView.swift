@@ -6,10 +6,12 @@ struct EventTeamEditSheetView: View {
     @ObservedObject var viewModel: EventiViewModel
     let event: RaceEvent
     let registration: EventRegistrationResponse
+    var isAdmin: Bool = false
     
     @Environment(\.dismiss) var dismiss
     
     @State private var teamName: String = ""
+    @State private var leaderEmail: String = ""
     @State private var memberEmails: [String] = []
     
     @State private var isFetching = true
@@ -36,8 +38,10 @@ struct EventTeamEditSheetView: View {
                             
                             TeamFormSection(
                                 teamName: $teamName,
+                                leaderEmail: $leaderEmail,
                                 memberEmails: $memberEmails,
-                                maxAdditionalMembers: maxAdditionalMembers
+                                maxAdditionalMembers: maxAdditionalMembers,
+                                isLeaderEditable: isAdmin
                             )
                             
                             if let error = errorMessage {
@@ -68,7 +72,7 @@ struct EventTeamEditSheetView: View {
                             }
                             .disabled(isSaving || teamName.trimmingCharacters(in: .whitespaces).isEmpty)
                             
-                            if registration.status != "confirmed" {
+                            if !isAdmin && registration.status != "confirmed" {
                                 Button {
                                     performCancelRegistration()
                                 } label: {
@@ -128,7 +132,10 @@ struct EventTeamEditSheetView: View {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200, let data = data {
                     if let teamResponse = try? JSONDecoder().decode(TeamRegistrationResponse.self, from: data) {
                         self.teamName = teamResponse.teamName
-                        // Escludiamo il leader (utente corrente)
+                        if let leader = teamResponse.members.first(where: { $0.isTeamLeader }) {
+                            self.leaderEmail = leader.email ?? ""
+                        }
+                        // Escludiamo il leader
                         let otherMembers = teamResponse.members.filter { !$0.isTeamLeader }
                         self.memberEmails = otherMembers.compactMap { $0.email }
                         
@@ -161,7 +168,8 @@ struct EventTeamEditSheetView: View {
             teamId: teamId,
             token: authState.currentToken,
             teamName: teamName.trimmingCharacters(in: .whitespaces),
-            memberEmails: validEmails
+            memberEmails: validEmails,
+            leaderEmail: isAdmin ? leaderEmail.trimmingCharacters(in: .whitespaces) : nil
         ) { success, errorMsg in
             isSaving = false
             if success {

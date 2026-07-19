@@ -13,6 +13,7 @@ struct EventRegistrationSheetView: View {
     @State private var isRegistering = false
     @State private var errorMessage: String? = nil
     @State private var teamName: String = ""
+    @State private var leaderEmail: String = ""
     @State private var memberEmails: [String] = [""]
 
     private var isTeamEvent: Bool { event.isTeamEvent }
@@ -35,8 +36,10 @@ struct EventRegistrationSheetView: View {
                         if isTeamEvent {
                             TeamFormSection(
                                 teamName: $teamName,
+                                leaderEmail: $leaderEmail,
                                 memberEmails: $memberEmails,
-                                maxAdditionalMembers: maxAdditionalMembers
+                                maxAdditionalMembers: maxAdditionalMembers,
+                                isLeaderEditable: false
                             )
                         }
                         registrationNote
@@ -63,7 +66,28 @@ struct EventRegistrationSheetView: View {
                         .foregroundColor(.kartAccent)
                 }
             }
+            .onAppear {
+                fetchUserEmail()
+            }
         }
+    }
+
+    // MARK: - Fetch User Email
+
+    private func fetchUserEmail() {
+        guard let token = authState.currentToken,
+              let url = server.httpURL?.appendingPathComponent("auth/me") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let email = json["email"] as? String {
+                DispatchQueue.main.async {
+                    self.leaderEmail = email
+                }
+            }
+        }.resume()
     }
 
     // MARK: - Note
@@ -141,6 +165,8 @@ struct RegistrationHeaderSection: View {
 
             if isTeamEvent {
                 TeamEventBadge(maxPeople: event.maxPeoplePerGroup ?? 2)
+            } else {
+                IndividualEventBadge()
             }
         }
         .padding(.top, 10)
@@ -170,6 +196,29 @@ private struct TeamEventBadge: View {
             )
         )
         .foregroundColor(.black)
+        .clipShape(Capsule())
+        .padding(.top, 4)
+    }
+}
+
+private struct IndividualEventBadge: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "person.fill")
+                .font(.system(size: 11, weight: .bold))
+            Text("GARA INDIVIDUALE")
+                .font(.system(size: 11, weight: .bold))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(
+            LinearGradient(
+                colors: [Color.cyan, Color.blue],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .foregroundColor(.white)
         .clipShape(Capsule())
         .padding(.top, 4)
     }
@@ -283,8 +332,10 @@ private struct RegistrationButton: View {
 
 struct TeamFormSection: View {
     @Binding var teamName: String
+    @Binding var leaderEmail: String
     @Binding var memberEmails: [String]
     let maxAdditionalMembers: Int
+    var isLeaderEditable: Bool = false
 
     private var filledCount: Int {
         memberEmails.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count
@@ -309,6 +360,7 @@ struct TeamFormSection: View {
             }
 
             teamNameField
+            leaderEmailField
             memberEmailsSection
         }
         .padding(14)
@@ -337,6 +389,29 @@ struct TeamFormSection: View {
                 .cornerRadius(9)
                 .overlay(RoundedRectangle(cornerRadius: 9).stroke(borderColor, lineWidth: 1))
                 .autocorrectionDisabled()
+        }
+    }
+
+    private var leaderEmailField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label("Email Caposquadra", systemImage: "star.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.kartDim)
+
+            let isEmpty = leaderEmail.trimmingCharacters(in: .whitespaces).isEmpty
+            let borderColor: Color = isEmpty ? Color.white.opacity(0.15) : Color.kartAccent.opacity(0.6)
+
+            TextField("Indirizzo email del caposquadra", text: $leaderEmail)
+                .keyboardType(.emailAddress)
+                .autocapitalization(.none)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .background(isLeaderEditable ? Color.white.opacity(0.07) : Color.white.opacity(0.02))
+                .foregroundColor(isLeaderEditable ? .white : .gray)
+                .cornerRadius(9)
+                .overlay(RoundedRectangle(cornerRadius: 9).stroke(borderColor, lineWidth: 1))
+                .autocorrectionDisabled()
+                .disabled(!isLeaderEditable)
         }
     }
 

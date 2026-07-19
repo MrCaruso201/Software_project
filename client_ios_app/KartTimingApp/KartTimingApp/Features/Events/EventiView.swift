@@ -206,7 +206,7 @@ struct EventiView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(event.isTeamEvent ? "GARA A SQUADRE" : "GARA INDIVIDUALE")
                                 .font(.caption.bold())
-                                .foregroundColor(event.isTeamEvent ? .kartAccent : .blue)
+                                .foregroundColor(event.isTeamEvent ? .yellow : .blue)
                         }
                         Spacer()
                         VStack(alignment: .trailing, spacing: 4) {
@@ -224,6 +224,7 @@ struct EventiView: View {
                     let status = reg?.status
                     let isPending = status == "pending_payment"
                     let isConfirmed = status == "confirmed"
+                    let isWaitlist = status == "waitlist"
                     let isRegistered = status != nil
                     let isAdmin = authState.currentUser?.role.canManageUsers == true
                     
@@ -340,6 +341,28 @@ struct EventiView: View {
                                             .foregroundColor(.white)
                                             .cornerRadius(8)
                                     }
+                                } else if isWaitlist {
+                                    if let registration = reg, event.isTeamEvent, registration.isTeamLeader {
+                                        Button {
+                                            activeSheet = .editTeamRegistration(event, registration)
+                                        } label: {
+                                            Text("In Attesa / Modifica")
+                                                .font(.system(size: 11, weight: .bold))
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 10)
+                                                .background(Color.purple)
+                                                .foregroundColor(.white)
+                                                .cornerRadius(8)
+                                        }
+                                    } else {
+                                        Text("In Lista d'Attesa")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 10)
+                                            .background(Color.purple)
+                                            .foregroundColor(.white)
+                                            .cornerRadius(8)
+                                    }
                                 }
                             }
                         }
@@ -358,6 +381,14 @@ struct EventiView: View {
                                         .foregroundColor(.black)
                                         .cornerRadius(8)
                                 }
+                            } else if isWaitlist {
+                                Text("Posti attualmente esauriti. Sei in lista d'attesa.")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color.purple.opacity(0.3))
+                                    .foregroundColor(.purple)
+                                    .cornerRadius(8)
                             }
                         }
                     }

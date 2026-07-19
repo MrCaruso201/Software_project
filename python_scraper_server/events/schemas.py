@@ -96,3 +96,12 @@ class TeamRegistrationResponse(BaseModel):
 class TeamRegistrationRequest(BaseModel):
     team_name: str
     member_emails: List[str]  # email degli altri partecipanti (escluso il leader)
+    leader_email: Optional[str] = None
+
+class AdminIndividualRegistrationRequest(BaseModel):
+    email: str
+
+class AdminTeamRegistrationRequest(BaseModel):
+    team_name: str
+    leader_email: str
+    member_emails: List[str]

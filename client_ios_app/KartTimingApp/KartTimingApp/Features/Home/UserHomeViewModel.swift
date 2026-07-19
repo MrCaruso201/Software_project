@@ -12,6 +12,7 @@ class UserHomeViewModel: ObservableObject {
     var totalRegistrations: Int { registrations.count }
     var confirmedRegistrations: Int { registrations.filter { $0.status == "confirmed" }.count }
     var pendingRegistrations: Int { registrations.filter { $0.status == "pending_payment" }.count }
+    var waitlistRegistrations: Int { registrations.filter { $0.status == "waitlist" }.count }
     
     func fetchData(serverURL: URL?, token: String?) {
         guard let serverURL = serverURL, let token = token else {

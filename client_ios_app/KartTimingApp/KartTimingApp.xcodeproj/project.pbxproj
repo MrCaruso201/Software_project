@@ -16,7 +16,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A9B364E92FEE850F000B6D9E = {
+		A9B364E92FEE850F000B6D9E /* Exceptions for "KartTimingApp" folder in "KartTimingApp" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -26,7 +26,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A9B364DC2FEE8404000B6D9E /* KartTimingApp */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A9B364E92FEE850F000B6D9E, ); path = KartTimingApp; sourceTree = "<group>"; };
+		A9B364DC2FEE8404000B6D9E /* KartTimingApp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A9B364E92FEE850F000B6D9E /* Exceptions for "KartTimingApp" folder in "KartTimingApp" target */,
+			);
+			path = KartTimingApp;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */

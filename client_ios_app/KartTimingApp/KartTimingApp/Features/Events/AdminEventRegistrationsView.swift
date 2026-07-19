@@ -15,6 +15,9 @@ struct AdminEventRegistrationsView: View {
     
     @State private var isLoading = true
     
+    @State private var showAddRegistrationSheet = false
+    @State private var teamToEdit: TeamRegistrationResponse? = nil
+    
     private var isTeamEvent: Bool { event.isTeamEvent }
     
     var body: some View {
@@ -35,12 +38,50 @@ struct AdminEventRegistrationsView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showAddRegistrationSheet = true }) {
+                        Image(systemName: "plus")
+                    }
+                    .foregroundColor(.kartAccent)
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
                         .foregroundColor(.kartAccent)
                 }
             }
             .onAppear {
                 loadRegistrations()
+            }
+            .sheet(isPresented: $showAddRegistrationSheet, onDismiss: {
+                loadRegistrations()
+            }) {
+                AdminAddRegistrationSheetView(
+                    server: server,
+                    viewModel: viewModel,
+                    event: event,
+                    isTeamEvent: isTeamEvent
+                )
+            }
+            .sheet(item: $teamToEdit, onDismiss: {
+                loadRegistrations()
+            }) { team in
+                let mockReg = EventRegistrationResponse(
+                    id: 0,
+                    userId: nil,
+                    eventId: event.id,
+                    status: team.overallStatus,
+                    teamName: team.teamName,
+                    teamId: team.teamId,
+                    isTeamLeader: true,
+                    memberEmail: nil,
+                    createdAt: ""
+                )
+                EventTeamEditSheetView(
+                    server: server,
+                    viewModel: viewModel,
+                    event: event,
+                    registration: mockReg,
+                    isAdmin: true
+                )
             }
         }
     }
@@ -98,15 +139,25 @@ struct AdminEventRegistrationsView: View {
                 Spacer()
                 
                 // Badge status
-                Text(team.overallStatus == "confirmed" ? "Confermata" : "Attesa Pag.")
-                    .font(.system(size: 10, weight: .bold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(team.overallStatus == "confirmed"
-                                ? Color.green.opacity(0.2)
-                                : Color.orange.opacity(0.2))
-                    .foregroundColor(team.overallStatus == "confirmed" ? .green : .orange)
-                    .cornerRadius(5)
+                if team.overallStatus == "waitlist" {
+                    Text("Lista d'Attesa")
+                        .font(.system(size: 10, weight: .bold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.purple.opacity(0.2))
+                        .foregroundColor(.purple)
+                        .cornerRadius(5)
+                } else {
+                    Text(team.overallStatus == "confirmed" ? "Confermata" : "Attesa Pag.")
+                        .font(.system(size: 10, weight: .bold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(team.overallStatus == "confirmed"
+                                    ? Color.green.opacity(0.2)
+                                    : Color.orange.opacity(0.2))
+                        .foregroundColor(team.overallStatus == "confirmed" ? .green : .orange)
+                        .cornerRadius(5)
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -161,16 +212,32 @@ struct AdminEventRegistrationsView: View {
             Divider().background(Color.white.opacity(0.08))
             
             // ── Azioni admin ───────────────────────────────────────
-            HStack(spacing: 10) {
-                if team.overallStatus != "confirmed" {
+            HStack(spacing: 8) {
+                if team.overallStatus == "waitlist" {
+                    Button {
+                        acceptWaitlistTeam(teamId: team.teamId)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.crop.circle.badge.checkmark")
+                            Text("Accetta Iscrizione")
+                        }
+                        .font(.system(size: 12, weight: .bold))
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(7)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else if team.overallStatus != "confirmed" {
                     Button {
                         confirmTeam(teamId: team.teamId)
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "checkmark.circle.fill")
-                            Text("Conferma Pag.")
+                            Text("Conferma")
                         }
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
                         .background(Color.green)
@@ -178,16 +245,64 @@ struct AdminEventRegistrationsView: View {
                         .cornerRadius(7)
                     }
                     .buttonStyle(PlainButtonStyle())
+                    
+                    Button {
+                        moveToWaitlistTeam(teamId: team.teamId)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock.fill")
+                            Text("Attesa")
+                        }
+                        .font(.system(size: 11, weight: .bold))
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.purple)
+                        .foregroundColor(.white)
+                        .cornerRadius(7)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else if team.overallStatus == "confirmed" {
+                    Button {
+                        unconfirmTeam(teamId: team.teamId)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "xmark.circle.fill")
+                            Text("Revoca")
+                        }
+                        .font(.system(size: 11, weight: .bold))
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.orange)
+                        .foregroundColor(.white)
+                        .cornerRadius(7)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
+                
+                Button {
+                    teamToEdit = team
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "pencil")
+                        Text("Modifica")
+                    }
+                    .font(.system(size: 11, weight: .bold))
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(7)
+                }
+                .buttonStyle(PlainButtonStyle())
                 
                 Button {
                     deleteTeam(teamId: team.teamId)
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "trash.fill")
-                        Text("Rimuovi Team")
+                        Text("Rimuovi")
                     }
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
                     .background(Color.kartRed)
@@ -284,7 +399,14 @@ struct AdminEventRegistrationsView: View {
                 
                 Spacer()
                 
-                if reg.status == "confirmed" {
+                if reg.status == "waitlist" {
+                    Text("Lista d'Attesa")
+                        .font(.caption).bold()
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color.purple.opacity(0.2))
+                        .foregroundColor(.purple)
+                        .cornerRadius(4)
+                } else if reg.status == "confirmed" {
                     Text("Confermata")
                         .font(.caption).bold()
                         .padding(.horizontal, 8).padding(.vertical, 4)
@@ -303,12 +425,25 @@ struct AdminEventRegistrationsView: View {
 
 
             HStack(spacing: 12) {
-                if reg.status != "confirmed", let userId = reg.userId {
+                if reg.status == "waitlist" {
                     Button {
-                        confirmIndividual(userId: userId)
+                        acceptWaitlistIndividual(registrationId: reg.id)
                     } label: {
-                        Text("Conferma Pagamento")
+                        Text("Accetta Iscrizione")
                             .font(.system(size: 12, weight: .bold))
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else if reg.status != "confirmed" {
+                    Button {
+                        confirmIndividual(registrationId: reg.id)
+                    } label: {
+                        Text("Conferma")
+                            .font(.system(size: 11, weight: .bold))
                             .padding(.vertical, 6)
                             .frame(maxWidth: .infinity)
                             .background(Color.green)
@@ -316,14 +451,39 @@ struct AdminEventRegistrationsView: View {
                             .cornerRadius(6)
                     }
                     .buttonStyle(PlainButtonStyle())
+                    
+                    Button {
+                        moveToWaitlistIndividual(registrationId: reg.id)
+                    } label: {
+                        Text("Attesa")
+                            .font(.system(size: 11, weight: .bold))
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.purple)
+                            .foregroundColor(.white)
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else if reg.status == "confirmed" {
+                    Button {
+                        unconfirmIndividual(registrationId: reg.id)
+                    } label: {
+                        Text("Revoca")
+                            .font(.system(size: 11, weight: .bold))
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.orange)
+                            .foregroundColor(.white)
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
                 
-                if let userId = reg.userId {
-                    Button {
-                        deleteIndividual(userId: userId)
-                    } label: {
+                Button {
+                    deleteIndividual(registrationId: reg.id)
+                } label: {
                         Text("Rimuovi")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                             .padding(.vertical, 6)
                             .frame(maxWidth: .infinity)
                             .background(Color.kartRed)
@@ -331,7 +491,6 @@ struct AdminEventRegistrationsView: View {
                             .cornerRadius(6)
                     }
                     .buttonStyle(PlainButtonStyle())
-                }
             }
             .padding(.top, 4)
         }
@@ -411,6 +570,13 @@ struct AdminEventRegistrationsView: View {
         }
     }
     
+    private func unconfirmTeam(teamId: String) {
+        guard let token = authState.currentToken else { return }
+        viewModel.adminUnconfirmTeamRegistration(serverURL: server.httpURL, eventId: event.id, teamId: teamId, token: token) { success in
+            if success { loadRegistrations() }
+        }
+    }
+    
     private func deleteTeam(teamId: String) {
         guard let token = authState.currentToken else { return }
         viewModel.adminDeleteTeamRegistration(serverURL: server.httpURL, eventId: event.id, teamId: teamId, token: token) { success in
@@ -420,16 +586,53 @@ struct AdminEventRegistrationsView: View {
     
     // MARK: - Actions (Individual)
     
-    private func confirmIndividual(userId: Int) {
+    private func confirmIndividual(registrationId: Int) {
         guard let token = authState.currentToken else { return }
-        viewModel.confirmRegistration(serverURL: server.httpURL, eventId: event.id, userId: userId, token: token) { success in
+        viewModel.adminConfirmIndividualRegistration(serverURL: server.httpURL, eventId: event.id, registrationId: registrationId, token: token) { success in
             if success { loadRegistrations() }
         }
     }
     
-    private func deleteIndividual(userId: Int) {
+    private func unconfirmIndividual(registrationId: Int) {
         guard let token = authState.currentToken else { return }
-        viewModel.adminDeleteRegistration(serverURL: server.httpURL, eventId: event.id, userId: userId, token: token) { success in
+        viewModel.adminUnconfirmIndividualRegistration(serverURL: server.httpURL, eventId: event.id, registrationId: registrationId, token: token) { success in
+            if success { loadRegistrations() }
+        }
+    }
+    
+    private func deleteIndividual(registrationId: Int) {
+        guard let token = authState.currentToken else { return }
+        viewModel.adminDeleteIndividualRegistration(serverURL: server.httpURL, eventId: event.id, registrationId: registrationId, token: token) { success in
+            if success { loadRegistrations() }
+        }
+    }
+    
+    // MARK: - Actions (Waitlist)
+    
+    private func acceptWaitlistTeam(teamId: String) {
+        guard let token = authState.currentToken else { return }
+        viewModel.adminAcceptWaitlistTeamRegistration(serverURL: server.httpURL, eventId: event.id, teamId: teamId, token: token) { success in
+            if success { loadRegistrations() }
+        }
+    }
+    
+    private func acceptWaitlistIndividual(registrationId: Int) {
+        guard let token = authState.currentToken else { return }
+        viewModel.adminAcceptWaitlistRegistration(serverURL: server.httpURL, eventId: event.id, registrationId: registrationId, token: token) { success in
+            if success { loadRegistrations() }
+        }
+    }
+    
+    private func moveToWaitlistTeam(teamId: String) {
+        guard let token = authState.currentToken else { return }
+        viewModel.adminMoveToWaitlistTeamRegistration(serverURL: server.httpURL, eventId: event.id, teamId: teamId, token: token) { success in
+            if success { loadRegistrations() }
+        }
+    }
+    
+    private func moveToWaitlistIndividual(registrationId: Int) {
+        guard let token = authState.currentToken else { return }
+        viewModel.adminMoveToWaitlistRegistration(serverURL: server.httpURL, eventId: event.id, registrationId: registrationId, token: token) { success in
             if success { loadRegistrations() }
         }
     }
