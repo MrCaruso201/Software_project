@@ -280,16 +280,30 @@ struct EventiView: View {
                             } else {
                                 if !isRegistered {
                                     // Non iscritto
-                                    Button {
-                                        activeSheet = .register(event)
-                                    } label: {
-                                        Text("Iscriviti")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 10)
-                                            .background(Color.kartAccent)
-                                            .foregroundColor(.black)
-                                            .cornerRadius(8)
+                                    if authState.currentUser?.role == .raceDirector {
+                                        Button {
+                                            // TODO: Add manager action later
+                                        } label: {
+                                            Text("MANAGER")
+                                                .font(.system(size: 14, weight: .bold))
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 10)
+                                                .background(Color.gray)
+                                                .foregroundColor(.white)
+                                                .cornerRadius(8)
+                                        }
+                                    } else {
+                                        Button {
+                                            activeSheet = .register(event)
+                                        } label: {
+                                            Text("Iscriviti")
+                                                .font(.system(size: 14, weight: .bold))
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 10)
+                                                .background(Color.kartAccent)
+                                                .foregroundColor(.black)
+                                                .cornerRadius(8)
+                                        }
                                     }
                                 } else if !isConfirmed, let reg = reg {
                                     if event.isTeamEvent && reg.isTeamLeader {
