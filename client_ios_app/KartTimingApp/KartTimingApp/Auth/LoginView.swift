@@ -49,7 +49,7 @@ struct LoginView: View {
 
                     // Campi di testo
                     VStack(spacing: 16) {
-                        CustomTextField(placeholder: "Username", text: $username, icon: "person")
+                        CustomTextField(placeholder: isLoginTab ? "Username o Email" : "Username", text: $username, icon: "person")
 
                         if !isLoginTab {
                             CustomTextField(placeholder: "Email", text: $email, icon: "envelope")
