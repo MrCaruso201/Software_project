@@ -158,6 +158,7 @@ struct TeamRegistrationResponse: Codable, Identifiable {
     let eventId: Int
     let members: [TeamMemberResponse]
     let overallStatus: String
+    let acceptsExtraPilots: Bool
     
     var id: String { teamId }
     
@@ -167,5 +168,6 @@ struct TeamRegistrationResponse: Codable, Identifiable {
         case eventId = "event_id"
         case members
         case overallStatus = "overall_status"
+        case acceptsExtraPilots = "accepts_extra_pilots"
     }
 }

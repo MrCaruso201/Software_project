@@ -105,7 +105,12 @@ struct PilotView: View {
                 UIInterfaceOrientation.landscapeRight.rawValue,
                 forKey: "orientation"
             )
-            UINavigationController.attemptRotationToDeviceOrientation()
+            if #available(iOS 16.0, *) {
+                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                windowScene?.windows.first?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+            } else {
+                UINavigationController.attemptRotationToDeviceOrientation()
+            }
         }
         .onDisappear {
             // Ripristina portrait
@@ -114,7 +119,12 @@ struct PilotView: View {
                 UIInterfaceOrientation.portrait.rawValue,
                 forKey: "orientation"
             )
-            UINavigationController.attemptRotationToDeviceOrientation()
+            if #available(iOS 16.0, *) {
+                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                windowScene?.windows.first?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+            } else {
+                UINavigationController.attemptRotationToDeviceOrientation()
+            }
         }
     }
 

@@ -49,6 +49,7 @@ class EventRegistrationResponse(BaseModel):
     team_id: Optional[str] = None
     is_team_leader: bool = False
     member_email: Optional[str] = None
+    accepts_extra_pilots: bool = False
     created_at: datetime
 
     class Config:
@@ -65,6 +66,7 @@ class EventRegistrationWithUserResponse(BaseModel):
     team_id: Optional[str] = None
     is_team_leader: bool = False
     member_email: Optional[str] = None
+    accepts_extra_pilots: bool = False
     created_at: datetime
     username: Optional[str] = None
     email: Optional[str] = None
@@ -89,6 +91,7 @@ class TeamRegistrationResponse(BaseModel):
     team_name: str
     event_id: int
     members: List[TeamMemberResponse]
+    accepts_extra_pilots: bool = False
     overall_status: str  # "confirmed" se almeno 1 confermato, altrimenti "pending_payment"
 
 # ── Request body per iscrizione a squadre ────────────────────────────────────
@@ -96,6 +99,7 @@ class TeamRegistrationResponse(BaseModel):
 class TeamRegistrationRequest(BaseModel):
     team_name: str
     member_emails: List[str]  # email degli altri partecipanti (escluso il leader)
+    accepts_extra_pilots: bool = False
     leader_email: Optional[str] = None
 
 class AdminIndividualRegistrationRequest(BaseModel):
@@ -105,3 +109,13 @@ class AdminTeamRegistrationRequest(BaseModel):
     team_name: str
     leader_email: str
     member_emails: List[str]
+    accepts_extra_pilots: bool = False
+
+class AdminAssignTeamRequest(BaseModel):
+    registration_ids: List[int]
+
+class AdminCreateTeamFromIndividualsRequest(BaseModel):
+    team_name: str
+    leader_registration_id: int
+    member_registration_ids: List[int]
+    accepts_extra_pilots: bool = False

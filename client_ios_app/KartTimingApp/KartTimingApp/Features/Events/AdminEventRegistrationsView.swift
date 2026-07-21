@@ -12,11 +12,21 @@ struct AdminEventRegistrationsView: View {
     @State private var registrations: [EventRegistrationWithUserResponse] = []
     // Vista team (gare a squadre)
     @State private var teams: [TeamRegistrationResponse] = []
+    @State private var unassignedRegistrations: [EventRegistrationWithUserResponse] = []
+    
+    private var enrolledTeams: [TeamRegistrationResponse] {
+        teams.filter { $0.overallStatus != "waitlist" }
+    }
+    
+    private var waitlistTeams: [TeamRegistrationResponse] {
+        teams.filter { $0.overallStatus == "waitlist" }
+    }
     
     @State private var isLoading = true
     
     @State private var showAddRegistrationSheet = false
     @State private var teamToEdit: TeamRegistrationResponse? = nil
+    @State private var registrationToAssign: EventRegistrationWithUserResponse? = nil
     
     private var isTeamEvent: Bool { event.isTeamEvent }
     
@@ -83,6 +93,20 @@ struct AdminEventRegistrationsView: View {
                     isAdmin: true
                 )
             }
+            .sheet(item: $registrationToAssign, onDismiss: {
+                loadRegistrations()
+            }) { reg in
+                AdminTeamSelectionSheet(
+                    server: server,
+                    viewModel: viewModel,
+                    event: event,
+                    registration: reg,
+                    availableTeams: teams.filter { team in
+                        let maxMembers = event.maxPeoplePerGroup ?? 1
+                        return team.acceptsExtraPilots && team.members.count < maxMembers
+                    }
+                )
+            }
         }
     }
     
@@ -93,12 +117,14 @@ struct AdminEventRegistrationsView: View {
             if registrations.isEmpty {
                 emptyView
             } else {
-                List {
-                    ForEach(registrations) { reg in
-                        individualRow(reg)
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(registrations) { reg in
+                            individualRow(reg)
+                        }
                     }
+                    .padding(.vertical, 16)
                 }
-                .listStyle(PlainListStyle())
             }
         }
     }
@@ -107,16 +133,57 @@ struct AdminEventRegistrationsView: View {
     
     private var teamContent: some View {
         Group {
-            if teams.isEmpty {
+            if teams.isEmpty && unassignedRegistrations.isEmpty {
                 emptyView
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(teams) { team in
-                            teamCard(team)
+                    LazyVStack(spacing: 20) {
+                        if !unassignedRegistrations.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("PILOTI DA ACCORPARE")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.kartAccent)
+                                    .padding(.horizontal, 16)
+                                    
+                                ForEach(unassignedRegistrations) { reg in
+                                    individualRow(reg)
+                                }
+                            }
+                            .padding(.top, 10)
+                            
+                            Divider().background(Color.white.opacity(0.1))
+                        }
+                        
+                        if !waitlistTeams.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("SQUADRE IN LISTA D'ATTESA (ISCRITTE TARDI)")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.purple)
+                                    .padding(.horizontal, 16)
+                                    
+                                ForEach(waitlistTeams) { team in
+                                    teamCard(team)
+                                }
+                            }
+                            .padding(.top, 10)
+                            
+                            Divider().background(Color.white.opacity(0.1))
+                        }
+                        
+                        if !enrolledTeams.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("SQUADRE ISCRITTE")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    
+                                ForEach(enrolledTeams) { team in
+                                    teamCard(team)
+                                }
+                            }
+                            .padding(.top, 10)
                         }
                     }
-                    .padding(16)
                     .padding(.bottom, 20)
                 }
             }
@@ -131,9 +198,20 @@ struct AdminEventRegistrationsView: View {
                     Text(team.teamName)
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.white)
-                    Text("\(team.members.count) partecipanti")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.kartDim)
+                    
+                    HStack(spacing: 6) {
+                        Text("\(team.members.count) partecipanti")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.kartDim)
+                            
+                        if let maxP = event.maxPeoplePerGroup {
+                            if team.members.count < maxP && team.acceptsExtraPilots {
+                                Text("• ACCETTA EXTRA")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.green)
+                            }
+                        }
+                    }
                 }
                 
                 Spacer()
@@ -325,6 +403,7 @@ struct AdminEventRegistrationsView: View {
                     lineWidth: 1
                 )
         )
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Individual Row
@@ -425,11 +504,11 @@ struct AdminEventRegistrationsView: View {
 
 
             HStack(spacing: 12) {
-                if reg.status == "waitlist" {
+                if reg.status == "waitlist" && reg.teamId == nil && isTeamEvent {
                     Button {
-                        acceptWaitlistIndividual(registrationId: reg.id)
+                        registrationToAssign = reg
                     } label: {
-                        Text("Accetta Iscrizione")
+                        Text("Accorpa a Team")
                             .font(.system(size: 12, weight: .bold))
                             .padding(.vertical, 6)
                             .frame(maxWidth: .infinity)
@@ -438,45 +517,62 @@ struct AdminEventRegistrationsView: View {
                             .cornerRadius(6)
                     }
                     .buttonStyle(PlainButtonStyle())
-                } else if reg.status != "confirmed" {
-                    Button {
-                        confirmIndividual(registrationId: reg.id)
-                    } label: {
-                        Text("Conferma")
-                            .font(.system(size: 11, weight: .bold))
-                            .padding(.vertical, 6)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(6)
+                }
+                
+                if !(isTeamEvent && reg.teamId == nil) {
+                    if reg.status == "waitlist" {
+                        Button {
+                            acceptWaitlistIndividual(registrationId: reg.id)
+                        } label: {
+                            Text("Accetta Iscrizione")
+                                .font(.system(size: 12, weight: .bold))
+                                .padding(.vertical, 6)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    } else if reg.status != "confirmed" {
+                        Button {
+                            confirmIndividual(registrationId: reg.id)
+                        } label: {
+                            Text("Conferma")
+                                .font(.system(size: 11, weight: .bold))
+                                .padding(.vertical, 6)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.green)
+                                .foregroundColor(.white)
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        Button {
+                            moveToWaitlistIndividual(registrationId: reg.id)
+                        } label: {
+                            Text("Attesa")
+                                .font(.system(size: 11, weight: .bold))
+                                .padding(.vertical, 6)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.purple)
+                                .foregroundColor(.white)
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    } else if reg.status == "confirmed" {
+                        Button {
+                            unconfirmIndividual(registrationId: reg.id)
+                        } label: {
+                            Text("Revoca")
+                                .font(.system(size: 11, weight: .bold))
+                                .padding(.vertical, 6)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.orange)
+                                .foregroundColor(.white)
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    
-                    Button {
-                        moveToWaitlistIndividual(registrationId: reg.id)
-                    } label: {
-                        Text("Attesa")
-                            .font(.system(size: 11, weight: .bold))
-                            .padding(.vertical, 6)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.purple)
-                            .foregroundColor(.white)
-                            .cornerRadius(6)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else if reg.status == "confirmed" {
-                    Button {
-                        unconfirmIndividual(registrationId: reg.id)
-                    } label: {
-                        Text("Revoca")
-                            .font(.system(size: 11, weight: .bold))
-                            .padding(.vertical, 6)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.orange)
-                            .foregroundColor(.white)
-                            .cornerRadius(6)
-                    }
-                    .buttonStyle(PlainButtonStyle())
                 }
                 
                 Button {
@@ -494,8 +590,10 @@ struct AdminEventRegistrationsView: View {
             }
             .padding(.top, 4)
         }
-        .padding(.vertical, 8)
-        .listRowBackground(Color.kartPanel)
+        .padding(14)
+        .background(Color.kartPanel)
+        .cornerRadius(12)
+        .padding(.horizontal, 16)
     }
     
     @ViewBuilder
@@ -549,9 +647,22 @@ struct AdminEventRegistrationsView: View {
         isLoading = true
         
         if isTeamEvent {
+            let group = DispatchGroup()
+            
+            group.enter()
             viewModel.fetchTeamRegistrations(serverURL: server.httpURL, eventId: event.id, token: token) { loadedTeams in
-                self.isLoading = false
                 self.teams = loadedTeams ?? []
+                group.leave()
+            }
+            
+            group.enter()
+            viewModel.fetchUnassignedRegistrations(serverURL: server.httpURL, eventId: event.id, token: token) { loadedUnassigned in
+                self.unassignedRegistrations = loadedUnassigned ?? []
+                group.leave()
+            }
+            
+            group.notify(queue: .main) {
+                self.isLoading = false
             }
         } else {
             viewModel.fetchEventRegistrations(serverURL: server.httpURL, eventId: event.id, token: token) { loadedRegs in
@@ -634,6 +745,254 @@ struct AdminEventRegistrationsView: View {
         guard let token = authState.currentToken else { return }
         viewModel.adminMoveToWaitlistRegistration(serverURL: server.httpURL, eventId: event.id, registrationId: registrationId, token: token) { success in
             if success { loadRegistrations() }
+        }
+    }
+}
+
+// MARK: - Admin Team Selection Sheet
+
+struct AdminTeamSelectionSheet: View {
+    let server: DiscoveredServer
+    @ObservedObject var viewModel: EventiViewModel
+    let event: RaceEvent
+    let registration: EventRegistrationWithUserResponse
+    let availableTeams: [TeamRegistrationResponse]
+    
+    @EnvironmentObject var authState: AuthState
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var isAssigning = false
+    @State private var errorMessage: String? = nil
+    
+    @State private var showCreateForm = false
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.kartBG.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    if availableTeams.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 40))
+                                .foregroundColor(.orange)
+                            Text("Nessuna squadra disponibile.")
+                                .foregroundColor(.white)
+                                .font(.headline)
+                            Text("Non ci sono squadre che hanno posti liberi e accettano piloti extra.")
+                                .foregroundColor(.kartDim)
+                                .multilineTextAlignment(.center)
+                                .font(.subheadline)
+                                .padding(.horizontal, 20)
+                        }
+                        .frame(maxHeight: .infinity)
+                    } else {
+                        List {
+                            if let error = errorMessage {
+                                Section {
+                                    RegistrationErrorBanner(message: error)
+                                        .listRowBackground(Color.clear)
+                                        .listRowInsets(EdgeInsets())
+                                }
+                            }
+                            
+                            Section(header: Text("Squadre Disponibili").foregroundColor(.kartAccent)) {
+                                ForEach(availableTeams) { team in
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(team.teamName)
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                            let maxP = event.maxPeoplePerGroup ?? 1
+                                            Text("Posti liberi: \(maxP - team.members.count)")
+                                                .font(.caption)
+                                                .foregroundColor(.kartDim)
+                                        }
+                                        Spacer()
+                                        
+                                        Button {
+                                            assign(to: team.teamId)
+                                        } label: {
+                                            if isAssigning {
+                                                ProgressView().tint(.white)
+                                                    .frame(width: 70, height: 30)
+                                                    .background(Color.blue)
+                                                    .cornerRadius(6)
+                                            } else {
+                                                Text("Scegli")
+                                                    .font(.system(size: 13, weight: .bold))
+                                                    .frame(width: 70, height: 30)
+                                                    .background(Color.blue)
+                                                    .foregroundColor(.white)
+                                                    .cornerRadius(6)
+                                            }
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        .disabled(isAssigning)
+                                    }
+                                    .padding(.vertical, 6)
+                                    .listRowBackground(Color.kartPanel)
+                                }
+                            }
+                        }
+                        .listStyle(InsetGroupedListStyle())
+                    }
+                }
+            }
+            .navigationTitle("Seleziona Squadra")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Annulla") { dismiss() }
+                        .foregroundColor(.kartAccent)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showCreateForm = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 22))
+                    }
+                    .foregroundColor(.kartAccent)
+                }
+            }
+            .sheet(isPresented: $showCreateForm) {
+                AdminCreateTeamFormSheet(
+                    server: server,
+                    viewModel: viewModel,
+                    event: event,
+                    leaderRegistration: registration,
+                    onSuccess: {
+                        dismiss()
+                    }
+                )
+            }
+        }
+    }
+    
+    private func assign(to teamId: String) {
+        guard let token = authState.currentToken else { return }
+        isAssigning = true
+        errorMessage = nil
+        
+        viewModel.adminAssignToTeam(serverURL: server.httpURL, eventId: event.id, teamId: teamId, registrationIds: [registration.id], token: token) { success in
+            isAssigning = false
+            if success {
+                dismiss()
+            } else {
+                errorMessage = "Impossibile assegnare il pilota alla squadra."
+            }
+        }
+    }
+}
+// MARK: - Admin Create Team Form Sheet
+
+struct AdminCreateTeamFormSheet: View {
+    let server: DiscoveredServer
+    @ObservedObject var viewModel: EventiViewModel
+    let event: RaceEvent
+    let leaderRegistration: EventRegistrationWithUserResponse
+    let onSuccess: () -> Void
+    
+    @EnvironmentObject var authState: AuthState
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var teamName: String = ""
+    @State private var acceptsExtraPilots: Bool = true
+    
+    @State private var isCreating = false
+    @State private var errorMessage: String? = nil
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.kartBG.ignoresSafeArea()
+                
+                Form {
+                    if let error = errorMessage {
+                        Section {
+                            RegistrationErrorBanner(message: error)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets())
+                        }
+                    }
+                    
+                    Section(header: Text("Dettagli Nuova Squadra").foregroundColor(.kartAccent)) {
+                        TextField("Nome della squadra", text: $teamName)
+                            .foregroundColor(.white)
+                            .disableAutocorrection(true)
+                            .autocapitalization(.words)
+                        
+                        Toggle("Accetta piloti extra", isOn: $acceptsExtraPilots)
+                            .tint(.kartAccent)
+                            .foregroundColor(.white)
+                    }
+                    .listRowBackground(Color.kartPanel)
+                    
+                    Section {
+                        Button {
+                            createTeam()
+                        } label: {
+                            HStack {
+                                Spacer()
+                                if isCreating {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Text("Crea Squadra")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                                Spacer()
+                            }
+                        }
+                        .disabled(teamName.trimmingCharacters(in: .whitespaces).isEmpty || isCreating)
+                        .listRowBackground(
+                            (teamName.trimmingCharacters(in: .whitespaces).isEmpty || isCreating)
+                                ? Color.gray
+                                : Color.blue
+                        )
+                    }
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Nuova Squadra")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Annulla") { dismiss() }
+                        .foregroundColor(.kartAccent)
+                }
+            }
+        }
+    }
+    
+    private func createTeam() {
+        guard let token = authState.currentToken else { return }
+        let cleanName = teamName.trimmingCharacters(in: .whitespaces)
+        guard !cleanName.isEmpty else { return }
+        
+        isCreating = true
+        errorMessage = nil
+        
+        viewModel.adminCreateTeamFromIndividuals(
+            serverURL: server.httpURL,
+            eventId: event.id,
+            teamName: cleanName,
+            leaderId: leaderRegistration.id,
+            memberIds: [],
+            acceptsExtraPilots: acceptsExtraPilots,
+            token: token
+        ) { success in
+            isCreating = false
+            if success {
+                onSuccess()
+                dismiss()
+            } else {
+                errorMessage = "Impossibile creare la squadra."
+            }
         }
     }
 }

@@ -15,11 +15,20 @@ struct EventRegistrationSheetView: View {
     @State private var teamName: String = ""
     @State private var leaderEmail: String = ""
     @State private var memberEmails: [String] = [""]
+    
+    @State private var wantsToBeGrouped: Bool = true
+    @State private var acceptsExtraPilots: Bool = false
 
     private var isTeamEvent: Bool { event.isTeamEvent }
     private var maxAdditionalMembers: Int { max(0, (event.maxPeoplePerGroup ?? 1) - 1) }
+    
+    private var filledEmailsCount: Int {
+        memberEmails.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count
+    }
+    
     private var isButtonEnabled: Bool {
         guard isTeamEvent else { return true }
+        if filledEmailsCount == 0 && wantsToBeGrouped { return true }
         return !teamName.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
@@ -41,6 +50,20 @@ struct EventRegistrationSheetView: View {
                                 maxAdditionalMembers: maxAdditionalMembers,
                                 isLeaderEditable: false
                             )
+                            
+                            if filledEmailsCount == 0 {
+                                Toggle("Voglio essere accorpato ad una squadra", isOn: $wantsToBeGrouped)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .tint(.kartAccent)
+                                    .padding(.top, 10)
+                            } else if filledEmailsCount < maxAdditionalMembers {
+                                Toggle("Accetto membri extra accorpati dagli admin", isOn: $acceptsExtraPilots)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .tint(.kartAccent)
+                                    .padding(.top, 10)
+                            }
                         }
                         registrationNote
                         if let error = errorMessage {
@@ -93,12 +116,29 @@ struct EventRegistrationSheetView: View {
     // MARK: - Note
 
     private var registrationNote: some View {
-        let text = isTeamEvent
-            ? "Inserisci il nome della squadra e le email dei tuoi compagni. Sarai tu il capogruppo e dovrai pagare l'iscrizione completa del team."
-            : "Cliccando su Conferma Iscrizione, ti registrerai ufficialmente all'evento."
+        let text: String
+        if !isTeamEvent {
+            text = "Cliccando su Conferma Iscrizione, ti registrerai ufficialmente all'evento."
+        } else {
+            if filledEmailsCount == 0 {
+                if wantsToBeGrouped {
+                    text = "Non avendo inserito compagni, sarai messo in lista d'attesa. Pagherai l'iscrizione il giorno dell'evento."
+                } else {
+                    text = "Creerai una squadra da solo. Pagherai l'intera quota, ma potrai aggiungere membri in futuro."
+                }
+            } else if filledEmailsCount < maxAdditionalMembers {
+                if acceptsExtraPilots {
+                    text = "I membri extra si accorperanno alla tua squadra il giorno dell'evento solo se i pagamenti verranno divisi correttamente in pista."
+                } else {
+                    text = "La tua squadra non accetterà piloti extra dagli admin."
+                }
+            } else {
+                text = "Hai riempito tutti i posti disponibili per questa gara a squadre."
+            }
+        }
         return Text(text)
             .font(.footnote)
-            .foregroundColor(.kartDim)
+            .foregroundColor(Color.gray)
             .multilineTextAlignment(.leading)
             .padding(.top, 4)
     }
@@ -114,18 +154,37 @@ struct EventRegistrationSheetView: View {
         errorMessage = nil
 
         if isTeamEvent {
-            let validEmails = memberEmails
-                .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
-                .filter { !$0.isEmpty }
-            viewModel.registerToEvent(
-                serverURL: server.httpURL,
-                eventId: event.id,
-                token: token,
-                teamName: teamName.trimmingCharacters(in: .whitespaces),
-                memberEmails: validEmails
-            ) { success, msg in
-                isRegistering = false
-                if success { dismiss() } else { errorMessage = msg ?? "Errore sconosciuto." }
+            let validEmails = memberEmails.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }.filter { !$0.isEmpty }
+            
+            if validEmails.isEmpty && wantsToBeGrouped {
+                viewModel.registerToEvent(
+                    serverURL: server.httpURL,
+                    eventId: event.id,
+                    token: token
+                ) { success, msg in
+                    isRegistering = false
+                    if success { dismiss() } else { errorMessage = msg ?? "Errore sconosciuto." }
+                }
+            } else {
+                var finalTeamName = teamName.trimmingCharacters(in: .whitespaces)
+                if finalTeamName.isEmpty && validEmails.isEmpty {
+                    let shortEmail = leaderEmail.components(separatedBy: "@").first ?? "Anon"
+                    finalTeamName = "Team \(shortEmail)"
+                }
+                
+                let acceptsExtra = (validEmails.count < maxAdditionalMembers) ? acceptsExtraPilots : false
+                
+                viewModel.registerToEvent(
+                    serverURL: server.httpURL,
+                    eventId: event.id,
+                    token: token,
+                    teamName: finalTeamName,
+                    memberEmails: validEmails,
+                    acceptsExtraPilots: acceptsExtra
+                ) { success, msg in
+                    isRegistering = false
+                    if success { dismiss() } else { errorMessage = msg ?? "Errore sconosciuto." }
+                }
             }
         } else {
             viewModel.registerToEvent(
@@ -354,7 +413,7 @@ struct TeamFormSection: View {
                     .font(.headline)
                     .foregroundColor(.white)
                 Spacer()
-                Text("Membri: \(filledCount)/\(maxAdditionalMembers)")
+                Text("Membri: \(filledCount + 1)/\(maxAdditionalMembers + 1)")
                     .font(.system(size: 12, weight: .semibold, design: .monospaced))
                     .foregroundColor(.kartAccent)
             }

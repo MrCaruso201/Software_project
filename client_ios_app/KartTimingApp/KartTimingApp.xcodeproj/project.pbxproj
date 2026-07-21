@@ -7,11 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E4904157871A4C71B8041BFF /* EventTeamEditSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CCE40328790C30F15E8FC3E /* EventTeamEditSheetView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		6CCE40328790C30F15E8FC3E /* EventTeamEditSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EventTeamEditSheetView.swift; path = KartTimingApp/Features/Events/EventTeamEditSheetView.swift; sourceTree = SOURCE_ROOT; };
 		A9B364DA2FEE8404000B6D9E /* KartTimingApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KartTimingApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -52,7 +50,6 @@
 			children = (
 				A9B364DC2FEE8404000B6D9E /* KartTimingApp */,
 				A9B364DB2FEE8404000B6D9E /* Products */,
-				6CCE40328790C30F15E8FC3E /* EventTeamEditSheetView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -138,7 +135,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E4904157871A4C71B8041BFF /* EventTeamEditSheetView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
