@@ -59,6 +59,7 @@ def _apply_migrations() -> None:
     """Aggiunge colonne al DB esistente senza sovrascrivere i dati (migration manuale)."""
     migrations = [
         "ALTER TABLE kartodromi ADD COLUMN sito_web TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE kartodromi ADD COLUMN image_url TEXT",
         "ALTER TABLE events ADD COLUMN description TEXT",
         # Colonne squadra per event_registrations
         "ALTER TABLE event_registrations ADD COLUMN team_name TEXT",

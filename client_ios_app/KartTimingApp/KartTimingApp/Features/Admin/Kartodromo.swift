@@ -8,12 +8,14 @@ struct Kartodromo: Identifiable, Hashable, Codable {
     let luogo: String
     let url: String
     let sitoWeb: String
+    let imageUrl: String?
     let attivo: Bool
     let createdAt: String
 
     enum CodingKeys: String, CodingKey {
         case id, nome, luogo, url, attivo
         case sitoWeb   = "sito_web"
+        case imageUrl  = "image_url"
         case createdAt = "created_at"
     }
 }

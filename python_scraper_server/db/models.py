@@ -69,6 +69,7 @@ class Kartodromo(Base):
     luogo      = Column(String, nullable=False, default="") # città e provincia (es. "Ottobiano, PV")
     url        = Column(String, nullable=False, unique=True) # URL pagina live timing
     sito_web   = Column(String, nullable=False, default="") # URL sito ufficiale del kartodromo
+    image_url  = Column(String, nullable=True)             # URL immagine grafica circuito (vista dall'alto)
     attivo     = Column(Boolean, default=True, nullable=False) # se False viene nascosto nel client
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 

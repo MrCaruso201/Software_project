@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct AdminKartodromoView: View {
     let server: DiscoveredServer
@@ -9,6 +10,8 @@ struct AdminKartodromoView: View {
     @State private var expandedId: Int? = nil
     @State private var kartodromoToDelete: Kartodromo? = nil
     @State private var showDeleteAlert = false
+    @State private var uploadingId: Int? = nil
+    @State private var uploadResult: (id: Int, success: Bool)? = nil
 
     enum ActiveSheet: Identifiable {
         case new
@@ -247,6 +250,73 @@ struct AdminKartodromoView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(8)
                         }
+                    }
+
+                    // Upload grafica circuito
+                    PhotosPicker(
+                        selection: Binding(
+                            get: { nil },
+                            set: { item in
+                                guard let item = item else { return }
+                                uploadingId = k.id
+                                item.loadTransferable(type: Data.self) { result in
+                                    DispatchQueue.main.async {
+                                        switch result {
+                                        case .success(let data):
+                                            if let data = data {
+                                                viewModel.uploadImage(
+                                                    serverURL: server.httpURL,
+                                                    kartodromoId: k.id,
+                                                    imageData: data,
+                                                    fileName: "circuit_\(k.id).png",
+                                                    mimeType: "image/png",
+                                                    token: authState.currentToken
+                                                ) { success in
+                                                    uploadingId = nil
+                                                    uploadResult = (id: k.id, success: success)
+                                                    // Reset dopo 2 secondi
+                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                                        uploadResult = nil
+                                                    }
+                                                }
+                                            }
+                                        case .failure:
+                                            uploadingId = nil
+                                        }
+                                    }
+                                }
+                            }
+                        ),
+                        matching: .images
+                    ) {
+                        HStack(spacing: 6) {
+                            if uploadingId == k.id {
+                                ProgressView()
+                                    .tint(.black)
+                                    .scaleEffect(0.8)
+                            } else if let res = uploadResult, res.id == k.id {
+                                Image(systemName: res.success ? "checkmark" : "xmark")
+                                    .font(.system(size: 11, weight: .bold))
+                            } else {
+                                Image(systemName: k.imageUrl != nil ? "photo.badge.checkmark" : "photo.badge.plus")
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                            Text(k.imageUrl != nil ? "Sostituisci grafica" : "Carica grafica circuito")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            uploadResult?.id == k.id
+                                ? (uploadResult!.success ? Color.green.opacity(0.8) : Color.kartRed.opacity(0.7))
+                                : Color.kartBG
+                        )
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                        )
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

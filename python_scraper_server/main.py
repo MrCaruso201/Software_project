@@ -90,10 +90,11 @@ app.include_router(ws_router)
 app.include_router(events_router)
 app.include_router(kartodromi_router)
 
-# Serve file statici (come le immagini di profilo)
+# Serve file statici (come le immagini di profilo e le grafiche dei circuiti)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 os.makedirs(os.path.join(DATA_DIR, "profile_pictures"), exist_ok=True)
+os.makedirs(os.path.join(DATA_DIR, "circuit_images"), exist_ok=True)
 app.mount("/static", StaticFiles(directory=DATA_DIR), name="static")
 
 

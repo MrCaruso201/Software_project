@@ -158,4 +158,47 @@ class KartodromoViewModel: ObservableObject {
             }
         }.resume()
     }
+
+    // MARK: - Upload Image (POST /kartodromi/{id}/image)
+
+    func uploadImage(
+        serverURL: URL?,
+        kartodromoId: Int,
+        imageData: Data,
+        fileName: String,
+        mimeType: String,
+        token: String?,
+        completion: @escaping (Bool) -> Void
+    ) {
+        guard let serverURL = serverURL else { completion(false); return }
+        let url = serverURL.appendingPathComponent("kartodromi/\(kartodromoId)/image")
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        if let token = token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        var body = Data()
+        let crlf = "\r\n"
+        body.append("--\(boundary)\(crlf)".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\(crlf)".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\(crlf)\(crlf)".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\(crlf)--\(boundary)--\(crlf)".data(using: .utf8)!)
+        request.httpBody = body
+
+        URLSession.shared.dataTask(with: request) { _, response, _ in
+            DispatchQueue.main.async {
+                if let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
+                    self.fetchAll(serverURL: serverURL, token: token)
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
 }

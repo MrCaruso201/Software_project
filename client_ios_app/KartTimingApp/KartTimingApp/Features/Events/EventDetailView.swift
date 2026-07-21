@@ -18,6 +18,9 @@ struct EventDetailView: View {
                         // ── Hero ────────────────────────────────────────────
                         heroCard
 
+                        // ── Immagine circuito ────────────────────────────────
+                        circuitImageSection
+
                         // ── Descrizione ─────────────────────────────────────
                         let isAdmin = authState.currentUser?.role.canManageUsers == true
                         let descText = event.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -150,6 +153,80 @@ struct EventDetailView: View {
         }
         .onAppear {
             kartodromoVM.fetchActive(serverURL: server.httpURL, token: authState.currentToken)
+        }
+    }
+
+    // MARK: - Circuit Image Section
+
+    @ViewBuilder
+    private var circuitImageSection: some View {
+        // Trova il kartodromo corrispondente all'evento
+        let kartodromo: Kartodromo? = {
+            let locParts = event.location.components(separatedBy: " - ")
+            let trackName = locParts.first ?? event.location
+            return kartodromoVM.kartodromi.first(where: { $0.nome == trackName || $0.nome == event.location })
+        }()
+
+        if let k = kartodromo, let imageUrl = k.imageUrl {
+            // Costruisce l'URL completo (il server serve /static/... dalla DATA_DIR)
+            let baseURL = server.httpURL?.absoluteString
+                .replacingOccurrences(of: "/api", with: "") ?? ""
+            let fullURL = URL(string: baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + imageUrl)
+
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 6) {
+                    Image(systemName: "map.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.kartAccent)
+                    Text("GRAFICA CIRCUITO")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(.kartAccent)
+                    Spacer()
+                    Text(k.nome.uppercased())
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(.kartDim)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color.kartAccent.opacity(0.08))
+
+                if let url = fullURL {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .cornerRadius(0)
+                        case .failure:
+                            HStack {
+                                Image(systemName: "photo.slash")
+                                    .foregroundColor(.kartDim)
+                                Text("Immagine non disponibile")
+                                    .font(.caption)
+                                    .foregroundColor(.kartDim)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
+                        case .empty:
+                            ProgressView()
+                                .tint(.kartAccent)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 24)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                }
+            }
+            .background(Color.kartPanel)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
+            )
         }
     }
 

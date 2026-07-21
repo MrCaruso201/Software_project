@@ -9,9 +9,10 @@ Endpoints:
   DELETE /kartodromi/{id}    → elimina kartodromo (solo admin)
 """
 
+import os
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 
 from auth.dependencies import require_role
@@ -132,3 +133,38 @@ def delete_kartodromo(
     db.delete(db_k)
     db.commit()
     return None
+
+
+@router.post("/{kartodromo_id}/image", response_model=KartodromoResponse)
+async def upload_circuit_image(
+    kartodromo_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _user: dict = Depends(require_role(Role.ADMIN)),
+):
+    """Carica (o sostituisce) l'immagine del circuito per un kartodromo. Solo admin."""
+    db_k = db.query(Kartodromo).filter(Kartodromo.id == kartodromo_id).first()
+    if not db_k:
+        raise HTTPException(status_code=404, detail="Kartodromo non trovato")
+
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Il file deve essere un'immagine")
+
+    ext = file.filename.split(".")[-1].lower() if file.filename and "." in file.filename else "png"
+    filename = f"circuit_{kartodromo_id}.{ext}"
+
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    images_dir = os.path.join(BASE_DIR, "data", "circuit_images")
+    os.makedirs(images_dir, exist_ok=True)
+    filepath = os.path.join(images_dir, filename)
+
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    db_k.image_url = f"/static/circuit_images/{filename}"
+    db.commit()
+    db.refresh(db_k)
+
+    print(f"🖼️  Immagine circuito aggiornata: {db_k.nome} → {filename}")
+    return db_k
