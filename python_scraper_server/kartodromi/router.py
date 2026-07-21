@@ -15,11 +15,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 
-from auth.dependencies import require_role
+from auth.dependencies import require_role, get_current_user
 from auth.roles import Role
 from db.database import get_db
-from db.models import Kartodromo
-from kartodromi.schemas import KartodromoCreate, KartodromoUpdate, KartodromoResponse
+from db.models import Kartodromo, KartodromoResult
+from kartodromi.schemas import KartodromoCreate, KartodromoUpdate, KartodromoResponse, KartodromoResultRequest, KartodromoResultResponse
 
 router = APIRouter(prefix="/kartodromi", tags=["kartodromi"])
 
@@ -168,3 +168,43 @@ async def upload_circuit_image(
 
     print(f"🖼️  Immagine circuito aggiornata: {db_k.nome} → {filename}")
     return db_k
+
+
+# ---------------------------------------------------------------------------
+# Risultati personali (self-declared su circuito)
+# ---------------------------------------------------------------------------
+
+@router.get("/results/me", response_model=List[KartodromoResultResponse])
+def get_my_kartodromo_results(
+    db: Session = Depends(get_db),
+    user_payload: dict = Depends(get_current_user),
+):
+    """Restituisce tutti i tempi autodichiarati dell'utente corrente sui vari kartodromi."""
+    user_id = int(user_payload["sub"])
+    return db.query(KartodromoResult).filter(KartodromoResult.user_id == user_id).order_by(KartodromoResult.date.desc()).all()
+
+
+@router.post("/{kartodromo_id}/results/me/best_lap", response_model=KartodromoResultResponse)
+def self_declare_kartodromo_best_lap(
+    kartodromo_id: int,
+    req: KartodromoResultRequest,
+    db: Session = Depends(get_db),
+    user_payload: dict = Depends(get_current_user),
+):
+    """Crea o aggiorna il tempo autodichiarato dall'utente per un determinato kartodromo."""
+    user_id = int(user_payload["sub"])
+    
+    k = db.query(Kartodromo).filter(Kartodromo.id == kartodromo_id).first()
+    if not k:
+        raise HTTPException(status_code=404, detail="Kartodromo non trovato")
+        
+    new_result = KartodromoResult(
+        user_id=user_id,
+        kartodromo_id=kartodromo_id,
+        best_lap_ms=req.best_lap_ms,
+        date=req.date
+    )
+    db.add(new_result)
+    db.commit()
+    db.refresh(new_result)
+    return new_result

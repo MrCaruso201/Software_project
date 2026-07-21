@@ -34,12 +34,7 @@ struct HomeView: View {
                 .tag(HomeTab.timing)
 
                 NavigationStack {
-                    Text("Analisi in costruzione")
-                        .foregroundColor(.kartDim)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.kartBG)
-                        .navigationTitle("Analisi")
-                        .navigationBarTitleDisplayMode(.inline)
+                    AnalisiView(server: appEnv.server(token: authState.currentToken ?? ""))
                 }
                 .tabItem { Label("Analisi", systemImage: "trophy.fill") }
                 .tag(HomeTab.analisi)

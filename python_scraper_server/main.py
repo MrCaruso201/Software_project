@@ -24,7 +24,8 @@ Struttura del progetto:
   auth/router.py         → endpoint /auth/*
   auth/admin_router.py   → endpoint /admin/* (solo admin)
   db/database.py         → connessione SQLite + init_db
-  db/models.py           → modelli SQLAlchemy (users, refresh_tokens, events, kartodromi)
+  db/models.py           → modelli SQLAlchemy (users, refresh_tokens, events, kartodromi, event_results)
+  results/router.py      → endpoint /events/results/* (classifiche gara)
   scraper/storage.py     → persistenza JSON su disco
   scraper/session.py     → ScraperSession + registro globale sessioni
   ws/manager.py          → mappa client-URL, subscribe/unsubscribe, broadcast
@@ -51,6 +52,7 @@ from ws.router import router as ws_router
 from discovery.bonjour import start_bonjour, stop_bonjour
 from events.router import router as events_router
 from kartodromi.router import router as kartodromi_router
+from results.router import router as results_router
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +89,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(ws_router)
+app.include_router(results_router)   # PRIMA di events_router: /events/results/me deve matchare come path statico
 app.include_router(events_router)
 app.include_router(kartodromi_router)
 

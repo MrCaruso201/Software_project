@@ -8,10 +8,10 @@ Tabelle:
   - kartodromi     → kartodromi disponibili con URL live timing
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, date, timezone
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, ForeignKey, Integer, String, Float, Text, UniqueConstraint
+    Boolean, Column, DateTime, Date, ForeignKey, Integer, String, Float, Text, UniqueConstraint
 )
 from sqlalchemy.orm import declarative_base
 
@@ -91,3 +91,43 @@ class EventRegistration(Base):
     __table_args__ = (
         UniqueConstraint('user_id', 'event_id', name='uq_user_event'),
     )
+
+
+class EventResult(Base):
+    """
+    Risultato di un pilota in una gara.
+
+    - is_official=True  → inserito dall'admin (via CSV o manualmente)
+    - is_official=False → auto-dichiarato dal pilota
+    In caso di gara a squadre tutti i membri condividono la stessa posizione.
+    """
+    __tablename__ = "event_results"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    event_id     = Column(Integer, ForeignKey("events.id",    ondelete="CASCADE"), nullable=False)
+    user_id      = Column(Integer, ForeignKey("users.id",     ondelete="CASCADE"), nullable=True)
+    driver_name  = Column(String,  nullable=True)   # nome pilota dal CSV
+    member_email = Column(String,  nullable=True)   # email anche se non registrato nel sistema
+    position     = Column(Integer, nullable=True)   # posizione finale (None = non pubblicata)
+    best_lap_ms  = Column(Integer, nullable=True)   # miglior giro in millisecondi
+    gap          = Column(String,  nullable=True)   # distacco
+    laps         = Column(Integer, nullable=True)   # numero di giri
+    is_official  = Column(Boolean, default=False, nullable=False)  # True = admin, False = utente
+    team_id      = Column(String,  nullable=True)   # UUID team (gare a squadre)
+    team_name    = Column(String,  nullable=True)   # nome squadra
+    note         = Column(Text,    nullable=True)
+    created_at   = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class KartodromoResult(Base):
+    """
+    Risultato personale auto-dichiarato di un pilota su un determinato circuito (fuori da eventi ufficiali).
+    """
+    __tablename__ = "kartodromo_results"
+
+    id            = Column(Integer, primary_key=True, index=True)
+    user_id       = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    kartodromo_id = Column(Integer, ForeignKey("kartodromi.id", ondelete="CASCADE"), nullable=False)
+    best_lap_ms   = Column(Integer, nullable=False)   # miglior giro in millisecondi
+    date          = Column(Date, nullable=False)      # data della prova libera
+    created_at    = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

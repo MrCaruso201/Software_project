@@ -37,10 +37,14 @@ struct RaceEvent: Identifiable, Codable {
     }
 
     var formattedDate: String {
-        if let date = Self.parseDate(from: eventDate) {
+        if let date = dateObject {
             return Self.format(date)
         }
         return eventDate
+    }
+    
+    var dateObject: Date? {
+        Self.parseDate(from: eventDate)
     }
     
     private static func parseDate(from string: String) -> Date? {

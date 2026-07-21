@@ -41,6 +41,20 @@ struct EventiView: View {
         }
     }
     
+    var upcomingEvents: [RaceEvent] {
+        let now = Date()
+        return filteredEvents
+            .filter { ($0.dateObject ?? .distantFuture) >= now }
+            .sorted { ($0.dateObject ?? .distantFuture) < ($1.dateObject ?? .distantFuture) }
+    }
+    
+    var pastEvents: [RaceEvent] {
+        let now = Date()
+        return filteredEvents
+            .filter { ($0.dateObject ?? .distantFuture) < now }
+            .sorted { ($0.dateObject ?? .distantPast) > ($1.dateObject ?? .distantPast) }
+    }
+    
     var body: some View {
         ZStack {
             Color.kartBG.ignoresSafeArea()
@@ -74,9 +88,24 @@ struct EventiView: View {
                     Spacer()
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(filteredEvents) { event in
-                                eventRow(event)
+                        LazyVStack(spacing: 16) {
+                            if !upcomingEvents.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    sectionHeader("IN PROGRAMMA", icon: "calendar.badge.clock")
+                                    ForEach(upcomingEvents) { event in
+                                        eventRow(event)
+                                    }
+                                }
+                            }
+                            
+                            if !pastEvents.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    sectionHeader("PASSATI", icon: "clock.arrow.circlepath")
+                                        .padding(.top, 10)
+                                    ForEach(pastEvents) { event in
+                                        eventRow(event)
+                                    }
+                                }
                             }
                         }
                         .padding(.top, 16)
@@ -128,7 +157,9 @@ struct EventiView: View {
                 }
             }
         }
-        .sheet(item: $activeSheet) { sheetType in
+        .sheet(item: $activeSheet, onDismiss: {
+            viewModel.fetchEvents(serverURL: server.httpURL)
+        }) { sheetType in
             switch sheetType {
             case .new:
                 EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: nil)
@@ -158,6 +189,18 @@ struct EventiView: View {
                 viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
             }
         }
+    }
+    
+    private func sectionHeader(_ title: String, icon: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .foregroundColor(.kartAccent)
+            Text(title)
+                .foregroundColor(.kartAccent)
+            Spacer()
+        }
+        .font(.system(size: 13, weight: .bold, design: .monospaced))
+        .padding(.horizontal, 16)
     }
     
     // ── Event Row ─────────────────────────────────────────────────────────────

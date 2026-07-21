@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct AdminEventRegistrationsView: View {
     let server: DiscoveredServer
@@ -17,6 +18,12 @@ struct AdminEventRegistrationsView: View {
     
     @State private var showAddRegistrationSheet = false
     @State private var teamToEdit: TeamRegistrationResponse? = nil
+
+    // CSV Import
+    @State private var showCSVImporter     = false
+    @State private var isUploadingCSV      = false
+    @State private var csvImportAlert      = false
+    @State private var csvImportMessage    = ""
     
     private var isTeamEvent: Bool { event.isTeamEvent }
     
@@ -38,10 +45,26 @@ struct AdminEventRegistrationsView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showAddRegistrationSheet = true }) {
-                        Image(systemName: "plus")
+                    HStack(spacing: 4) {
+                        // CSV import
+                        Button {
+                            showCSVImporter = true
+                        } label: {
+                            if isUploadingCSV {
+                                ProgressView().tint(.kartAccent).scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "chart.bar.doc.horizontal")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                        }
+                        .foregroundColor(.kartAccent)
+
+                        // Aggiungi iscrizione
+                        Button(action: { showAddRegistrationSheet = true }) {
+                            Image(systemName: "plus")
+                        }
+                        .foregroundColor(.kartAccent)
                     }
-                    .foregroundColor(.kartAccent)
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
@@ -82,6 +105,26 @@ struct AdminEventRegistrationsView: View {
                     registration: mockReg,
                     isAdmin: true
                 )
+            }
+            // ── CSV file picker ──────────────────────────────────────────
+            .fileImporter(
+                isPresented: $showCSVImporter,
+                allowedContentTypes: [UTType.commaSeparatedText, UTType.plainText],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    guard let url = urls.first else { return }
+                    uploadCSV(url: url)
+                case .failure:
+                    csvImportMessage = "Impossibile aprire il file. Riprova."
+                    csvImportAlert = true
+                }
+            }
+            .alert("Importazione classifica", isPresented: $csvImportAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(csvImportMessage)
             }
         }
     }
@@ -635,5 +678,85 @@ struct AdminEventRegistrationsView: View {
         viewModel.adminMoveToWaitlistRegistration(serverURL: server.httpURL, eventId: event.id, registrationId: registrationId, token: token) { success in
             if success { loadRegistrations() }
         }
+    }
+
+    // MARK: - CSV Import
+
+    private func uploadCSV(url: URL) {
+        guard let serverURL = server.httpURL,
+              let token     = authState.currentToken else { return }
+
+        isUploadingCSV = true
+
+        // Accesso sicuro al file scelto dal picker
+        guard url.startAccessingSecurityScopedResource() else {
+            csvImportMessage = "Permesso negato per accedere al file."
+            csvImportAlert   = true
+            isUploadingCSV   = false
+            return
+        }
+
+        defer { url.stopAccessingSecurityScopedResource() }
+
+        let csvData: Data
+        do {
+            csvData = try Data(contentsOf: url)
+        } catch {
+            csvImportMessage = "Impossibile leggere il file: \(error.localizedDescription)"
+            csvImportAlert   = true
+            isUploadingCSV   = false
+            return
+        }
+
+        let endpoint = serverURL.appendingPathComponent("events/\(event.id)/results/import_csv")
+        let boundary = "Boundary-\(UUID().uuidString)"
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let crlf = "\r\n"
+        var body = Data()
+        body.append("--\(boundary)\(crlf)".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"classifica.csv\"\(crlf)".data(using: .utf8)!)
+        body.append("Content-Type: text/csv\(crlf)\(crlf)".data(using: .utf8)!)
+        body.append(csvData)
+        body.append("\(crlf)--\(boundary)--\(crlf)".data(using: .utf8)!)
+        request.httpBody = body
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                self.isUploadingCSV = false
+
+                if let error {
+                    self.csvImportMessage = "Errore di rete: \(error.localizedDescription)"
+                    self.csvImportAlert   = true
+                    return
+                }
+                guard let http = response as? HTTPURLResponse else { return }
+
+                if let data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let imported = json["imported"] as? Int ?? 0
+                    let errors   = json["errors"]   as? [String] ?? []
+
+                    if http.statusCode == 200 {
+                        var msg = "✅ Importati \(imported) risultati."
+                        if !errors.isEmpty {
+                            msg += "\n\n⚠️ \(errors.count) errori:\n" + errors.prefix(5).joined(separator: "\n")
+                            if errors.count > 5 { msg += "\n…e altri \(errors.count - 5) errori." }
+                        }
+                        self.csvImportMessage = msg
+                    } else {
+                        let detail = json["detail"] as? String ?? "Errore \(http.statusCode)"
+                        self.csvImportMessage = "❌ \(detail)"
+                    }
+                } else {
+                    self.csvImportMessage = "❌ Risposta non valida dal server (\(http.statusCode))"
+                }
+                self.csvImportAlert = true
+            }
+        }.resume()
     }
 }

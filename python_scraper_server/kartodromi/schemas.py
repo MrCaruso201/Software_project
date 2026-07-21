@@ -2,7 +2,7 @@
 Schema Pydantic per i kartodromi.
 """
 
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 from pydantic import BaseModel
 
@@ -35,3 +35,21 @@ class KartodromoResponse(KartodromoBase):
 
     class Config:
         from_attributes = True
+
+
+class KartodromoResultRequest(BaseModel):
+    best_lap_ms: int
+    date: date
+
+
+class KartodromoResultResponse(BaseModel):
+    id: int
+    user_id: int
+    kartodromo_id: int
+    best_lap_ms: int
+    date: date
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
