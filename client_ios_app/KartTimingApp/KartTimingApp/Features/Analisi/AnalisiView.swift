@@ -612,10 +612,16 @@ struct ClassificationSheet: View {
                     }
                     .padding(32)
                 } else {
+                    let isTeamRace = results.contains { r in
+                        !(r.teamName ?? "").isEmpty
+                    }
+
                     ScrollView {
-                        VStack(spacing: 8) {
-                            ForEach(results) { result in
-                                classificationRow(result)
+                        VStack(spacing: 10) {
+                            if isTeamRace {
+                                teamClassification(results)
+                            } else {
+                                individualClassification(results)
                             }
                         }
                         .padding(16)
@@ -645,55 +651,36 @@ struct ClassificationSheet: View {
         }
     }
 
-    private func classificationRow(_ result: EventResult) -> some View {
-        let bgColor: Color = {
-            switch result.position {
-            case 1: return Color.yellow.opacity(0.07)
-            case 2: return Color(white: 0.5).opacity(0.07)
-            case 3: return Color.orange.opacity(0.07)
-            default: return Color.kartPanel
-            }
-        }()
-        
-        let strokeColor: Color = {
-            switch result.position {
-            case 1: return Color.yellow.opacity(0.25)
-            case 2: return Color(white: 0.6).opacity(0.2)
-            case 3: return Color.orange.opacity(0.2)
-            default: return Color.white.opacity(0.04)
-            }
-        }()
+    // ── Classifica Individuale ────────────────────────────────────────────────
+
+    @ViewBuilder
+    private func individualClassification(_ results: [EventResult]) -> some View {
+        ForEach(results.sorted { ($0.position ?? 999) < ($1.position ?? 999) }) { result in
+            individualRow(result)
+        }
+    }
+
+    private func individualRow(_ result: EventResult) -> some View {
+        let (bgColor, strokeColor) = podiumColors(result.position)
 
         return HStack(spacing: 12) {
-            positionCircle(result.position)
+            positionBadge(result.position)
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(result.displayName)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                    
-                    // Mostriamo il team tra parentesi, in piccolo, indipendentemente dal driverName
-                    if let team = result.teamName {
-                        Text("(\(team))")
-                            .font(.system(size: 11))
-                            .foregroundColor(.kartDim)
-                            .lineLimit(1)
-                    }
-                }
-                
+                Text(result.displayName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+
                 HStack(spacing: 12) {
                     if let lap = result.formattedBestLap {
                         HStack(spacing: 4) {
-                            Image(systemName: "stopwatch")
-                                .font(.system(size: 10))
+                            Image(systemName: "stopwatch").font(.system(size: 10))
                             Text(lap)
                         }
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(.kartAccent)
                     }
-                    
                     if let gap = result.gap {
                         Text(gap)
                             .font(.system(size: 11, design: .monospaced))
@@ -702,7 +689,6 @@ struct ClassificationSheet: View {
                 }
             }
             Spacer()
-            
             if let laps = result.laps {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(laps)")
@@ -720,7 +706,166 @@ struct ClassificationSheet: View {
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(strokeColor, lineWidth: 1))
     }
 
-    private func positionCircle(_ position: Int?) -> some View {
+    // ── Classifica a Squadre ──────────────────────────────────────────────────
+
+    @ViewBuilder
+    private func teamClassification(_ results: [EventResult]) -> some View {
+        let groups = buildTeamGroups(results)
+        ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+            teamCard(group.teamName, position: group.position,
+                     gap: group.gap, members: group.members)
+        }
+    }
+
+    private struct TeamGroup {
+        let teamName: String
+        let position: Int?
+        let gap: String?
+        let members: [EventResult]
+    }
+
+    private func buildTeamGroups(_ results: [EventResult]) -> [TeamGroup] {
+        var seen: [String: Int] = [:]
+        var teams: [(name: String, position: Int?, gap: String?, members: [EventResult])] = []
+        for r in results {
+            let key = r.teamName ?? r.displayName
+            if let idx = seen[key] {
+                teams[idx].members.append(r)
+            } else {
+                seen[key] = teams.count
+                teams.append((key, r.position, r.gap, [r]))
+            }
+        }
+        return teams
+            .sorted { ($0.position ?? 999) < ($1.position ?? 999) }
+            .map { TeamGroup(teamName: $0.name, position: $0.position,
+                             gap: $0.gap, members: $0.members) }
+    }
+
+    private func teamCard(_ teamName: String, position: Int?,
+                          gap: String?, members: [EventResult]) -> some View {
+        let (bgColor, strokeColor) = podiumColors(position)
+
+        return VStack(spacing: 0) {
+
+            // ── Header squadra ────────────────────────────────────────────
+            HStack(spacing: 10) {
+                positionBadge(position)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(teamName)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    Text("\(members.count) piloti")
+                        .font(.system(size: 10))
+                        .foregroundColor(.kartDim)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 3) {
+                    // Miglior giro del team
+                    if let bestMs = members.compactMap({ $0.bestLapMs }).min() {
+                        let mins = bestMs / 60_000
+                        let secs = (bestMs % 60_000) / 1_000
+                        let ms   = bestMs % 1_000
+                        let str  = mins > 0
+                            ? String(format: "%d:%02d.%03d", mins, secs, ms)
+                            : String(format: "%d.%03d", secs, ms)
+                        HStack(spacing: 4) {
+                            Image(systemName: "stopwatch").font(.system(size: 9))
+                            Text(str)
+                        }
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(.kartAccent)
+                    }
+                    // Gap dal leader
+                    if let g = gap, g != "Leader" {
+                        Text(g)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(.kartDim)
+                    } else if gap == "Leader" {
+                        Text("Leader")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.kartAccent)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+
+            // ── Divisore ──────────────────────────────────────────────────
+            Rectangle()
+                .fill(strokeColor.opacity(0.5))
+                .frame(height: 1)
+
+            // ── Righe piloti ──────────────────────────────────────────────
+            VStack(spacing: 0) {
+                ForEach(Array(members.enumerated()), id: \.element.id) { idx, member in
+                    HStack(spacing: 10) {
+                        // Indice pilota nel team
+                        ZStack {
+                            Circle()
+                                .fill(Color.white.opacity(0.06))
+                                .frame(width: 22, height: 22)
+                            Text("\(idx + 1)")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(.kartDim)
+                        }
+
+                        Text(member.displayName)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        if let lap = member.formattedBestLap {
+                            HStack(spacing: 3) {
+                                Image(systemName: "stopwatch")
+                                    .font(.system(size: 9))
+                                Text(lap)
+                            }
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.kartAccent.opacity(0.8))
+                        } else {
+                            Text("—")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(.kartDim.opacity(0.4))
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(idx % 2 == 0 ? Color.clear : Color.white.opacity(0.02))
+
+                    if idx < members.count - 1 {
+                        Rectangle()
+                            .fill(Color.white.opacity(0.05))
+                            .frame(height: 1)
+                            .padding(.horizontal, 12)
+                    }
+                }
+            }
+            .padding(.bottom, 4)
+        }
+        .background(bgColor)
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(strokeColor, lineWidth: 1))
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private func podiumColors(_ position: Int?) -> (Color, Color) {
+        switch position {
+        case 1: return (Color.yellow.opacity(0.07), Color.yellow.opacity(0.3))
+        case 2: return (Color(white: 0.5).opacity(0.07), Color(white: 0.6).opacity(0.25))
+        case 3: return (Color.orange.opacity(0.07), Color.orange.opacity(0.25))
+        default: return (Color.kartPanel, Color.white.opacity(0.06))
+        }
+    }
+
+    private func positionBadge(_ position: Int?) -> some View {
         let (bg, fg): (Color, Color) = {
             switch position {
             case 1: return (.yellow.opacity(0.2), .yellow)
@@ -737,6 +882,7 @@ struct ClassificationSheet: View {
         }
     }
 }
+
 
 // MARK: - AddCircuitTimeSheet
 

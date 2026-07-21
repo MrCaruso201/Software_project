@@ -290,6 +290,11 @@ class AnalisiViewModel: ObservableObject {
         if let d = df.date(from: string) { return d }
         
         df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
-        return df.date(from: string)
+        if let d = df.date(from: string) { return d }
+        
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+        if let d = df.date(from: string) { return d }
+        
+        return nil
     }
 }

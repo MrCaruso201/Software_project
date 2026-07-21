@@ -1,0 +1,11 @@
+Posizione, Pilota           , Squadra , Miglior Giro, Gap    , Giri, username
+        1, Pippo Baudo      , squadra1, 1:12.517    , Leader ,   12, user
+        1, Luca Ferrari     , squadra1, 1:13.228    , +7.692s,   12
+        1, Andrea Ricci     , squadra1, 1:13.040    , +9.745s,   12, user2
+        2, Sofia Esposito   , squadra2, 1:14.929    , +1 giro,   11
+        2, Francesco Mancini, squadra2, 1:14.616    , +1 giro,   11
+        2, Giovanni Bianchi , squadra2, 1:15.119    , +1 giro,   11
+        3, Elena Conti      , squadra3, 1:15.935    , +1 giro,   11
+        3, Matteo Romano    , squadra3, 1:16.930    , +1 giro,   11
+        3, Chiara Colombo   , squadra3, 1:17.821    , +1 giro,   11
+         

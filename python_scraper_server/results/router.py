@@ -139,8 +139,12 @@ async def import_results_from_csv(
     Importa la classifica ufficiale da CSV. Solo admin.
     Sovrascrive tutti i risultati ufficiali precedenti per questo evento.
 
-    Gare individuali → colonne: position, email, best_lap_ms (opzionale)
-    Gare a squadre   → colonne: position, team_name, best_lap_ms (opzionale)
+    Formato CSV atteso (colonne):
+      Posizione, Pilota, Squadra (opzionale), Miglior Giro (opzionale), Gap (opzionale), Giri (opzionale), username (opzionale)
+
+    - username: se presente, associa il risultato all'account con quel username.
+    - In gare a squadre la Posizione è la stessa per tutti i membri dello stesso team (Squadra).
+    - Se username è vuoto, il pilota viene salvato senza associazione a un account.
     """
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
@@ -171,8 +175,10 @@ async def import_results_from_csv(
     errors: list[str] = []
 
     for i, row in enumerate(reader, start=2):
-        # Normalizza chiavi (case insensitive + strip)
-        row = {k.strip().lower(): v.strip() for k, v in row.items() if k}
+        # Normalizza chiavi (case insensitive + strip); salta righe completamente vuote
+        row = {k.strip().lower(): (v.strip() if v is not None else "") for k, v in row.items() if k}
+        if not any(row.values()):
+            continue  # riga vuota (es. riga finale del CSV)
 
         # Posizione
         raw_pos = row.get("posizione", row.get("position", ""))
@@ -221,9 +227,19 @@ async def import_results_from_csv(
             except ValueError:
                 pass
 
+        # Lettura username colonna (opzionale)
+        username_col = row.get("username", "").strip()
+
         user_id = None
         member_email = None
         matched_team_id = None
+
+        # Risolvi user_id da username se fornito
+        if username_col:
+            u = db.query(User).filter(User.username == username_col).first()
+            if u:
+                user_id = u.id
+                member_email = u.email
 
         if is_team_event:
             if team_name:
@@ -234,13 +250,22 @@ async def import_results_from_csv(
 
                 if team_regs:
                     matched_team_id = team_regs[0].team_id
-                    # Gara a squadre: un risultato PER OGNI membro del team iscritto
+                    # Per ogni membro registrato nel team:
+                    # se il username della riga corrente corrisponde a un membro, associa quell'utente;
+                    # altrimenti crea un risultato con user_id dall'username colonna o None
+                    matched_member = None
                     for reg in team_regs:
+                        if reg.user_id and reg.user_id == user_id:
+                            matched_member = reg
+                            break
+
+                    if matched_member:
+                        # Risultato per questo pilota specifico nel team
                         db.add(EventResult(
                             event_id=event_id,
-                            user_id=reg.user_id,
+                            user_id=matched_member.user_id,
                             driver_name=driver_name,
-                            member_email=reg.member_email,
+                            member_email=matched_member.member_email,
                             position=position,
                             best_lap_ms=best_lap_ms,
                             gap=gap,
@@ -250,22 +275,28 @@ async def import_results_from_csv(
                             team_name=team_name,
                         ))
                         imported += 1
-                    continue
+                        continue
+                    else:
+                        # Nessun membro specifico matchato: salva con user_id dall'username se disponibile
+                        db.add(EventResult(
+                            event_id=event_id,
+                            user_id=user_id,
+                            driver_name=driver_name,
+                            member_email=member_email,
+                            position=position,
+                            best_lap_ms=best_lap_ms,
+                            gap=gap,
+                            laps=laps,
+                            is_official=True,
+                            team_id=matched_team_id,
+                            team_name=team_name,
+                        ))
+                        imported += 1
+                        continue
                 else:
                     errors.append(f"Riga {i}: squadra '{team_name}' non iscritta (salvato senza utenti associati)")
             else:
                 errors.append(f"Riga {i}: squadra mancante in gara a squadre")
-        else:
-            # Gara individuale: match per nome pilota
-            if driver_name:
-                regs = db.query(EventRegistration).filter(EventRegistration.event_id == event_id).all()
-                for reg in regs:
-                    if reg.user_id:
-                        u = db.query(User).filter(User.id == reg.user_id).first()
-                        if u and f"{u.first_name} {u.last_name}".lower() == driver_name.lower():
-                            user_id = u.id
-                            member_email = u.email
-                            break
 
         # Inserimento fallback se non è team event o se il team_name non è stato matchato
         db.add(EventResult(

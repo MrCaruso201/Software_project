@@ -37,17 +37,19 @@ OUTPUT_FILE              = script_dir + "/sim_data/live_timing.json"   # File un
 BASE_URL                 = "https://live.racefacer.com/simulator"
 
 # Piloti: nome, numero kart, tempo base giro (secondi), sigma (varianza = consistenza)
+# team: nome della squadra (None = gara individuale)
+# username: username dell'account app (None = pilota non iscritto)
 DRIVERS = [
-    {"name": "Marco Rossi",       "kart": "101", "base_time": 73.5, "sigma": 0.35},
-    {"name": "Luca Ferrari",      "kart": "102", "base_time": 74.2, "sigma": 0.40},
-    {"name": "Sofia Esposito",    "kart": "103", "base_time": 75.8, "sigma": 0.55},
-    {"name": "Giovanni Bianchi",  "kart": "104", "base_time": 76.1, "sigma": 0.45},
-    {"name": "Elena Conti",       "kart": "105", "base_time": 77.0, "sigma": 0.60},
-    {"name": "Andrea Ricci",      "kart": "106", "base_time": 73.8, "sigma": 0.38},
-    {"name": "Matteo Romano",     "kart": "107", "base_time": 78.5, "sigma": 0.70},
-    {"name": "Chiara Colombo",    "kart": "108", "base_time": 79.2, "sigma": 0.65},
-    {"name": "Francesco Mancini", "kart": "109", "base_time": 75.2, "sigma": 0.50},
-    {"name": "Valentina Leone",   "kart": "110", "base_time": 80.0, "sigma": 0.80},
+    {"name": "Marco Rossi",       "kart": "101", "base_time": 73.5, "sigma": 0.35, "team": "Scuderia Alpha", "username": "marco"},
+    {"name": "Luca Ferrari",      "kart": "102", "base_time": 74.2, "sigma": 0.40, "team": "Scuderia Alpha", "username": None},
+    {"name": "Sofia Esposito",    "kart": "103", "base_time": 75.8, "sigma": 0.55, "team": "Red Karts",     "username": None},
+    {"name": "Giovanni Bianchi",  "kart": "104", "base_time": 76.1, "sigma": 0.45, "team": "Red Karts",     "username": None},
+    {"name": "Elena Conti",       "kart": "105", "base_time": 77.0, "sigma": 0.60, "team": "Red Karts",     "username": None},
+    {"name": "Andrea Ricci",      "kart": "106", "base_time": 73.8, "sigma": 0.38, "team": "Pit Stop FC",   "username": None},
+    {"name": "Matteo Romano",     "kart": "107", "base_time": 78.5, "sigma": 0.70, "team": "Pit Stop FC",   "username": None},
+    {"name": "Chiara Colombo",    "kart": "108", "base_time": 79.2, "sigma": 0.65, "team": "Pit Stop FC",   "username": None},
+    {"name": "Francesco Mancini", "kart": "109", "base_time": 75.2, "sigma": 0.50, "team": None,            "username": None},
+    {"name": "Valentina Leone",   "kart": "110", "base_time": 80.0, "sigma": 0.80, "team": None,            "username": None},
 ]
 
 # ─── Utilità ──────────────────────────────────────────────────────────────────
@@ -91,11 +93,14 @@ def simulate_lap(base_time: float, sigma: float, lap_num: int) -> float:
 # ─── Stato pilota ─────────────────────────────────────────────────────────────
 
 class Driver:
-    def __init__(self, name: str, kart: str, base_time: float, sigma: float, grid_pos: int):
+    def __init__(self, name: str, kart: str, base_time: float, sigma: float, grid_pos: int,
+                 team: Optional[str] = None, username: Optional[str] = None):
         self.name      = name
         self.kart      = kart
         self.base_time = base_time
         self.sigma     = sigma
+        self.team      = team        # nome della squadra (None = individuale)
+        self.username  = username    # username app (None = non iscritto)
 
         self.lap_count: int         = 0
         self.lap_times: List[float] = []
@@ -337,7 +342,17 @@ def run_simulation(
     try:
         with open(csv_file, mode="w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["Posizione", "Pilota", "Miglior Giro", "Gap", "Giri"])
+            writer.writerow(["Posizione", "Pilota", "Squadra", "Miglior Giro", "Gap", "Giri", "username"])
+            
+            # Calcola la posizione in base al team (stessa pos per tutti i membri del team)
+            team_positions: dict = {}
+            pos_counter = 1
+            for d in finished:
+                team_key = d.team if d.team else d.name  # Piloti individuali: chiave = nome
+                if team_key not in team_positions:
+                    team_positions[team_key] = pos_counter
+                    pos_counter += 1
+
             for i, d in enumerate(finished, 1):
                 assert leader is not None
                 if i == 1:
@@ -347,13 +362,30 @@ def run_simulation(
                         gap_str = f"+{d.last_cross_time - leader.last_cross_time:.3f}s"
                     else:
                         laps_behind = leader.lap_count - d.lap_count
-                        gap_str = f"+{laps_behind} giri" if laps_behind > 1 else "+1 giro"
-                
+                        gap_str = f"+{laps_behind} giro" if laps_behind == 1 else f"+{laps_behind} giri"
+
                 best_lap_str = seconds_to_laptime(d.best_lap) if d.best_lap else "-"
-                writer.writerow([str(i), d.name, best_lap_str, gap_str, str(d.lap_count)])
-            
+                team_key = d.team if d.team else d.name
+                position = team_positions.get(team_key, i)
+                writer.writerow([
+                    str(position),
+                    d.name,
+                    d.team if d.team else "",
+                    best_lap_str,
+                    gap_str,
+                    str(d.lap_count),
+                    d.username if d.username else "",
+                ])
+
             for d in no_time_final:
-                writer.writerow(["-", d.name, "-", "-", "0"])
+                team_key = d.team if d.team else d.name
+                position = team_positions.get(team_key, "-")
+                writer.writerow([
+                    str(position), d.name,
+                    d.team if d.team else "",
+                    "-", "-", "0",
+                    d.username if d.username else ""
+                ])
         print(f"✅  Classifica finale salvata in CSV su '{csv_file}'")
     except Exception as e:
         print(f"⚠️  Errore durante il salvataggio del CSV: {e}")

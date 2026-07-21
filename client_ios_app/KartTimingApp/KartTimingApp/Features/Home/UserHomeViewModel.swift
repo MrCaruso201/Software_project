@@ -189,6 +189,14 @@ class UserHomeViewModel: ObservableObject {
         let df2 = DateFormatter()
         df2.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         if let d = df2.date(from: string) { return d }
+        
+        let df3 = DateFormatter()
+        df3.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        if let d = df3.date(from: string) { return d }
+        
+        let df4 = DateFormatter()
+        df4.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+        if let d = df4.date(from: string) { return d }
 
         return nil
     }
