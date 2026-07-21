@@ -5,7 +5,7 @@ struct UserHomeView: View {
     @EnvironmentObject var authState: AuthState
     @StateObject private var viewModel = UserHomeViewModel()
     
-    @State private var activePaymentEvent: RaceEvent? = nil
+    @State private var showNotifications = false
     
     var body: some View {
         ZStack {
@@ -29,20 +29,34 @@ struct UserHomeView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
-                    // Notifiche (placeholder)
+                    showNotifications = true
                 }) {
-                    Image(systemName: "bell.fill")
-                        .foregroundColor(.kartAccent)
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "bell.fill")
+                            .foregroundColor(.kartAccent)
+
+                        if viewModel.unreadCount > 0 {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 16, height: 16)
+                                Text(viewModel.unreadCount > 9 ? "9+" : "\(viewModel.unreadCount)")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            .offset(x: 8, y: -8)
+                        }
+                    }
+                }
+                .sheet(isPresented: $showNotifications) {
+                    NotificationsPanelView(viewModel: viewModel)
                 }
             }
         }
         .onAppear {
             viewModel.fetchData(serverURL: server.httpURL, token: authState.currentToken)
         }
-        .sheet(item: $activePaymentEvent) { event in
-            PaymentInfoSheetView(event: event)
-                .environmentObject(authState)
-        }
+
     }
     
     // MARK: - Profile Card
