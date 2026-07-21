@@ -58,6 +58,8 @@ class Event(Base):
     weight_limit = Column(Float, nullable=True) # peso limite (opzionale)
     kart = Column(String, nullable=True) # tipo di kart (es. CRG, Sodi, ecc.)
     description = Column(Text, nullable=True) # testo libero descrittivo dell'evento
+    race_duration = Column(Integer, nullable=True) # durata gara in minuti
+    max_stint_duration = Column(Integer, nullable=True) # durata massima stint in minuti
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 

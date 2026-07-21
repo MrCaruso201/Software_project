@@ -14,6 +14,8 @@ class EventBase(BaseModel):
     weight_limit: Optional[float] = None
     kart: Optional[str] = None
     description: Optional[str] = None
+    race_duration: Optional[int] = None
+    max_stint_duration: Optional[int] = None
 
 class EventCreate(EventBase):
     pass
@@ -30,6 +32,8 @@ class EventUpdate(BaseModel):
     weight_limit: Optional[float] = None
     kart: Optional[str] = None
     description: Optional[str] = None
+    race_duration: Optional[int] = None
+    max_stint_duration: Optional[int] = None
 
 class EventResponse(EventBase):
     id: int

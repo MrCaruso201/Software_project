@@ -122,12 +122,18 @@ struct EventDetailView: View {
                             }
                         }
 
-                        // ── Requisiti ───────────────────────────────
-                        infoSection(title: "Requisiti", icon: "list.clipboard") {
+                        // ── Regolamento & Requisiti ───────────────────────
+                        infoSection(title: "Regolamento & Requisiti", icon: "list.clipboard") {
                             if let weight = event.weightLimit {
                                 infoRow(label: "Peso Minimo", value: "\(String(format: "%.1f", weight)) kg", icon: "scalemass")
                             } else {
                                 infoRow(label: "Peso Minimo", value: "Nessun limite", icon: "scalemass", dimmed: true)
+                            }
+                            if let dur = event.raceDuration {
+                                infoRow(label: "Durata Gara", value: "\(dur) min", icon: "clock")
+                            }
+                            if let stint = event.maxStintDuration {
+                                infoRow(label: "Max Stint", value: "\(stint) min", icon: "stopwatch")
                             }
                         }
 

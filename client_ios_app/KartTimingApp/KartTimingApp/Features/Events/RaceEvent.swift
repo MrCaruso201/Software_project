@@ -13,6 +13,8 @@ struct RaceEvent: Identifiable, Codable {
     let weightLimit: Double?
     let kart: String?
     let description: String?
+    let raceDuration: Int?
+    let maxStintDuration: Int?
     let createdAt: String
     
     enum CodingKeys: String, CodingKey {
@@ -28,6 +30,8 @@ struct RaceEvent: Identifiable, Codable {
         case weightLimit = "weight_limit"
         case kart
         case description
+        case raceDuration = "race_duration"
+        case maxStintDuration = "max_stint_duration"
         case createdAt = "created_at"
     }
 

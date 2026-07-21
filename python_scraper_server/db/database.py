@@ -72,6 +72,10 @@ def _apply_migrations() -> None:
         "ALTER TABLE event_registrations ADD COLUMN is_team_leader INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE event_registrations ADD COLUMN member_email TEXT",
         "ALTER TABLE event_registrations ADD COLUMN accepts_extra_pilots INTEGER NOT NULL DEFAULT 0",
+        # Nuovi campi gara per events
+        "ALTER TABLE events ADD COLUMN race_duration INTEGER",
+        "ALTER TABLE events ADD COLUMN pit_stops_required INTEGER",
+        "ALTER TABLE events ADD COLUMN max_stint_duration INTEGER",
     ]
     with engine.connect() as conn:
         for stmt in migrations:
