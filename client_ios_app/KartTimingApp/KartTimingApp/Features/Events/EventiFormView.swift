@@ -23,6 +23,8 @@ struct EventiFormView: View {
     @State private var weightLimit: String = ""
     @State private var kart: String = ""
     @State private var description: String = ""
+    @State private var raceDuration: String = ""
+    @State private var maxStintDuration: String = ""
     
     @State private var isSaving = false
     @State private var isDeleting = false
@@ -118,6 +120,22 @@ struct EventiFormView: View {
                             .frame(width: 130, alignment: .leading)
                         TextField("Es. Sodi SR5", text: $kart)
                             .foregroundColor(.primary)
+                    }
+                    HStack {
+                        Text("Durata Gara (min)")
+                            .foregroundColor(.secondary)
+                            .frame(width: 130, alignment: .leading)
+                        TextField("Es. 60", text: $raceDuration)
+                            .foregroundColor(.primary)
+                            .keyboardType(.numberPad)
+                    }
+                    HStack {
+                        Text("Max Stint (min)")
+                            .foregroundColor(.secondary)
+                            .frame(width: 130, alignment: .leading)
+                        TextField("Es. 30", text: $maxStintDuration)
+                            .foregroundColor(.primary)
+                            .keyboardType(.numberPad)
                     }
                 }
 
@@ -223,6 +241,8 @@ struct EventiFormView: View {
                     if let w = ev.weightLimit { weightLimit = String(w) }
                     if let k = ev.kart { kart = k }
                     if let desc = ev.description { description = desc }
+                    if let rd = ev.raceDuration { raceDuration = String(rd) }
+                    if let ms = ev.maxStintDuration { maxStintDuration = String(ms) }
                 }
             }
         }
@@ -252,6 +272,8 @@ struct EventiFormView: View {
         if !trimmedKart.isEmpty { data["kart"] = trimmedKart }
         let trimmedDesc = description.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedDesc.isEmpty { data["description"] = trimmedDesc }
+        if let rd = Int(raceDuration) { data["race_duration"] = rd }
+        if let ms = Int(maxStintDuration) { data["max_stint_duration"] = ms }
         
         if let ev = editingEvent {
             viewModel.updateEvent(

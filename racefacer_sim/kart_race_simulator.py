@@ -23,6 +23,7 @@ import random
 import os
 import time
 import argparse
+import csv
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -330,6 +331,32 @@ def run_simulation(
 
     print("═" * 68)
     print(f"\n✅  {update_count} aggiornamenti scritti su '{output_file}'")
+    
+    # ─── Salva CSV ────────────────────────────────────────────────────────────
+    csv_file = output_file.rsplit('.', 1)[0] + ".csv"
+    try:
+        with open(csv_file, mode="w", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Posizione", "Pilota", "Miglior Giro", "Gap", "Giri"])
+            for i, d in enumerate(finished, 1):
+                assert leader is not None
+                if i == 1:
+                    gap_str = "Leader"
+                else:
+                    if d.lap_count == leader.lap_count:
+                        gap_str = f"+{d.last_cross_time - leader.last_cross_time:.3f}s"
+                    else:
+                        laps_behind = leader.lap_count - d.lap_count
+                        gap_str = f"+{laps_behind} giri" if laps_behind > 1 else "+1 giro"
+                
+                best_lap_str = seconds_to_laptime(d.best_lap) if d.best_lap else "-"
+                writer.writerow([str(i), d.name, best_lap_str, gap_str, str(d.lap_count)])
+            
+            for d in no_time_final:
+                writer.writerow(["-", d.name, "-", "-", "0"])
+        print(f"✅  Classifica finale salvata in CSV su '{csv_file}'")
+    except Exception as e:
+        print(f"⚠️  Errore durante il salvataggio del CSV: {e}")
 
 
 # ─── Entry point ──────────────────────────────────────────────────────────────

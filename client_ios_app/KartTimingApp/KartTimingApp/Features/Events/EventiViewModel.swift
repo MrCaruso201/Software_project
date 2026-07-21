@@ -170,6 +170,7 @@ class EventiViewModel: ObservableObject {
         token: String?,
         teamName: String? = nil,
         memberEmails: [String]? = nil,
+        acceptsExtraPilots: Bool? = nil,
         completion: @escaping (Bool, String?) -> Void
     ) {
         guard let serverURL = serverURL, let token = token else {
@@ -185,10 +186,13 @@ class EventiViewModel: ObservableObject {
         // Se si tratta di una gara a squadre, invia il body JSON
         if let teamName = teamName {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            let body: [String: Any] = [
+            var body: [String: Any] = [
                 "team_name": teamName,
                 "member_emails": memberEmails ?? []
             ]
+            if let accepts = acceptsExtraPilots {
+                body["accepts_extra_pilots"] = accepts
+            }
             request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         }
         
@@ -355,6 +359,7 @@ class EventiViewModel: ObservableObject {
         teamName: String,
         memberEmails: [String],
         leaderEmail: String? = nil,
+        acceptsExtraPilots: Bool? = nil,
         completion: @escaping (Bool, String?) -> Void
     ) {
         guard let serverURL = serverURL, let token = token else {
@@ -373,8 +378,11 @@ class EventiViewModel: ObservableObject {
             "member_emails": memberEmails
         ]
         
-        if let leaderEmail = leaderEmail {
-            body["leader_email"] = leaderEmail
+        if let leader = leaderEmail {
+            body["leader_email"] = leader
+        }
+        if let accepts = acceptsExtraPilots {
+            body["accepts_extra_pilots"] = accepts
         }
         
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
@@ -435,6 +443,40 @@ class EventiViewModel: ObservableObject {
             }
         }.resume()
     }
+    
+    // MARK: - Admin: Unassigned Registrations
+    
+    func fetchUnassignedRegistrations(serverURL: URL?, eventId: Int, token: String?, completion: @escaping ([EventRegistrationWithUserResponse]?) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(nil)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/admin_register/unassigned")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error fetching unassigned regs: \(error)")
+                    completion(nil)
+                    return
+                }
+                
+                if let data = data, let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
+                    let decoder = JSONDecoder()
+                    let regs = try? decoder.decode([EventRegistrationWithUserResponse].self, from: data)
+                    completion(regs)
+                } else {
+                    completion(nil)
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Admin: Teams
     
     func fetchTeamRegistrations(serverURL: URL?, eventId: Int, token: String?, completion: @escaping ([TeamRegistrationResponse]?) -> Void) {
         guard let serverURL = serverURL, let token = token else {
@@ -523,6 +565,79 @@ class EventiViewModel: ObservableObject {
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, (httpRes.statusCode == 200 || httpRes.statusCode == 204) {
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
+    
+    func adminAssignToTeam(serverURL: URL?, eventId: Int, teamId: String, registrationIds: [Int], token: String?, completion: @escaping (Bool) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/admin_register/teams/\(teamId)/assign")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "registration_ids": registrationIds
+        ]
+        
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error assigning team: \(error)")
+                    completion(false)
+                    return
+                }
+                
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
+    
+    func adminCreateTeamFromIndividuals(serverURL: URL?, eventId: Int, teamName: String, leaderId: Int, memberIds: [Int], acceptsExtraPilots: Bool, token: String?, completion: @escaping (Bool) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/admin_register/teams/create_from_individuals")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "team_name": teamName,
+            "leader_registration_id": leaderId,
+            "member_registration_ids": memberIds,
+            "accepts_extra_pilots": acceptsExtraPilots
+        ]
+        
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error creating team from individuals: \(error)")
+                    completion(false)
+                    return
+                }
+                
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 || httpRes.statusCode == 201 {
                     completion(true)
                 } else {
                     completion(false)

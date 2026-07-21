@@ -14,6 +14,8 @@ struct EventTeamEditSheetView: View {
     @State private var leaderEmail: String = ""
     @State private var memberEmails: [String] = []
     
+    @State private var acceptsExtraPilots: Bool = false
+    
     @State private var isFetching = true
     @State private var isSaving = false
     @State private var errorMessage: String? = nil
@@ -43,6 +45,14 @@ struct EventTeamEditSheetView: View {
                                 maxAdditionalMembers: maxAdditionalMembers,
                                 isLeaderEditable: isAdmin
                             )
+                            
+                            let filledCount = memberEmails.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count
+                            if filledCount < maxAdditionalMembers {
+                                Toggle("Accetto membri extra accorpati dagli admin", isOn: $acceptsExtraPilots)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .tint(.kartAccent)
+                            }
                             
                             if let error = errorMessage {
                                 RegistrationErrorBanner(message: error)
@@ -138,6 +148,7 @@ struct EventTeamEditSheetView: View {
                         // Escludiamo il leader
                         let otherMembers = teamResponse.members.filter { !$0.isTeamLeader }
                         self.memberEmails = otherMembers.compactMap { $0.email }
+                        self.acceptsExtraPilots = teamResponse.acceptsExtraPilots
                         
                         // Non forziamo alcun campo vuoto
                         // if self.memberEmails.isEmpty {
@@ -161,6 +172,7 @@ struct EventTeamEditSheetView: View {
         let validEmails = memberEmails
             .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
             .filter { !$0.isEmpty }
+        let acceptsExtra = (validEmails.count < maxAdditionalMembers) ? acceptsExtraPilots : false
             
         viewModel.updateTeamRegistration(
             serverURL: server.httpURL,
@@ -169,7 +181,8 @@ struct EventTeamEditSheetView: View {
             token: authState.currentToken,
             teamName: teamName.trimmingCharacters(in: .whitespaces),
             memberEmails: validEmails,
-            leaderEmail: isAdmin ? leaderEmail.trimmingCharacters(in: .whitespaces) : nil
+            leaderEmail: isAdmin ? leaderEmail.trimmingCharacters(in: .whitespaces) : nil,
+            acceptsExtraPilots: acceptsExtra
         ) { success, errorMsg in
             isSaving = false
             if success {

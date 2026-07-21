@@ -65,7 +65,9 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
     """Login: verifica credenziali e restituisce access + refresh token."""
-    user = db.query(User).filter(User.username == req.username).first()
+    user = db.query(User).filter(
+        (User.username == req.username) | (User.email == req.username)
+    ).first()
     if not user or not verify_password(req.password, user.hashed_pw):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenziali non valide")
 

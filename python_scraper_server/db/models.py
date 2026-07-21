@@ -58,6 +58,8 @@ class Event(Base):
     weight_limit = Column(Float, nullable=True) # peso limite (opzionale)
     kart = Column(String, nullable=True) # tipo di kart (es. CRG, Sodi, ecc.)
     description = Column(Text, nullable=True) # testo libero descrittivo dell'evento
+    race_duration = Column(Integer, nullable=True) # durata gara in minuti
+    max_stint_duration = Column(Integer, nullable=True) # durata massima stint in minuti
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
@@ -86,6 +88,7 @@ class EventRegistration(Base):
     team_id = Column(String, nullable=True)          # UUID condiviso da tutti i membri del team
     is_team_leader = Column(Boolean, default=False, nullable=False)  # True per chi ha registrato il team
     member_email = Column(String, nullable=True)     # email del membro (anche non registrato)
+    accepts_extra_pilots = Column(Boolean, default=False, nullable=False) # Se la squadra accetta piloti aggiuntivi inseriti dagli admin
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (

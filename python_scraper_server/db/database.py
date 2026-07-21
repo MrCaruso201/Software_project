@@ -9,7 +9,7 @@ Espone:
 """
 
 from pathlib import Path
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, event
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import OperationalError
 
@@ -21,6 +21,12 @@ engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False},  # necessario per SQLite con FastAPI
 )
+
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -66,6 +72,11 @@ def _apply_migrations() -> None:
         "ALTER TABLE event_registrations ADD COLUMN team_id TEXT",
         "ALTER TABLE event_registrations ADD COLUMN is_team_leader INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE event_registrations ADD COLUMN member_email TEXT",
+        "ALTER TABLE event_registrations ADD COLUMN accepts_extra_pilots INTEGER NOT NULL DEFAULT 0",
+        # Nuovi campi gara per events
+        "ALTER TABLE events ADD COLUMN race_duration INTEGER",
+        "ALTER TABLE events ADD COLUMN pit_stops_required INTEGER",
+        "ALTER TABLE events ADD COLUMN max_stint_duration INTEGER",
     ]
     with engine.connect() as conn:
         for stmt in migrations:
