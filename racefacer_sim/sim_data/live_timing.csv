@@ -1,11 +1,14 @@
-Posizione,Pilota,Miglior Giro,Gap,Giri
-1,Marco Rossi,1:12.517,Leader,12
-2,Luca Ferrari,1:13.228,+7.692s,12
-3,Andrea Ricci,1:13.040,+9.745s,12
-4,Sofia Esposito,1:14.929,+1 giro,11
-5,Francesco Mancini,1:14.616,+1 giro,11
-6,Giovanni Bianchi,1:15.119,+1 giro,11
-7,Elena Conti,1:15.935,+1 giro,11
-8,Matteo Romano,1:16.930,+1 giro,11
-9,Chiara Colombo,1:17.821,+1 giro,11
-10,Valentina Leone,1:18.400,+1 giro,11
+Posizione, Pilota           , Squadra       , Miglior Giro, Gap    , Giri, username
+        1, Marco Rossi      , Scuderia Alpha, 1:12.468    , Leader ,   14, marco
+        1, Luca Ferrari     , Scuderia Alpha, -           , Leader ,    0, 
+        1, Sofia Conti      , Scuderia Alpha, -           , Leader ,    0, sofia
+        2, Matteo Romano    , Pit Stop FC   , 1:13.010    , +2 giri,   12, 
+        2, Chiara Colombo   , Pit Stop FC   , -           , +2 giri,    0, 
+        3, Sara Fontana     , Veloce Racing , 1:13.814    , +2 giri,   12, 
+        3, Paolo Marini     , Veloce Racing , -           , +2 giri,    0, 
+        4, Andrea Ricci     , Red Karts     , 1:12.954    , +4 giri,   10, 
+        4, Giovanni Bianchi , Red Karts     , -           , +4 giri,    0, 
+        4, Elena Bruno      , Red Karts     , -           , +4 giri,    0, 
+        5, Francesco Mancini, Thunder Bulls , 1:14.536    , +7 giri,    7, 
+        5, Valentina Leone  , Thunder Bulls , -           , +7 giri,    0, 
+        5, Roberto Gallo    , Thunder Bulls , -           , +7 giri,    0, 
