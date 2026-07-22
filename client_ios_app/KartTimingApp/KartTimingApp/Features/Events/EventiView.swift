@@ -157,28 +157,60 @@ struct EventiView: View {
                 }
             }
         }
-        .sheet(item: $activeSheet, onDismiss: {
-            viewModel.fetchEvents(serverURL: server.httpURL)
-        }) { sheetType in
+        .sheet(item: $activeSheet, onDismiss: nil) { sheetType in
             switch sheetType {
             case .new:
-                EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: nil)
+                // Evento creato → ricarica la lista eventi
+                EventiFormView(
+                    server: server,
+                    authState: authState,
+                    viewModel: viewModel,
+                    editingEvent: nil,
+                    onSaved: { viewModel.fetchEvents(serverURL: server.httpURL) }
+                )
             case .edit(let event):
-                EventiFormView(server: server, authState: authState, viewModel: viewModel, editingEvent: event)
+                // Evento modificato/eliminato → ricarica la lista eventi
+                EventiFormView(
+                    server: server,
+                    authState: authState,
+                    viewModel: viewModel,
+                    editingEvent: event,
+                    onSaved: { viewModel.fetchEvents(serverURL: server.httpURL) }
+                )
             case .detail(let event):
+                // Sola lettura: nessun reload
                 EventDetailView(server: server, event: event)
             case .register(let event):
+                // Solo le iscrizioni cambiano → aggiorna solo i bottoni di stato
                 EventRegistrationSheetView(server: server, viewModel: viewModel, event: event)
                     .environmentObject(authState)
+                    .onDisappear {
+                        if let token = authState.currentToken {
+                            viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
+                        }
+                    }
             case .manageRegistrations(let event):
+                // Solo le iscrizioni cambiano → aggiorna solo i bottoni di stato
                 AdminEventRegistrationsView(server: server, viewModel: viewModel, event: event)
                     .environmentObject(authState)
+                    .onDisappear {
+                        if let token = authState.currentToken {
+                            viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
+                        }
+                    }
             case .payment(let event):
+                // Sola lettura/informativa: nessun reload
                 PaymentInfoSheetView(event: event)
                     .environmentObject(authState)
             case .editTeamRegistration(let event, let reg):
+                // Solo le iscrizioni cambiano → aggiorna solo i bottoni di stato
                 EventTeamEditSheetView(server: server, viewModel: viewModel, event: event, registration: reg)
                     .environmentObject(authState)
+                    .onDisappear {
+                        if let token = authState.currentToken {
+                            viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
+                        }
+                    }
             }
         }
         .onAppear {

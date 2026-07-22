@@ -5,9 +5,12 @@ struct EventiFormView: View {
     let server: DiscoveredServer
     let authState: AuthState
     let viewModel: EventiViewModel
-    
+
     // Se `editingEvent` è nil, siamo in modalità Creazione.
     var editingEvent: RaceEvent?
+    /// Chiamato solo se il form viene salvato o l'evento eliminato con successo.
+    /// Se nil, nessuna azione aggiuntiva viene eseguita.
+    var onSaved: (() -> Void)? = nil
 
     @StateObject private var kartodromoVM = KartodromoViewModel()
     
@@ -283,7 +286,10 @@ struct EventiFormView: View {
                 token: authState.currentToken
             ) { success in
                 isSaving = false
-                if success { dismiss() }
+                if success {
+                    onSaved?()
+                    dismiss()
+                }
             }
         } else {
             viewModel.createEvent(
@@ -292,7 +298,10 @@ struct EventiFormView: View {
                 token: authState.currentToken
             ) { success in
                 isSaving = false
-                if success { dismiss() }
+                if success {
+                    onSaved?()
+                    dismiss()
+                }
             }
         }
     }
@@ -306,7 +315,10 @@ struct EventiFormView: View {
             token: authState.currentToken
         ) { success in
             isDeleting = false
-            if success { dismiss() }
+            if success {
+                onSaved?()
+                dismiss()
+            }
         }
     }
 }

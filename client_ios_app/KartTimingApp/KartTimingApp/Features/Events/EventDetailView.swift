@@ -7,6 +7,34 @@ struct EventDetailView: View {
     let event: RaceEvent
     @StateObject private var kartodromoVM = KartodromoViewModel()
 
+    // Ruolo utente — usato in tutti i sotto-componenti per decidere
+    // se mostrare i campi non compilati (solo l'admin li vede).
+    private var isAdmin: Bool {
+        authState.currentUser?.role.canManageUsers == true
+    }
+
+    // MARK: - Visibilità sezioni
+
+    /// "Dettagli Evento" ha sempre data e location → sempre visibile.
+    private var hasDettagliContent: Bool { true }
+
+    /// "Partecipanti & Gruppi" è visibile se c'è almeno un campo compilato
+    /// oppure se l'utente è admin (vede i placeholder).
+    private var hasPartecipantiContent: Bool {
+        isAdmin
+            || event.maxParticipants != nil
+            || (event.isTeamEvent && (event.minPeoplePerGroup != nil || event.maxPeoplePerGroup != nil))
+    }
+
+    /// "Regolamento & Requisiti" è visibile se c'è almeno un campo compilato
+    /// oppure se l'utente è admin.
+    private var hasRegolamentoContent: Bool {
+        isAdmin
+            || event.weightLimit != nil
+            || event.raceDuration != nil
+            || event.maxStintDuration != nil
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -22,7 +50,6 @@ struct EventDetailView: View {
                         circuitImageSection
 
                         // ── Descrizione ─────────────────────────────────────
-                        let isAdmin = authState.currentUser?.role.canManageUsers == true
                         let descText = event.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                         if isAdmin || !descText.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
@@ -95,48 +122,52 @@ struct EventDetailView: View {
                             let priceLabel = event.isTeamEvent ? "Prezzo per squadra" : "Prezzo"
                             if let cost = event.registrationCost {
                                 infoRow(label: priceLabel, value: "€ \(String(format: "%.2f", cost))", icon: "eurosign")
-                            } else {
+                            } else if isAdmin {
                                 infoRow(label: priceLabel, value: "Non definito", icon: "eurosign", dimmed: true)
                             }
-                            
+
                             if let kartType = event.kart, !kartType.isEmpty {
                                 infoRow(label: "Kart", value: kartType, icon: "steeringwheel")
-                            } else {
+                            } else if isAdmin {
                                 infoRow(label: "Kart", value: "Non definito", icon: "steeringwheel", dimmed: true)
                             }
                         }
 
                         // ── Partecipanti ────────────────────────────────────
-                        infoSection(title: "Partecipanti & Gruppi", icon: "person.3") {
-                            let partLabel = event.isTeamEvent ? "Max Squadre" : "Max Partecipanti"
-                            let partIcon = event.isTeamEvent ? "person.3.fill" : "person.fill"
-                            if let max = event.maxParticipants {
-                                infoRow(label: partLabel, value: "\(max)", icon: partIcon)
-                            } else {
-                                infoRow(label: partLabel, value: "Non definito", icon: partIcon, dimmed: true)
-                            }
-                            if event.isTeamEvent {
-                                if let minP = event.minPeoplePerGroup {
-                                    infoRow(label: "Min Persone per Squadra", value: "\(minP)", icon: "person.2")
+                        if hasPartecipantiContent {
+                            infoSection(title: "Partecipanti & Gruppi", icon: "person.3") {
+                                let partLabel = event.isTeamEvent ? "Max Squadre" : "Max Partecipanti"
+                                let partIcon = event.isTeamEvent ? "person.3.fill" : "person.fill"
+                                if let max = event.maxParticipants {
+                                    infoRow(label: partLabel, value: "\(max)", icon: partIcon)
+                                } else if isAdmin {
+                                    infoRow(label: partLabel, value: "Non definito", icon: partIcon, dimmed: true)
                                 }
-                                if let maxP = event.maxPeoplePerGroup {
-                                    infoRow(label: "Max Persone per Squadra", value: "\(maxP)", icon: "person.2.fill")
+                                if event.isTeamEvent {
+                                    if let minP = event.minPeoplePerGroup {
+                                        infoRow(label: "Min Persone per Squadra", value: "\(minP)", icon: "person.2")
+                                    }
+                                    if let maxP = event.maxPeoplePerGroup {
+                                        infoRow(label: "Max Persone per Squadra", value: "\(maxP)", icon: "person.2.fill")
+                                    }
                                 }
                             }
                         }
 
                         // ── Regolamento & Requisiti ───────────────────────
-                        infoSection(title: "Regolamento & Requisiti", icon: "list.clipboard") {
-                            if let weight = event.weightLimit {
-                                infoRow(label: "Peso Minimo", value: "\(String(format: "%.1f", weight)) kg", icon: "scalemass")
-                            } else {
-                                infoRow(label: "Peso Minimo", value: "Nessun limite", icon: "scalemass", dimmed: true)
-                            }
-                            if let dur = event.raceDuration {
-                                infoRow(label: "Durata Gara", value: "\(dur) min", icon: "clock")
-                            }
-                            if let stint = event.maxStintDuration {
-                                infoRow(label: "Max Stint", value: "\(stint) min", icon: "stopwatch")
+                        if hasRegolamentoContent {
+                            infoSection(title: "Regolamento & Requisiti", icon: "list.clipboard") {
+                                if let weight = event.weightLimit {
+                                    infoRow(label: "Peso Minimo", value: "\(String(format: "%.1f", weight)) kg", icon: "scalemass")
+                                } else if isAdmin {
+                                    infoRow(label: "Peso Minimo", value: "Non definito", icon: "scalemass", dimmed: true)
+                                }
+                                if let dur = event.raceDuration {
+                                    infoRow(label: "Durata Gara", value: "\(dur) min", icon: "clock")
+                                }
+                                if let stint = event.maxStintDuration {
+                                    infoRow(label: "Max Stint", value: "\(stint) min", icon: "stopwatch")
+                                }
                             }
                         }
 
@@ -257,16 +288,24 @@ struct EventDetailView: View {
 
             HStack(spacing: 0) {
                 heroStat(value: event.formattedDate, icon: "calendar")
-                Spacer()
-                Divider()
-                    .frame(height: 36)
-                    .background(Color.white.opacity(0.1))
-                Spacer()
+
+                // Costo: mostrato sempre se presente; se assente, solo l'admin vede "—"
                 if let cost = event.registrationCost {
+                    Spacer()
+                    Divider()
+                        .frame(height: 36)
+                        .background(Color.white.opacity(0.1))
+                    Spacer()
                     heroStat(value: "€ \(String(format: "%.0f", cost))", icon: "eurosign.circle.fill")
-                } else {
+                } else if isAdmin {
+                    Spacer()
+                    Divider()
+                        .frame(height: 36)
+                        .background(Color.white.opacity(0.1))
+                    Spacer()
                     heroStat(value: "—", icon: "eurosign.circle.fill")
                 }
+
                 Spacer()
                 Divider()
                     .frame(height: 36)
