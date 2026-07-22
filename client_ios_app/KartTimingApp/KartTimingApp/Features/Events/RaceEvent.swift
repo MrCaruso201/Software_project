@@ -5,6 +5,7 @@ struct RaceEvent: Identifiable, Codable {
     let title: String
     let eventDate: String
     let registrationDeadline: String?
+    let daysBeforeDeadline: Int?
     let location: String
     let maxParticipants: Int?
     let minPeoplePerGroup: Int?
@@ -22,6 +23,7 @@ struct RaceEvent: Identifiable, Codable {
         case title
         case eventDate = "event_date"
         case registrationDeadline = "registration_deadline"
+        case daysBeforeDeadline = "days_before_deadline"
         case location
         case maxParticipants = "max_participants"
         case minPeoplePerGroup = "min_people_per_group"

@@ -49,7 +49,8 @@ class Event(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False) # Titolo o nome dell'evento
     event_date = Column(DateTime, nullable=False) # data evento
-    registration_deadline = Column(DateTime, nullable=True) # data fine iscrizioni
+    registration_deadline = Column(DateTime, nullable=True) # data fine iscrizioni (calcolata)
+    days_before_deadline = Column(Integer, nullable=True) # giorni prima dell'evento per chiudere le iscrizioni
     location = Column(String, nullable=False) # luogo evento
     max_participants = Column(Integer, nullable=True) # massimo numero di partecipanti
     min_people_per_group = Column(Integer, nullable=True) # minimo numero di persone per gruppo

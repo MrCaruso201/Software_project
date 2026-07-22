@@ -28,6 +28,7 @@ struct EventiFormView: View {
     @State private var description: String = ""
     @State private var raceDuration: String = ""
     @State private var maxStintDuration: String = ""
+    @State private var daysBeforeDeadline: String = ""
     
     @State private var isSaving = false
     @State private var isDeleting = false
@@ -140,6 +141,14 @@ struct EventiFormView: View {
                             .foregroundColor(.primary)
                             .keyboardType(.numberPad)
                     }
+                    HStack {
+                        Text("Chiudi iscrizioni")
+                            .foregroundColor(.secondary)
+                            .frame(width: 130, alignment: .leading)
+                        TextField("Giorni prima (es. 3)", text: $daysBeforeDeadline)
+                            .foregroundColor(.primary)
+                            .keyboardType(.numberPad)
+                    }
                 }
 
                 // ── Descrizione ───────────────────────────────────────────────
@@ -246,6 +255,7 @@ struct EventiFormView: View {
                     if let desc = ev.description { description = desc }
                     if let rd = ev.raceDuration { raceDuration = String(rd) }
                     if let ms = ev.maxStintDuration { maxStintDuration = String(ms) }
+                    if let d = ev.daysBeforeDeadline { daysBeforeDeadline = String(d) }
                 }
             }
         }
@@ -277,6 +287,7 @@ struct EventiFormView: View {
         if !trimmedDesc.isEmpty { data["description"] = trimmedDesc }
         if let rd = Int(raceDuration) { data["race_duration"] = rd }
         if let ms = Int(maxStintDuration) { data["max_stint_duration"] = ms }
+        if let d = Int(daysBeforeDeadline) { data["days_before_deadline"] = d }
         
         if let ev = editingEvent {
             viewModel.updateEvent(

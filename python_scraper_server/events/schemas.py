@@ -6,6 +6,10 @@ class EventBase(BaseModel):
     title: str
     event_date: datetime
     registration_deadline: Optional[datetime] = None
+    # Giorni prima dell'evento dopo cui chiudere le iscrizioni.
+    # Se fornito, il router calcola registration_deadline = event_date - N giorni
+    # e salva entrambi i valori nel DB.
+    days_before_deadline: Optional[int] = None
     location: str
     max_participants: Optional[int] = None
     min_people_per_group: Optional[int] = None
@@ -18,12 +22,15 @@ class EventBase(BaseModel):
     max_stint_duration: Optional[int] = None
 
 class EventCreate(EventBase):
-    pass
+    pass  # days_before_deadline ereditato da EventBase
 
 class EventUpdate(BaseModel):
     title: Optional[str] = None
     event_date: Optional[datetime] = None
     registration_deadline: Optional[datetime] = None
+    # Se fornito, ricalcola registration_deadline e aggiorna days_before_deadline nel DB.
+    # Passa None esplicitamente per azzerare la deadline.
+    days_before_deadline: Optional[int] = None
     location: Optional[str] = None
     max_participants: Optional[int] = None
     min_people_per_group: Optional[int] = None

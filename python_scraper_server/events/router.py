@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from db.database import get_db
 from db.models import Event, EventRegistration, User
@@ -21,7 +21,14 @@ router = APIRouter(prefix="/events", tags=["events"])
 
 @router.post("/", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 def create_event(event: EventCreate, db: Session = Depends(get_db)):
-    db_event = Event(**event.model_dump())
+    event_data = event.model_dump()
+
+    # Se fornito days_before_deadline, calcola e salva anche registration_deadline
+    days = event_data.get("days_before_deadline")
+    if days is not None:
+        event_data["registration_deadline"] = event_data["event_date"] - timedelta(days=days)
+
+    db_event = Event(**event_data)
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
@@ -52,6 +59,18 @@ def update_event(event_id: int, event_update: EventUpdate, db: Session = Depends
         raise HTTPException(status_code=404, detail="Event not found")
     
     update_data = event_update.model_dump(exclude_unset=True)
+
+    # Se fornito days_before_deadline, calcola e aggiorna anche registration_deadline
+    if "days_before_deadline" in update_data:
+        days = update_data["days_before_deadline"]
+        if days is not None:
+            # Usa la nuova event_date se presente nel payload, altrimenti quella già nel DB
+            base_date = update_data.get("event_date", db_event.event_date)
+            update_data["registration_deadline"] = base_date - timedelta(days=days)
+        else:
+            # days_before_deadline azzerato esplicitamente: rimuove anche la deadline
+            update_data["registration_deadline"] = None
+
     for key, value in update_data.items():
         setattr(db_event, key, value)
         
