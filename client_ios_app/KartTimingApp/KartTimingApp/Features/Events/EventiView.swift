@@ -7,6 +7,7 @@ struct EventiView: View {
     
     @State private var searchText = ""
     @State private var expandedEventId: Int? = nil
+    @State private var pendingEventIdToOpen: Int? = nil
     
     // Gestione Form e Modifica
     enum ActiveSheet: Identifiable {
@@ -211,6 +212,22 @@ struct EventiView: View {
                             viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
                         }
                     }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenEventDetail"))) { notif in
+            if let eventId = notif.userInfo?["eventId"] as? Int {
+                if let event = viewModel.events.first(where: { $0.id == eventId }) {
+                    self.activeSheet = .detail(event)
+                } else {
+                    // Salva l'ID per aprirlo non appena gli eventi sono stati caricati
+                    self.pendingEventIdToOpen = eventId
+                }
+            }
+        }
+        .onChange(of: viewModel.events.count) { _ in
+            if let pendingId = pendingEventIdToOpen, let event = viewModel.events.first(where: { $0.id == pendingId }) {
+                self.activeSheet = .detail(event)
+                self.pendingEventIdToOpen = nil
             }
         }
         .onAppear {

@@ -53,7 +53,7 @@ from discovery.bonjour import start_bonjour, stop_bonjour
 from events.router import router as events_router
 from kartodromi.router import router as kartodromi_router
 from results.router import router as results_router
-
+from notifications.router import router as notifications_router
 
 # ---------------------------------------------------------------------------
 # Lifecycle
@@ -92,6 +92,7 @@ app.include_router(ws_router)
 app.include_router(results_router)   # PRIMA di events_router: /events/results/me deve matchare come path statico
 app.include_router(events_router)
 app.include_router(kartodromi_router)
+app.include_router(notifications_router)
 
 # Serve file statici (come le immagini di profilo e le grafiche dei circuiti)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

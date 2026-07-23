@@ -6,6 +6,9 @@ class UserHomeViewModel: ObservableObject {
     @Published var registrations: [EventRegistrationResponse] = []
     @Published var events: [RaceEvent] = []
     @Published var notifications: [AppNotification] = []
+    var serverNotifications: [ServerNotification] = []
+    var currentServerURL: URL?
+    var currentToken: String?
 
     @Published var isLoading = true
 
@@ -29,6 +32,8 @@ class UserHomeViewModel: ObservableObject {
         }
 
         isLoading = true
+        self.currentServerURL = serverURL
+        self.currentToken = token
 
         let group = DispatchGroup()
 
@@ -60,6 +65,21 @@ class UserHomeViewModel: ObservableObject {
             }
         }.resume()
 
+
+        // Fetch Server Notifications
+        group.enter()
+        var reqNotif = URLRequest(url: serverURL.appendingPathComponent("notifications/me"))
+        reqNotif.httpMethod = "GET"
+        reqNotif.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        URLSession.shared.dataTask(with: reqNotif) { data, _, _ in
+            DispatchQueue.main.async {
+                if let data = data, let notifs = try? JSONDecoder().decode([ServerNotification].self, from: data) {
+                    self.serverNotifications = notifs
+                }
+                group.leave()
+            }
+        }.resume()
+
         // Fetch Events
         group.enter()
         var reqEv = URLRequest(url: serverURL.appendingPathComponent("events"))
@@ -83,7 +103,38 @@ class UserHomeViewModel: ObservableObject {
     // MARK: - Notifiche
 
     /// Marca una notifica come letta e persiste l'ID in UserDefaults.
+
+    func deleteAllNotifications() {
+        if let url = currentServerURL, let token = currentToken {
+            var req = URLRequest(url: url.appendingPathComponent("notifications/me"))
+            req.httpMethod = "DELETE"
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            URLSession.shared.dataTask(with: req).resume()
+        }
+        DispatchQueue.main.async {
+            // Save current IDs to cleared list
+            var clearedIds = Set(UserDefaults.standard.stringArray(forKey: "clearedNotificationIds") ?? [])
+            for notif in self.notifications {
+                clearedIds.insert(notif.id)
+            }
+            UserDefaults.standard.set(Array(clearedIds), forKey: "clearedNotificationIds")
+            
+            self.serverNotifications.removeAll()
+            self.buildNotifications()
+        }
+    }
+
     func markNotificationRead(id: String) {
+        if id.hasPrefix("server_") {
+            let serverIdStr = id.replacingOccurrences(of: "server_", with: "")
+            if let serverId = Int(serverIdStr), let serverURL = currentServerURL, let token = currentToken {
+                var reqRead = URLRequest(url: serverURL.appendingPathComponent("notifications/\(serverId)/read"))
+                reqRead.httpMethod = "POST"
+                reqRead.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                URLSession.shared.dataTask(with: reqRead) { _, _, _ in }.resume()
+            }
+        }
+        
         var readIds = Set(UserDefaults.standard.stringArray(forKey: readIdsKey) ?? [])
         guard !readIds.contains(id) else { return }
         readIds.insert(id)
@@ -93,42 +144,62 @@ class UserHomeViewModel: ObservableObject {
         }
     }
 
+    /// Elimina una singola notifica e nasconde quelle locali se corrispondono
+    func deleteSingleNotification(id: String) {
+        if id.hasPrefix("server_") {
+            // È una notifica server, eliminala via API
+            let sIdStr = id.replacingOccurrences(of: "server_", with: "")
+            if let serverNotifId = Int(sIdStr), let url = currentServerURL?.appendingPathComponent("notifications/\(serverNotifId)"), let token = UserDefaults.standard.string(forKey: "jwtToken") {
+                var req = URLRequest(url: url)
+                req.httpMethod = "DELETE"
+                req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                URLSession.shared.dataTask(with: req).resume()
+                
+                DispatchQueue.main.async {
+                    self.serverNotifications.removeAll(where: { $0.id == serverNotifId })
+                    self.buildNotifications()
+                }
+            }
+        } else {
+            // È una notifica locale, aggiungila ai clearedIds
+            DispatchQueue.main.async {
+                var clearedIds = Set(UserDefaults.standard.stringArray(forKey: "clearedNotificationIds") ?? [])
+                clearedIds.insert(id)
+                UserDefaults.standard.set(Array(clearedIds), forKey: "clearedNotificationIds")
+                self.buildNotifications()
+            }
+        }
+    }
+
     /// Costruisce l'array di notifiche dai dati già scaricati.
     func buildNotifications() {
         let readIds = Set(UserDefaults.standard.stringArray(forKey: readIdsKey) ?? [])
+        let clearedIds = Set(UserDefaults.standard.stringArray(forKey: "clearedNotificationIds") ?? [])
         let now = Date()
         let calendar = Calendar.current
         var result: [AppNotification] = []
 
-        // 1. Pagamento in attesa
-        for reg in registrations where reg.status == "pending_payment" {
-            if let event = events.first(where: { $0.id == reg.eventId }) {
-                let stableId = "pending_\(reg.eventId)"
-                result.append(AppNotification(
-                    id: stableId,
-                    type: .pendingPayment(event: event),
-                    title: "Pagamento in attesa",
-                    message: "Completa il pagamento per \"\(event.title)\"",
-                    isRead: readIds.contains(stableId)
-                ))
+        // 0. Server Notifications
+        for serverNotif in serverNotifications {
+            let stableId = "server_\(serverNotif.id)"
+            var event: RaceEvent? = nil
+            if let eId = serverNotif.eventId {
+                event = events.first(where: { $0.id == eId })
             }
+            let date = parseDate(from: serverNotif.createdAt) ?? now
+            result.append(AppNotification(
+                id: stableId,
+                type: .adminAction(serverNotif: serverNotif, event: event),
+                title: serverNotif.title,
+                message: serverNotif.message,
+                isRead: serverNotif.isRead || readIds.contains(stableId),
+                timestamp: date
+            ))
         }
-
-        // 2. Lista d'attesa
-        for reg in registrations where reg.status == "waitlist" {
-            if let event = events.first(where: { $0.id == reg.eventId }) {
-                let stableId = "waitlist_\(reg.eventId)"
-                result.append(AppNotification(
-                    id: stableId,
-                    type: .waitlist(event: event),
-                    title: "Lista d'attesa",
-                    message: "Sei in lista d'attesa per \"\(event.title)\"",
-                    isRead: readIds.contains(stableId)
-                ))
-            }
-        }
-
-        // 3. Promemoria eventi imminenti (confermati, entro 7 giorni)
+        // Local status notifications (pending_payment, waitlist) have been removed from the Bell menu
+        // so that the Bell menu acts purely as an inbox for admin notifications.
+        
+        // 1. Promemoria eventi imminenti (confermati, entro 7 giorni)i)
         let confirmedEventIds = Set(registrations.filter { $0.status == "confirmed" }.map { $0.eventId })
         for eventId in confirmedEventIds {
             if let event = events.first(where: { $0.id == eventId }),
@@ -147,7 +218,8 @@ class UserHomeViewModel: ObservableObject {
                         type: .upcomingEvent(event: event, daysLeft: daysLeft),
                         title: "Evento imminente",
                         message: "\(event.title) – \(dayMsg)",
-                        isRead: readIds.contains(stableId)
+                        isRead: readIds.contains(stableId),
+                        timestamp: now
                     ))
                 }
             }
@@ -164,11 +236,14 @@ class UserHomeViewModel: ObservableObject {
                     type: .newEvent(event: event),
                     title: "Nuovo evento disponibile",
                     message: "\"\(event.title)\" – \(event.formattedDate)",
-                    isRead: readIds.contains(stableId)
+                    isRead: readIds.contains(stableId),
+                    timestamp: createdDate
                 ))
             }
         }
 
+        result = result.filter { !clearedIds.contains($0.id) }
+        result.sort(by: { $0.timestamp > $1.timestamp })
         self.notifications = result
     }
 

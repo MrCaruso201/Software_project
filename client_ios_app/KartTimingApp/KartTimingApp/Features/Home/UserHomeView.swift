@@ -196,7 +196,10 @@ struct UserHomeView: View {
     }
     
     private func pendingEventRow(event: RaceEvent) -> some View {
-        HStack(spacing: 12) {
+        Button(action: {
+            NotificationCenter.default.post(name: NSNotification.Name("OpenEventDetail"), object: nil, userInfo: ["eventId": event.id])
+        }) {
+            HStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundColor(.orange)
                 .font(.system(size: 20))
@@ -215,10 +218,15 @@ struct UserHomeView: View {
         .background(Color.kartPanel)
         .cornerRadius(10)
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.3), lineWidth: 1))
+        }
+        .buttonStyle(PlainButtonStyle())
     }
     
     private func waitlistEventRow(event: RaceEvent) -> some View {
-        HStack(spacing: 12) {
+        Button(action: {
+            NotificationCenter.default.post(name: NSNotification.Name("OpenEventDetail"), object: nil, userInfo: ["eventId": event.id])
+        }) {
+            HStack(spacing: 12) {
             Image(systemName: "clock.fill")
                 .foregroundColor(.purple)
                 .font(.system(size: 20))
@@ -237,5 +245,7 @@ struct UserHomeView: View {
         .background(Color.kartPanel)
         .cornerRadius(10)
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.purple.opacity(0.3), lineWidth: 1))
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }

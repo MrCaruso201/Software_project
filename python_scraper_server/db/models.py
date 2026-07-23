@@ -135,3 +135,19 @@ class KartodromoResult(Base):
     best_lap_ms   = Column(Integer, nullable=False)   # miglior giro in millisecondi
     date          = Column(Date, nullable=False)      # data della prova libera
     created_at    = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class Notification(Base):
+    """
+    Notifica generata dal server per azioni admin (es. spostamento in waitlist, conferma iscrizione).
+    """
+    __tablename__ = "notifications"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    event_id   = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=True)
+    type       = Column(String, nullable=False)   # "registration_accepted", "moved_to_waitlist", ...
+    title      = Column(String, nullable=False)
+    message    = Column(Text, nullable=False)
+    is_read    = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 
 from db.database import get_db
-from db.models import Event, EventRegistration, User
+from db.models import Event, EventRegistration, User, EventResult, KartodromoResult
+from notifications.router import notify_user
 from events.schemas import (
     EventCreate, EventUpdate, EventResponse,
     EventRegistrationResponse, EventRegistrationWithUserResponse,
@@ -197,6 +198,13 @@ def register_for_event(
             db.add(member_reg)
         
         db.commit()
+        
+        # Invia notifiche ai membri (dopo aver committato il team)
+        for email in team_data.member_emails:
+            email = email.strip().lower()
+            member_user = db.query(User).filter(User.email == email).first()
+            if member_user:
+                notify_user(db, member_user.id, event_id, "registration_updated", "Aggiunto alla squadra", f"Il caposquadra ti ha aggiunto alla squadra {team_data.team_name.strip()} per questo evento.")
         db.refresh(leader_reg)
         return leader_reg
 
@@ -353,11 +361,20 @@ def update_team_registration(
             detail=f"Troppi membri: massimo {event.max_people_per_group} per squadra"
         )
         
-    # Elimina vecchi membri non leader
-    db.query(EventRegistration).filter(
+    # Salva vecchi membri per notificarli
+    old_members = db.query(EventRegistration).filter(
         EventRegistration.team_id == team_id,
         EventRegistration.is_team_leader == False
-    ).delete()
+    ).all()
+    old_emails = {m.member_email.lower(): m.user_id for m in old_members if m.member_email}
+
+    # Elimina vecchi membri non leader
+    for m in old_members:
+        db.delete(m)
+        
+    # Fondamentale per evitare errori di UNIQUE constraint:
+    # diciamo ad SQLAlchemy di eseguire le DELETE prima di accodare eventuali INSERT
+    db.flush()
     
     # Aggiorna nome team e preferenze
     leader_reg.team_name = team_data.team_name.strip()
@@ -414,6 +431,31 @@ def update_team_registration(
         db.add(member_reg)
 
     db.commit()
+    
+    new_emails_set = {e.strip().lower() for e in team_data.member_emails if e.strip()}
+    
+    # Notifica membri aggiunti
+    for email in new_emails_set:
+        if email not in old_emails:
+            added_user = db.query(User).filter(User.email == email).first()
+            if added_user:
+                if is_admin:
+                    notify_user(db, added_user.id, event_id, "admin_registered", "Aggiunto alla squadra", "L'organizzatore ti ha aggiunto alla squadra per questo evento.")
+                else:
+                    notify_user(db, added_user.id, event_id, "registration_updated", "Aggiunto alla squadra", "Il caposquadra ti ha aggiunto alla squadra per questo evento.")
+                
+    # Notifica membri rimossi
+    for email, old_user_id in old_emails.items():
+        if email not in new_emails_set and old_user_id:
+            if is_admin:
+                notify_user(db, old_user_id, event_id, "registration_deleted", "Rimosso dalla squadra", "L'organizzatore ti ha rimosso dalla squadra per questo evento.")
+            else:
+                notify_user(db, old_user_id, event_id, "registration_deleted", "Rimosso dalla squadra", "Il caposquadra ti ha rimosso dalla squadra per questo evento.")
+
+    if leader_reg.user_id:
+        if is_admin:
+            notify_user(db, leader_reg.user_id, event_id, "admin_registered", "Squadra modificata", "L'organizzatore ha modificato la tua squadra per questo evento.")
+        # Se non è admin (quindi è il leader stesso a modificarsi il team), non gli mandiamo nessuna notifica.
     db.refresh(leader_reg)
     return leader_reg
 
@@ -524,6 +566,9 @@ def confirm_registration(event_id: int, registration_id: int, user_payload: dict
     else:
         reg.status = "confirmed"
     
+    if reg.user_id:
+        notify_user(db, reg.user_id, event_id, "registration_confirmed", "Iscrizione confermata", "L'organizzatore ha confermato la tua iscrizione.")
+    
     db.commit()
     db.refresh(reg)
     return reg
@@ -551,6 +596,9 @@ def unconfirm_registration(event_id: int, registration_id: int, user_payload: di
     else:
         reg.status = "pending_payment"
     
+    if reg.user_id:
+        notify_user(db, reg.user_id, event_id, "registration_unconfirmed", "Iscrizione in attesa", "L'organizzatore ha riportato la tua iscrizione in attesa di conferma/pagamento.")
+    
     db.commit()
     db.refresh(reg)
     return reg
@@ -577,6 +625,8 @@ def admin_delete_registration(event_id: int, registration_id: int, user_payload:
         ).delete()
     else:
         db.delete(reg)
+        if reg.user_id:
+            notify_user(db, reg.user_id, event_id, "registration_deleted", "Iscrizione annullata", "L'organizzatore ha annullato la tua iscrizione.")
     
     db.commit()
     return None
@@ -589,6 +639,14 @@ def admin_delete_team_registration(event_id: int, team_id: str, user_payload: di
     if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
+    team_regs = db.query(EventRegistration).filter(
+        EventRegistration.team_id == team_id,
+        EventRegistration.event_id == event_id
+    ).all()
+    for r in team_regs:
+        if r.user_id:
+            notify_user(db, r.user_id, event_id, "registration_deleted", "Iscrizione annullata", "L'organizzatore ha rimosso la tua squadra dall'evento.")
+            
     deleted = db.query(EventRegistration).filter(
         EventRegistration.team_id == team_id,
         EventRegistration.event_id == event_id
@@ -613,6 +671,15 @@ def admin_confirm_team_registration(event_id: int, team_id: str, user_payload: d
         EventRegistration.event_id == event_id
     ).update({"status": "confirmed"})
     
+    if updated:
+        team_regs = db.query(EventRegistration).filter(
+            EventRegistration.team_id == team_id,
+            EventRegistration.event_id == event_id
+        ).all()
+        for r in team_regs:
+            if r.user_id:
+                notify_user(db, r.user_id, event_id, "registration_confirmed", "Squadra confermata", "L'organizzatore ha confermato l'iscrizione della tua squadra.")
+    
     if not updated:
         raise HTTPException(status_code=404, detail="Team registration not found")
     
@@ -629,6 +696,15 @@ def admin_unconfirm_team_registration(event_id: int, team_id: str, user_payload:
         EventRegistration.event_id == event_id,
         EventRegistration.status == "confirmed"
     ).update({"status": "pending_payment"})
+    
+    if updated:
+        team_regs = db.query(EventRegistration).filter(
+            EventRegistration.team_id == team_id,
+            EventRegistration.event_id == event_id
+        ).all()
+        for r in team_regs:
+            if r.user_id:
+                notify_user(db, r.user_id, event_id, "registration_unconfirmed", "Squadra da confermare", "L'organizzatore ha riportato la tua squadra in attesa di conferma/pagamento.")
     
     if not updated:
         raise HTTPException(status_code=404, detail="Team registration not found or not confirmed")
@@ -662,6 +738,9 @@ def accept_waitlist_registration(event_id: int, registration_id: int, user_paylo
     else:
         reg.status = "pending_payment"
     
+    if reg.user_id:
+        notify_user(db, reg.user_id, event_id, "registration_accepted", "Accettato dall'organizzatore", "L'organizzatore ti ha accettato dalla lista d'attesa!")
+    
     db.commit()
     db.refresh(reg)
     return reg
@@ -676,6 +755,15 @@ def admin_accept_waitlist_team_registration(event_id: int, team_id: str, user_pa
         EventRegistration.event_id == event_id,
         EventRegistration.status == "waitlist"
     ).update({"status": "pending_payment"})
+    
+    if updated:
+        team_regs = db.query(EventRegistration).filter(
+            EventRegistration.team_id == team_id,
+            EventRegistration.event_id == event_id
+        ).all()
+        for r in team_regs:
+            if r.user_id:
+                notify_user(db, r.user_id, event_id, "registration_accepted", "Squadra accettata", "L'organizzatore ha accettato la tua squadra dalla lista d'attesa!")
     
     if not updated:
         raise HTTPException(status_code=404, detail="Team registration not found or not in waitlist")
@@ -708,6 +796,9 @@ def move_to_waitlist_registration(event_id: int, registration_id: int, user_payl
         ).update({"status": "waitlist"})
     else:
         reg.status = "waitlist"
+        
+    if reg.user_id:
+        notify_user(db, reg.user_id, event_id, "moved_to_waitlist", "Spostato in lista d'attesa", "L'organizzatore ti ha spostato in lista d'attesa per questo evento.")
     
     db.commit()
     db.refresh(reg)
@@ -723,6 +814,15 @@ def admin_move_to_waitlist_team_registration(event_id: int, team_id: str, user_p
         EventRegistration.event_id == event_id,
         EventRegistration.status == "pending_payment"
     ).update({"status": "waitlist"})
+    
+    if updated:
+        team_regs = db.query(EventRegistration).filter(
+            EventRegistration.team_id == team_id,
+            EventRegistration.event_id == event_id
+        ).all()
+        for r in team_regs:
+            if r.user_id:
+                notify_user(db, r.user_id, event_id, "moved_to_waitlist", "Squadra in lista d'attesa", "L'organizzatore ha spostato la tua squadra in lista d'attesa.")
     
     if not updated:
         raise HTTPException(status_code=404, detail="Team registration not found or not in pending_payment")
@@ -766,6 +866,8 @@ def admin_register_individual(
     )
     db.add(reg)
     db.commit()
+    if reg.user_id:
+        notify_user(db, reg.user_id, event_id, "admin_registered", "Iscritto dall'organizzatore", "L'organizzatore ti ha aggiunto a questo evento.")
     db.refresh(reg)
     return reg
 
@@ -831,6 +933,8 @@ def admin_register_team(
         db.add(member_reg)
         
     db.commit()
+    if leader_reg.user_id:
+        notify_user(db, leader_reg.user_id, event_id, "admin_registered", "Squadra iscritta dall'organizzatore", "L'organizzatore ha iscritto la tua squadra a questo evento.")
     db.refresh(leader_reg)
     return leader_reg
 
@@ -894,6 +998,9 @@ def assign_to_team(event_id: int, team_id: str, req: AdminAssignTeamRequest, use
         
     db.commit()
     for r in regs_to_update:
+        if r.user_id:
+            notify_user(db, r.user_id, event_id, "team_member_added", "Aggiunto a una squadra", f"L'organizzatore ti ha inserito nella squadra {leader.team_name}.")
+    for r in regs_to_update:
         db.refresh(r)
         
     return regs_to_update
@@ -925,6 +1032,9 @@ def create_team_from_individuals(event_id: int, req: AdminCreateTeamFromIndividu
             r.status = "pending_payment"
         
     db.commit()
+    for r in regs:
+        if r.user_id:
+            notify_user(db, r.user_id, event_id, "team_created", "Squadra creata", f"L'organizzatore ti ha inserito nella nuova squadra {req.team_name.strip()}.")
     for r in regs:
         db.refresh(r)
         

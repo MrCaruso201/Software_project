@@ -15,21 +15,30 @@ struct NotificationsPanelView: View {
                 if viewModel.notifications.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            ForEach(viewModel.notifications) { notification in
-                                NotificationRowView(notification: notification) {
-                                    // Marca come letta
-                                    viewModel.markNotificationRead(id: notification.id)
-                                    // Azione specifica per tipo
-                                    if case .pendingPayment(let event) = notification.type {
-                                        activePaymentEvent = event
-                                    }
+                    List {
+                        ForEach(viewModel.notifications) { notification in
+                            NotificationRowView(notification: notification) {
+                                // Marca come letta
+                                viewModel.markNotificationRead(id: notification.id)
+                                if let event = notification.associatedEvent {
+                                    NotificationCenter.default.post(name: NSNotification.Name("OpenEventDetail"), object: nil, userInfo: ["eventId": event.id])
+                                    dismiss()
+                                }
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    viewModel.deleteSingleNotification(id: notification.id)
+                                } label: {
+                                    Label("Elimina", systemImage: "trash")
                                 }
                             }
                         }
-                        .padding(16)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                 }
             }
             .navigationTitle("Notifiche")
@@ -37,11 +46,12 @@ struct NotificationsPanelView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if viewModel.unreadCount > 0 {
-                        Text("\(viewModel.unreadCount) non lette")
-                            .font(.caption)
-                            .foregroundColor(.kartDim)
+                    Button(action: {
+                        viewModel.deleteAllNotifications()
+                    }) {
+                        Image(systemName: "trash")
                     }
+                    .foregroundColor(.kartRed)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Chiudi") { dismiss() }
@@ -86,7 +96,21 @@ struct NotificationRowView: View {
         case .waitlist:       return .purple
         case .upcomingEvent:  return Color(red: 1.0, green: 0.8, blue: 0.0)
         case .newEvent:       return .green
+        case .adminAction(let serverNotif, _):
+            switch serverNotif.type {
+            case "registration_accepted", "registration_confirmed": return .green
+            case "registration_unconfirmed": return .orange
+            case "moved_to_waitlist": return .purple
+            case "registration_deleted": return .red
+            default: return .blue
+            }
         }
+    }
+
+    private var relativeTime: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: notification.timestamp, relativeTo: Date())
     }
 
     var body: some View {
@@ -104,6 +128,12 @@ struct NotificationRowView: View {
 
                 // Testi
                 VStack(alignment: .leading, spacing: 4) {
+                    if let event = notification.associatedEvent {
+                        Text(event.title)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.kartAccent)
+                            .textCase(.uppercase)
+                    }
                     Text(notification.title)
                         .font(.system(size: 14, weight: notification.isRead ? .regular : .bold))
                         .foregroundColor(.white)
@@ -111,6 +141,10 @@ struct NotificationRowView: View {
                         .font(.system(size: 13))
                         .foregroundColor(.kartDim)
                         .fixedSize(horizontal: false, vertical: true)
+                    Text(relativeTime)
+                        .font(.system(size: 11))
+                        .foregroundColor(.kartDim.opacity(0.7))
+                        .padding(.top, 2)
                 }
 
                 Spacer()

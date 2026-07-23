@@ -46,7 +46,7 @@ def init_db() -> None:
     Al primo avvio crea anche un utente admin di default (admin/admin) e un utente
     viewer di default (viewer/viewer) se non esistono.
     """
-    from db.models import Base, User  # import locale per evitare importazione circolare
+    from db.models import Base, User, Notification  # import locale per evitare importazione circolare
     Base.metadata.create_all(bind=engine)
     print("✅ Database inizializzato.")
 
