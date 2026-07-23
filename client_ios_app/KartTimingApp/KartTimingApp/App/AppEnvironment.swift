@@ -30,6 +30,9 @@ class AppEnvironment: ObservableObject {
     @Published var selectedLocalPort: Int? {
         didSet { UserDefaults.standard.set(selectedLocalPort, forKey: "selectedLocalPort") }
     }
+    
+    // Per gestire l'apertura delle info evento dalle notifiche
+    @Published var pendingEventIdToOpen: Int? = nil
 
     // MARK: - Init
 

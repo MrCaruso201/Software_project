@@ -7,7 +7,7 @@ struct EventiView: View {
     
     @State private var searchText = ""
     @State private var expandedEventId: Int? = nil
-    @State private var pendingEventIdToOpen: Int? = nil
+    @EnvironmentObject var appEnv: AppEnvironment
     
     // Gestione Form e Modifica
     enum ActiveSheet: Identifiable {
@@ -214,20 +214,21 @@ struct EventiView: View {
                     }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenEventDetail"))) { notif in
-            if let eventId = notif.userInfo?["eventId"] as? Int {
-                if let event = viewModel.events.first(where: { $0.id == eventId }) {
+        .onChange(of: appEnv.pendingEventIdToOpen) {
+            if let pendingId = appEnv.pendingEventIdToOpen {
+                if let event = viewModel.events.first(where: { $0.id == pendingId }) {
                     self.activeSheet = .detail(event)
-                } else {
-                    // Salva l'ID per aprirlo non appena gli eventi sono stati caricati
-                    self.pendingEventIdToOpen = eventId
+                    appEnv.pendingEventIdToOpen = nil
+                } else if viewModel.events.isEmpty {
+                    // Se gli eventi non sono ancora caricati, aspettiamo che lo siano
+                    viewModel.fetchEvents(serverURL: server.httpURL)
                 }
             }
         }
         .onChange(of: viewModel.events.count) {
-            if let pendingId = pendingEventIdToOpen, let event = viewModel.events.first(where: { $0.id == pendingId }) {
+            if let pendingId = appEnv.pendingEventIdToOpen, let event = viewModel.events.first(where: { $0.id == pendingId }) {
                 self.activeSheet = .detail(event)
-                self.pendingEventIdToOpen = nil
+                appEnv.pendingEventIdToOpen = nil
             }
         }
         .onAppear {
@@ -236,6 +237,12 @@ struct EventiView: View {
             }
             if let token = authState.currentToken {
                 viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
+            }
+            
+            // Se c'è un evento in sospeso e gli eventi sono già caricati, aprilo
+            if let pendingId = appEnv.pendingEventIdToOpen, let event = viewModel.events.first(where: { $0.id == pendingId }) {
+                self.activeSheet = .detail(event)
+                appEnv.pendingEventIdToOpen = nil
             }
         }
     }
