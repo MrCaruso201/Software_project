@@ -224,7 +224,7 @@ struct EventiView: View {
                 }
             }
         }
-        .onChange(of: viewModel.events.count) { _ in
+        .onChange(of: viewModel.events.count) {
             if let pendingId = pendingEventIdToOpen, let event = viewModel.events.first(where: { $0.id == pendingId }) {
                 self.activeSheet = .detail(event)
                 self.pendingEventIdToOpen = nil
