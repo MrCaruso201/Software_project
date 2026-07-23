@@ -1,105 +1,75 @@
 # Kart Live Timing — App iOS
 
-Documentazione del client iOS (SwiftUI) che si collega al server di live timing, permettendo agli utenti di autenticarsi, visualizzare la classifica e, se hanno i privilegi necessari, amministrare gli utenti.
+Documentazione del client iOS (SwiftUI) che si collega al server backend, permettendo agli utenti di autenticarsi, gestire le proprie iscrizioni agli eventi, ricevere notifiche e visualizzare la classifica live.
 
 ---
 
 ## 1. Panoramica
 
-L'app si sviluppa attorno a un flusso autenticato:
+L'app si sviluppa attorno a un'interfaccia basata su `TabView` per gli utenti autenticati:
 
-1. **`LoginView` / `RegisterView`**: Gestisce l'autenticazione. Solo gli utenti loggati possono accedere all'app.
-2. **`WelcomeView`**: La dashboard principale in cui l'utente può scegliere di avviare il Live Timing, fare il logout, o accedere all'area di gestione utenti (se ha privilegi di amministratore).
-3. **`TimingView`**: La schermata di dettaglio per la classifica live in tempo reale, ricevuta via WebSocket.
-4. **`AdminUsersView`**: Pannello di amministrazione per ricercare gli utenti iscritti e modificarne i ruoli (Spettatore, Direttore di Gara, Admin).
+1. **Autenticazione (`LoginView` / `RegisterView`)**: Solo gli utenti loggati possono accedere alle funzionalità principali.
+2. **Home (`UserHomeView`)**: Dashboard riassuntiva con i prossimi eventi a cui l'utente è iscritto e un pannello notifiche interattivo.
+3. **Eventi (`EventiView`)**: Esplorazione delle gare disponibili, registrazione (singola o a squadre), gestione del proprio team, e (per gli admin/organizzatori) strumenti di approvazione e modifica iscrizioni.
+4. **Timing (`TimingView`)**: La schermata di dettaglio per la classifica live in tempo reale, ricevuta via WebSocket.
+5. **Analisi (`AnalisiView`)**: Area placeholder per statistiche post-gara e telemetrie.
+6. **Impostazioni (`SettingsView`)**: Gestione profilo, configurazione app e accesso all'area di amministrazione utenti (`AdminUsersView`).
 
 ---
 
-## 2. Struttura dei file
+## 2. Architettura e Flussi Principali
 
-| File | Responsabilità |
+### 2.1 Autenticazione e Profilo (`AuthService` e `AuthState`)
+- Usa **JWT** per identificare univocamente gli utenti.
+- All'avvio verifica l'esistenza di un token salvato in modo sicuro nel sistema.
+- Gestisce il Role-Based Access Control (RBAC): i ruoli (`user`, `race_director`, `admin`) vengono estratti o letti tramite API per mostrare o nascondere dinamicamente funzionalità organizzative avanzate nell'interfaccia (come la forzatura di iscrizioni o l'accesso al pannello Admin).
+
+### 2.2 Gestione Eventi e Iscrizioni (`EventiViewModel`)
+L'interfaccia per la gestione eventi modella due modalità di iscrizione:
+- **Iscrizioni in Team**: il team leader crea il team e può aggiungere o rimuovere compagni indicandone le email.
+- **Iscrizioni Singole**: per campionati individuali.
+- **Strumenti Race Director**: gli utenti autorizzati (es. organizzatori) possono cambiare manualmente lo stato dell'evento (es. passare un utente in lista d'attesa a confermato), ricevere o respingere iscritti, e forzare forzatamente la creazione o assegnazione di team e iscritti individuali.
+
+### 2.3 Sistema di Notifiche PUSH/in-app (`NotificationsPanelView`)
+Un banner notifiche raggiungibile dalla Home (`UserHomeView` tramite icona a campanella) gestisce il feedback di sistema asincrono:
+- Permette di vedere notifiche (es. quando si viene aggiunti a un team o si riceve una conferma).
+- Usa indicatori visuali per le notifiche non lette (pallino e sfondo evidenziato).
+- Supporta l'interazione profonda (Deep Linking simulato tramite `AppEnvironment.pendingEventIdToOpen`): toccando una notifica legata a un evento, l'app salta automaticamente alla scheda "Eventi" e apre la schermata dei dettagli "Maggiori Info" per l'evento corretto, risolvendo problematiche di caricamento asincrono.
+- Supporta le gestures native iOS, come lo swipe a sinistra per eliminare fisicamente la notifica.
+
+### 2.4 Live Timing (`TimingView.swift` + `KartTimingManager.swift`)
+La connessione WebSocket (`wss://<SERVER>/ws?token=<ACCESS_TOKEN>`) riceve aggiornamenti JSON continui (es. comando `timing_update`). 
+I dati sono decodificati (tramite `TimingPayload`) e mostrati tramite componenti visivi (Card e Tabelle). L'interfaccia è progettata con una palette scura ad alto contrasto adatta per uso "Trackside" o all'aperto sotto al sole:
+- `kartBG`: Sfondo principale molto scuro
+- `kartAccent`: Accenti, leaderboard gap e badge di notifica
+- `kartGreen`/`kartRed`: Feedback operativi
+
+---
+
+## 3. Struttura dei File (Sotto-directory principali)
+
+| Directory / File | Responsabilità |
 | --- | --- |
-| `KartTimingAppApp.swift` | Entry point dell'app (`@main`), definisce l'albero di navigazione e gestisce lo stato di autenticazione (`AuthState`). |
-| `WelcomeView.swift` | Hub centrale dopo il login; naviga verso Timing o Admin. |
-| `AdminUsersView.swift` | UI riservata agli admin per la ricerca e il cambio ruolo degli utenti. |
-| `TimingView.swift` | UI della classifica live: tabella/card dei piloti, stato connessione, editor URL sorgente. |
-| `AuthService.swift` | Wrapper delle chiamate REST (`/auth/*` e `/admin/*`) verso l'URL remoto. Gestisce token di accesso e di refresh. |
-| `KartTimingManager.swift` | Gestisce la connessione WebSocket verso il server: connessione, invio comandi, parsing messaggi in arrivo. |
-| `Models.swift` | Modelli dati: `TimingPayload` (dati di classifica) e definizioni di rete. |
-| `Color+Theme.swift` | Palette colori dell'interfaccia (tema scuro "kartodromo"). |
+| `App/KartTimingAppApp.swift` | Entry point, setup dell'ambiente e definizione della root view in base allo stato di login. |
+| `App/AppEnvironment.swift` | Gestisce configurazioni globali (come la modalità Dev) e la navigazione asincrona "cross-tab" (es. apertura eventi da notifica). |
+| `Features/Home/` | `HomeView` (il TabView principale dell'app), `UserHomeView`, e logica del pannello notifiche interagibile a scomparsa. |
+| `Features/Events/` | Esplorazione eventi, logica del model `EventiViewModel`, maschere (Sheet) per l'iscrizione, per l'amministrazione, e modifica team. |
+| `Features/Timing/` | Motore WebSocket (`KartTimingManager`), visualizzazione tabellare classifica e controllo dell'URL di scraping. |
+| `Features/Settings/` | Opzioni account, pulsante di logout e bridge verso `AdminUsersView`. |
+| `Network/` | Servizi client HTTP (`AuthService` e REST call generiche). |
+| `Models/` | Entità di mappatura JSON (Event, EventRegistration, Notification, TimingPayload, User, Role). |
 
 ---
 
-## 3. Flusso di Autenticazione (`AuthService` e `AuthState`)
+## 4. Considerazioni per RASD e DD
 
-L'app utilizza **JWT** per l'identità.
-- Il server di base è fisso e accessibile via internet tramite Tailscale Funnel (es. `https://marcos-macbook-pro.tail71e118.ts.net`).
-- In fase di avvio, l'app verifica la presenza di un refresh token salvato. Se valido, genera un nuovo access token senza richiedere le credenziali; altrimenti mostra la schermata di Login.
-- I ruoli (`viewer`, `race_director`, `admin`) vengono estratti dal token decodificato per adattare l'interfaccia (nascondere/mostrare pulsanti in `WelcomeView`).
+In previsione della stesura dei documenti accademici e di progettazione per l'intero sistema:
 
----
+- **RASD (Requisiti)**:
+  - Gli use case principali ruotano attorno a 3 tipologie di attori (Personas): Utente Base (pilota/spettatore), Race Director (organizzatore dell'evento/gara), e Admin (supervisore e manutentore del software).
+  - La ricezione dati in real-time senza bisogno di refresh manuale (WebSockets), accoppiato alle Notifiche in-app affidabili e persistenti sono considerati requisiti non funzionali chiave del sistema, insieme all'usabilità e la compatibilità su schermi iOS ridotti.
 
-## 4. Schermata classifica live (`TimingView.swift` + `KartTimingManager.swift`)
-
-### 4.1 Connessione
-
-La `TimingView` utilizza l'`access_token` JWT attivo passandolo nel WebSocket:
-`wss://<SERVER>/ws?token=<ACCESS_TOKEN>`
-
-`KartTimingManager.connect(to:)`:
-1. Chiude un'eventuale connessione precedente.
-2. Apre una `URLSessionWebSocketTask`.
-3. Avvia il loop di ricezione messaggi JSON.
-4. Invia il comando `get_status` per sincronizzarsi.
-
-### 4.2 Messaggi dal server
-
-`KartTimingManager` interpreta i messaggi JSON in arrivo in base al campo `"type"`:
-
-| Tipo messaggio | Effetto lato client |
-| --- | --- |
-| `timing_update` | Aggiorna i dati della tabella e imposta lo stato LIVE. |
-| `status` | Aggiorna `currentURL` e se c'è attività di scraping in corso. |
-| `url_changed` | Conferma che il server ha cambiato sorgente; aggiorna `currentURL`. |
-| `error` | Loggato in console. |
-
-### 4.3 Rendering della classifica
-
-La struttura è generica e interprete degli `headers` (colonne) che arrivano. L'app cerca per parole chiave (es. "Pos", "Kart", "Pilota", "Ultimo giro", "Distacco") per determinare il mapping delle colonne.
-
-Le righe di classifica sono renderizzate in **card** (`kartCard`). Le colonne non direttamente riconosciute o secondarie vengono compattate; cliccando su una card si espande la visualizzazione per mostrare tutte le chiavi/valore aggiuntive.
-
-### 4.4 Cambio sorgente (URL)
-
-Un utente loggato può cambiare la sorgente dello scraping tramite l'icona URL in alto a destra, inserendo un nuovo link (es. la pagina di live timing web ufficiale).
-Il server aggiornerà la sessione, ricaricherà Playwright e riprenderà a mandare via WebSocket i dati aggiornati.
-
----
-
-## 5. Pannello Admin (`AdminUsersView.swift`)
-
-L'utente con ruolo `admin` o chiunque sia in grado di chiamare gli endpoint di `AdminUsersView` può:
-- Ricercare utenti (tramite API `/admin/users/search`).
-- Cambiare il ruolo ad un utente da un picker segmentato (`viewer`, `race_director`, `admin`).
-- I cambiamenti vengono persistiti immediatamente chiamando `AuthService.updateUserRole()`.
-
----
-
-## 6. Tema visivo (`Color+Theme.swift`)
-
-Palette scura personalizzata, pensata per l'uso "trackside" con alta visibilità:
-- `kartBG`: Sfondo principale (quasi nero)
-- `kartPanel`: Sfondo di pannelli/card
-- `kartAccent`: Rosso acceso (leader, evidenziazioni)
-- `kartGreen`: Connesso, miglior tempo
-- `kartDim`: Testo secondario disattivato
-
----
-
-## 7. Flusso completo (riepilogo)
-
-1. L'app si avvia verificando il login. Mostra la view di autenticazione se necessaria.
-2. Una volta dentro (`WelcomeView`), un utente normale vede le opzioni "Live Timing" e "Logout". Un admin vede anche "Gestisci Utenti".
-3. Entrando nel "Live Timing", l'app apre una connessione WebSocket con l'URL Tailscale, validando la connessione con il proprio JWT.
-4. I payload arrivano sul dispositivo appena lo scraper Python intercetta aggiornamenti dalla pista e vengono renderizzati nella vista.
-5. Dal "Gestisci Utenti", un admin cerca e aggiorna i permessi degli iscritti che avranno effetto immediato dal loro prossimo login.
+- **DD (Design)**:
+  - L'architettura software di alto livello è un classico **Client-Server**. Il client iOS implementa il design pattern **MVVM** (Model-View-ViewModel), delegando la reattività di UI a SwiftUI e i side-effect (API/Sockets) al ViewModel.
+  - La comunicazione ibrida sfrutta **REST** (per le risorse CRUD come Eventi, Iscrizioni e Notifiche) e **WebSocket** (per i flussi di dati continui del live timing), evidenziando scelte architetturali basate sul trade-off tra facilità di caching/routing per REST e performance real-time per WS.
+  - L'uso di `EnvironmentObject` in SwiftUI viene sfruttato per iniettare le dipendenze globali e orchestrare la navigazione profonda (Deep Linking) in maniera reattiva.
