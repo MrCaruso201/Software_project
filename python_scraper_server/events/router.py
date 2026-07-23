@@ -103,8 +103,8 @@ def register_for_event(
         raise HTTPException(status_code=404, detail="Event not found")
     
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    if event.registration_deadline and now > event.registration_deadline:
-        raise HTTPException(status_code=400, detail="Registration deadline passed")
+    # Se la deadline è passata, l'iscrizione viene accettata ma forzata in lista d'attesa
+    past_deadline = bool(event.registration_deadline and now > event.registration_deadline)
 
     # Determina se è una gara a squadre
     is_team_event = event.max_people_per_group is not None and event.max_people_per_group > 1
@@ -128,16 +128,20 @@ def register_for_event(
             raise HTTPException(status_code=400, detail="Già iscritto a questo evento")
         
         # Controlla capienza gruppi (max_participants funge da max_squadre)
-        initial_status = "pending_payment"
-        if event.max_participants is not None:
-            existing_teams = db.query(EventRegistration.team_id).filter(
-                EventRegistration.event_id == event_id,
-                EventRegistration.team_id.isnot(None),
-                EventRegistration.is_team_leader == True,
-                EventRegistration.status != "waitlist"
-            ).distinct().count()
-            if existing_teams >= event.max_participants:
-                initial_status = "waitlist"
+        # Se la deadline è scaduta, va direttamente in waitlist ignorando la capienza
+        if past_deadline:
+            initial_status = "waitlist"
+        else:
+            initial_status = "pending_payment"
+            if event.max_participants is not None:
+                existing_teams = db.query(EventRegistration.team_id).filter(
+                    EventRegistration.event_id == event_id,
+                    EventRegistration.team_id.isnot(None),
+                    EventRegistration.is_team_leader == True,
+                    EventRegistration.status != "waitlist"
+                ).distinct().count()
+                if existing_teams >= event.max_participants:
+                    initial_status = "waitlist"
 
         # Genera UUID per il team
         new_team_id = str(uuid.uuid4())
@@ -198,19 +202,21 @@ def register_for_event(
 
     else:
         # Gara individuale o iscrizione "singola" per gara a squadre
-        initial_status = "pending_payment"
-        
-        # Se è un'iscrizione singola a una gara a squadre, va in waitlist di default
-        if is_team_event:
+        # Se la deadline è scaduta, va direttamente in waitlist ignorando la capienza
+        if past_deadline:
             initial_status = "waitlist"
-        # Solo se NON è una gara a squadre, max_participants limita le singole registrazioni
+        elif is_team_event:
+            # Iscrizione singola a una gara a squadre → waitlist di default
+            initial_status = "waitlist"
         elif event.max_participants is not None:
+            # Solo per gare individuali: controlla capienza
             count = db.query(EventRegistration).filter(
                 EventRegistration.event_id == event_id,
                 EventRegistration.status != "waitlist"
             ).count()
-            if count >= event.max_participants:
-                initial_status = "waitlist"
+            initial_status = "waitlist" if count >= event.max_participants else "pending_payment"
+        else:
+            initial_status = "pending_payment"
                 
         existing = db.query(EventRegistration).filter(
             EventRegistration.user_id == user_id,

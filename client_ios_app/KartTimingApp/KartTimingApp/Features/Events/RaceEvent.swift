@@ -42,6 +42,37 @@ struct RaceEvent: Identifiable, Codable {
         return (maxPeoplePerGroup ?? 1) > 1
     }
 
+    /// Data deadline parsata come oggetto Date
+    var deadlineObject: Date? {
+        guard let raw = registrationDeadline, !raw.isEmpty else { return nil }
+        return Self.parseDate(from: raw)
+    }
+
+    /// Stato della deadline rispetto al momento attuale.
+    enum DeadlineStatus {
+        case none           // Nessuna deadline impostata
+        case open           // Aperta, scade tra più di 3 giorni
+        case approaching    // In scadenza (entro 3 giorni)
+        case passed         // Scaduta
+    }
+
+    /// Soglia in secondi per considerare la deadline "imminente" (3 giorni)
+    private static let approachingThreshold: TimeInterval = 3 * 24 * 60 * 60
+
+    var deadlineStatus: DeadlineStatus {
+        guard let dl = deadlineObject else { return .none }
+        let now = Date()
+        if now > dl { return .passed }
+        if dl.timeIntervalSince(now) <= Self.approachingThreshold { return .approaching }
+        return .open
+    }
+
+    /// True se la deadline è già scaduta
+    var isDeadlinePassed: Bool { deadlineStatus == .passed }
+
+    /// True se la deadline è imminente (entro 3 giorni)
+    var isDeadlineApproaching: Bool { deadlineStatus == .approaching }
+
     var formattedDate: String {
         if let date = dateObject {
             return Self.format(date)

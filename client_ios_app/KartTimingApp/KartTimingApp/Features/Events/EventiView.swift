@@ -302,6 +302,46 @@ struct EventiView: View {
                     let isWaitlist = status == "waitlist"
                     let isRegistered = status != nil
                     let isAdmin = authState.currentUser?.role.canManageUsers == true
+                    let deadlinePassed = event.isDeadlinePassed
+                    let deadlineApproaching = event.isDeadlineApproaching
+
+                    // Banner deadline (solo per utenti non admin e non ancora iscritti)
+                    if !isAdmin && !isRegistered {
+                        if deadlinePassed {
+                            HStack(spacing: 8) {
+                                Image(systemName: "clock.badge.exclamationmark.fill")
+                                    .font(.system(size: 13, weight: .bold))
+                                Text("Iscrizioni chiuse — verrai messo in lista d'attesa")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Spacer()
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(Color.red.opacity(0.25))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.red.opacity(0.5), lineWidth: 1)
+                            )
+                            .cornerRadius(8)
+                        } else if deadlineApproaching, let dl = event.deadlineObject {
+                            let daysLeft = max(0, Int(dl.timeIntervalSince(Date()) / 86400))
+                            let hoursLeft = max(0, Int(dl.timeIntervalSince(Date()) / 3600))
+                            let timeLabel = daysLeft > 0 ? "\(daysLeft) giorn\(daysLeft == 1 ? "o" : "i")" : "\(hoursLeft) or\(hoursLeft == 1 ? "a" : "e")"
+                            HStack(spacing: 8) {
+                                Image(systemName: "clock.badge.exclamationmark")
+                                    .font(.system(size: 13, weight: .bold))
+                                Text("Iscrizioni in scadenza: \(timeLabel) rimast\(daysLeft == 1 || hoursLeft == 1 ? "o" : "i")")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Spacer()
+                            }
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(Color.yellow.opacity(0.85))
+                            .cornerRadius(8)
+                        }
+                    }
                     
                     // Pulsanti
                     VStack(spacing: 12) {
@@ -371,13 +411,16 @@ struct EventiView: View {
                                         Button {
                                             activeSheet = .register(event)
                                         } label: {
-                                            Text("Iscriviti")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 10)
-                                                .background(Color.kartAccent)
-                                                .foregroundColor(.black)
-                                                .cornerRadius(8)
+                                            HStack(spacing: 6) {
+                                                Image(systemName: deadlinePassed ? "clock.badge.exclamationmark" : "pencil.and.list.clipboard")
+                                                Text(deadlinePassed ? "Lista d'Attesa" : "Iscriviti")
+                                                    .font(.system(size: 14, weight: .bold))
+                                            }
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 10)
+                                            .background(deadlinePassed ? Color.purple : Color.kartAccent)
+                                            .foregroundColor(deadlinePassed ? .white : .black)
+                                            .cornerRadius(8)
                                         }
                                     }
                                 } else if !isConfirmed, let reg = reg {

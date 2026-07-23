@@ -117,7 +117,7 @@ struct EventDetailView: View {
                                 }
                             }
                             if let deadline = event.registrationDeadline, !deadline.isEmpty {
-                                infoRow(label: "Scadenza Iscrizioni", value: formattedDeadline(deadline), icon: "clock.badge.exclamationmark")
+                                deadlineRow(deadline: deadline, status: event.deadlineStatus)
                             }
                             let priceLabel = event.isTeamEvent ? "Prezzo per squadra" : "Prezzo"
                             if let cost = event.registrationCost {
@@ -399,6 +399,65 @@ struct EventDetailView: View {
             Text(value)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(dimmed ? .kartDim : .white)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.clear)
+        .overlay(alignment: .bottom) {
+            Divider()
+                .background(Color.white.opacity(0.05))
+                .padding(.leading, 44)
+        }
+    }
+
+    /// Riga dedicata alla deadline con colore dinamico in base allo stato.
+    /// Ogni branch del switch restituisce direttamente la view (pattern @ViewBuilder corretto).
+    @ViewBuilder
+    private func deadlineRow(deadline: String, status: RaceEvent.DeadlineStatus) -> some View {
+        switch status {
+        case .passed:
+            infoRowColored(
+                label: "Iscrizioni Chiuse",
+                value: formattedDeadline(deadline),
+                icon: "clock.badge.exclamationmark.fill",
+                accentColor: Color.red
+            )
+        case .approaching:
+            infoRowColored(
+                label: "Scadenza Iscrizioni",
+                value: formattedDeadline(deadline),
+                icon: "clock.badge.exclamationmark",
+                accentColor: Color.yellow
+            )
+        default:
+            infoRowColored(
+                label: "Scadenza Iscrizioni",
+                value: formattedDeadline(deadline),
+                icon: "clock.badge.exclamationmark",
+                accentColor: Color.kartAccent
+            )
+        }
+    }
+
+    /// Variante con colore accent personalizzato per icona e testo valore (es. deadline colorata)
+    private func infoRowColored(label: String, value: String, icon: String, accentColor: Color) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(accentColor)
+                .frame(width: 20)
+
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.kartDim)
+                .frame(maxWidth: 160, alignment: .leading)
+
+            Spacer()
+
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(accentColor)
                 .multilineTextAlignment(.trailing)
         }
         .padding(.horizontal, 14)

@@ -21,6 +21,7 @@ struct EventRegistrationSheetView: View {
 
     private var isTeamEvent: Bool { event.isTeamEvent }
     private var maxAdditionalMembers: Int { max(0, (event.maxPeoplePerGroup ?? 1) - 1) }
+    private var isDeadlinePassed: Bool { event.isDeadlinePassed }
     
     private var filledEmailsCount: Int {
         memberEmails.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count
@@ -74,6 +75,7 @@ struct EventRegistrationSheetView: View {
                             isTeamEvent: isTeamEvent,
                             isEnabled: isButtonEnabled,
                             isLoading: isRegistering,
+                            isDeadlinePassed: isDeadlinePassed,
                             action: performRegistration
                         )
                     }
@@ -117,7 +119,10 @@ struct EventRegistrationSheetView: View {
 
     private var registrationNote: some View {
         let text: String
-        if !isTeamEvent {
+        if isDeadlinePassed {
+            // Nota specifica per iscrizioni post-deadline
+            text = "Le iscrizioni per questo evento sono chiuse. Proseguendo entrerai in lista d'attesa: riceverai una notifica se verrai accettato dall'organizzatore."
+        } else if !isTeamEvent {
             text = "Cliccando su Conferma Iscrizione, ti registrerai ufficialmente all'evento."
         } else {
             if filledEmailsCount == 0 {
@@ -138,7 +143,7 @@ struct EventRegistrationSheetView: View {
         }
         return Text(text)
             .font(.footnote)
-            .foregroundColor(Color.gray)
+            .foregroundColor(isDeadlinePassed ? Color.orange.opacity(0.8) : Color.gray)
             .multilineTextAlignment(.leading)
             .padding(.top, 4)
     }
@@ -226,6 +231,58 @@ struct RegistrationHeaderSection: View {
                 TeamEventBadge(maxPeople: event.maxPeoplePerGroup ?? 2)
             } else {
                 IndividualEventBadge()
+            }
+
+            // Banner deadline visibile a tutti
+            if event.isDeadlinePassed {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "clock.badge.exclamationmark.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.top, 1)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("DEADLINE SCADUTA")
+                            .font(.system(size: 12, weight: .black, design: .monospaced))
+                            .foregroundColor(.white)
+                        Text("Verrai posizionato in lista d'attesa. Controlla le notifiche: riceverai un avviso se l'organizzatore ti accetta.")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.88))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(
+                    LinearGradient(
+                        colors: [Color(red: 0.85, green: 0.15, blue: 0.1), Color(red: 0.7, green: 0.08, blue: 0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.red.opacity(0.4), lineWidth: 1)
+                )
+                .padding(.top, 4)
+            } else if event.isDeadlineApproaching, let dl = event.deadlineObject {
+                let daysLeft = max(0, Int(dl.timeIntervalSince(Date()) / 86400))
+                let hoursLeft = max(0, Int(dl.timeIntervalSince(Date()) / 3600))
+                let timeLabel = daysLeft > 0 ? "\(daysLeft) giorn\(daysLeft == 1 ? "o" : "i")" : "\(hoursLeft) or\(hoursLeft == 1 ? "a" : "e")"
+                HStack(spacing: 10) {
+                    Image(systemName: "clock.badge.exclamationmark")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.black)
+                    Text("Iscrizioni in scadenza: \(timeLabel) rimast\(daysLeft == 1 || hoursLeft == 1 ? "o" : "i")")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.black)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color.yellow)
+                .cornerRadius(10)
+                .padding(.top, 4)
             }
         }
         .padding(.top, 10)
@@ -365,22 +422,35 @@ private struct RegistrationButton: View {
     let isTeamEvent: Bool
     let isEnabled: Bool
     let isLoading: Bool
+    var isDeadlinePassed: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack {
                 if isLoading {
-                    ProgressView().tint(.black).padding(.trailing, 5)
+                    ProgressView().tint(isDeadlinePassed ? .white : .black).padding(.trailing, 5)
                 }
-                Image(systemName: isTeamEvent ? "person.3.fill" : "checkmark.circle.fill")
-                Text(isTeamEvent ? "Iscriviti con il Team" : "Conferma Iscrizione")
-                    .font(.system(size: 16, weight: .bold))
+                Image(systemName: isDeadlinePassed
+                    ? "clock.badge.exclamationmark.fill"
+                    : (isTeamEvent ? "person.3.fill" : "checkmark.circle.fill")
+                )
+                Text(isDeadlinePassed
+                    ? "Lista d'Attesa"
+                    : (isTeamEvent ? "Iscriviti con il Team" : "Conferma Iscrizione")
+                )
+                .font(.system(size: 16, weight: .bold))
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(isEnabled ? Color.kartAccent : Color.gray.opacity(0.4))
-            .foregroundColor(isEnabled ? .black : .white)
+            .background(isEnabled
+                ? (isDeadlinePassed ? Color.purple : Color.kartAccent)
+                : Color.gray.opacity(0.4)
+            )
+            .foregroundColor(isEnabled
+                ? (isDeadlinePassed ? .white : .black)
+                : .white
+            )
             .cornerRadius(10)
         }
         .disabled(!isEnabled || isLoading)
