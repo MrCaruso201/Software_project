@@ -184,6 +184,16 @@ def get_my_kartodromo_results(
     return db.query(KartodromoResult).filter(KartodromoResult.user_id == user_id).order_by(KartodromoResult.date.desc()).all()
 
 
+@router.get("/results/user/{target_user_id}", response_model=List[KartodromoResultResponse])
+def get_user_kartodromo_results_admin(
+    target_user_id: int,
+    db: Session = Depends(get_db),
+    user_payload: dict = Depends(require_role(Role.RACE_DIRECTOR)),
+):
+    """Restituisce tutti i tempi autodichiarati di un utente specifico. Solo race_director e admin."""
+    return db.query(KartodromoResult).filter(KartodromoResult.user_id == target_user_id).order_by(KartodromoResult.date.desc()).all()
+
+
 @router.post("/{kartodromo_id}/results/me/best_lap", response_model=KartodromoResultResponse)
 def self_declare_kartodromo_best_lap(
     kartodromo_id: int,

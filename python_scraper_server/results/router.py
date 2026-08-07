@@ -84,6 +84,25 @@ def get_all_my_results(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# GET /events/results/user/{user_id}  — risultati di un utente specifico (solo admin)
+
+@router.get("/events/results/user/{target_user_id}", response_model=List[EventResultResponse])
+def get_user_results_admin(
+    target_user_id: int,
+    user_payload: dict = Depends(require_role(Role.RACE_DIRECTOR)),
+    db: Session = Depends(get_db),
+):
+    """Restituisce tutti i risultati di un utente specifico. Solo race_director e admin."""
+    results = (
+        db.query(EventResult)
+        .filter(EventResult.user_id == target_user_id)
+        .order_by(EventResult.event_id)
+        .all()
+    )
+    return [_to_response(r, db) for r in results]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # GET /events/{event_id}/results  — classifica ufficiale
 
 @router.get("/events/{event_id}/results", response_model=List[EventResultResponse])

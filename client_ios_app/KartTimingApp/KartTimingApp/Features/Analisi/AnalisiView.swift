@@ -11,7 +11,25 @@ struct AnalisiView: View {
     @State private var selectedSegment: Int = 0
     @State private var showAddCircuitTimeSheet = false
 
+    // MARK: – Role check
+    private var isAdminOrDirector: Bool {
+        let role = authState.currentUser?.role
+        return role == .admin || role == .raceDirector
+    }
+
     var body: some View {
+        if isAdminOrDirector {
+            // Gli admin vedono direttamente la schermata di ricerca utenti
+            AdminAnalisiView(server: server)
+                .environmentObject(authState)
+        } else {
+            // Gli utenti normali vedono la propria analisi
+            userAnalisiContent
+        }
+    }
+
+    @ViewBuilder
+    private var userAnalisiContent: some View {
         ZStack {
             Color.kartBG.ignoresSafeArea()
 
@@ -214,21 +232,23 @@ struct AnalisiView: View {
 
     private var circuitiContent: some View {
         VStack(spacing: 0) {
-            Button {
-                showAddCircuitTimeSheet = true
-            } label: {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Aggiungi tempo dichiarato")
+            if !viewModel.isReadOnly {
+                Button {
+                    showAddCircuitTimeSheet = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Aggiungi tempo dichiarato")
+                    }
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.orange)
+                    .cornerRadius(12)
                 }
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.orange)
-                .cornerRadius(12)
+                .padding(16)
             }
-            .padding(16)
             
             Group {
                 if viewModel.circuitStats.isEmpty {
@@ -287,7 +307,7 @@ struct AnalisiView: View {
 
 // MARK: - PastEventCard
 
-private struct PastEventCard: View {
+struct PastEventCard: View {
     let event: RaceEvent
     let result: EventResult?
     let server: DiscoveredServer
@@ -409,7 +429,7 @@ private struct PastEventCard: View {
 
 // MARK: - CircuitCard
 
-private struct CircuitCard: View {
+struct CircuitCard: View {
     let stat: CircuitStat
 
     var body: some View {

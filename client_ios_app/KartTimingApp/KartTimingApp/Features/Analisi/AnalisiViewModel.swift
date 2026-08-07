@@ -14,6 +14,7 @@ class AnalisiViewModel: ObservableObject {
     
     @Published var isLoading:      Bool                          = true
     @Published var errorMessage:   String?                       = nil
+    @Published var isReadOnly:     Bool                          = false
 
     /// Classifiche complete di singoli eventi (fetched on-demand)
     @Published var classifications: [Int: [EventResult]]         = [:]
@@ -112,22 +113,71 @@ class AnalisiViewModel: ObservableObject {
     // ── Network ──────────────────────────────────────────────────────────────
 
     func fetchAll(serverURL: URL?, token: String?) {
+        fetchAll(serverURL: serverURL, token: token, forUserId: nil)
+    }
+
+    /// Carica i dati di un utente specifico (versione admin, usa endpoint /user/{id})
+    func fetchAll(serverURL: URL?, token: String?, forUserId targetUserId: Int?) {
         guard let serverURL, let token else { isLoading = false; return }
         isLoading = true
         errorMessage = nil
+        isReadOnly = (targetUserId != nil)
 
         let group = DispatchGroup()
 
-        // Iscrizioni
-        group.enter()
-        fetch(url: serverURL.appendingPathComponent("events/registrations/me"),
-              token: token,
-              type: [EventRegistrationResponse].self) { [weak self] result in
-            if let regs = result { self?.registrations = regs }
-            group.leave()
+        if let uid = targetUserId {
+            // ── Percorso Admin: endpoint /user/{id} ──────────────────────────
+            group.enter()
+            fetch(url: serverURL.appendingPathComponent("events/results/user/\(uid)"),
+                  token: token,
+                  type: [EventResult].self) { [weak self] result in
+                if let res = result { self?.myResults = res }
+                group.leave()
+            }
+
+            group.enter()
+            fetch(url: serverURL.appendingPathComponent("events/registrations/user/\(uid)"),
+                  token: token,
+                  type: [EventRegistrationResponse].self) { [weak self] result in
+                if let regs = result { self?.registrations = regs }
+                group.leave()
+            }
+
+            group.enter()
+            fetch(url: serverURL.appendingPathComponent("kartodromi/results/user/\(uid)"),
+                  token: token,
+                  type: [KartodromoResultResponse].self) { [weak self] result in
+                if let kr = result { self?.kartodromiResults = kr }
+                group.leave()
+            }
+        } else {
+            // ── Percorso Utente: endpoint /me ─────────────────────────────────
+            group.enter()
+            fetch(url: serverURL.appendingPathComponent("events/registrations/me"),
+                  token: token,
+                  type: [EventRegistrationResponse].self) { [weak self] result in
+                if let regs = result { self?.registrations = regs }
+                group.leave()
+            }
+
+            group.enter()
+            fetch(url: serverURL.appendingPathComponent("events/results/me"),
+                  token: token,
+                  type: [EventResult].self) { [weak self] result in
+                if let res = result { self?.myResults = res }
+                group.leave()
+            }
+
+            group.enter()
+            fetch(url: serverURL.appendingPathComponent("kartodromi/results/me"),
+                  token: token,
+                  type: [KartodromoResultResponse].self) { [weak self] result in
+                if let kr = result { self?.kartodromiResults = kr }
+                group.leave()
+            }
         }
 
-        // Tutti gli eventi
+        // Tutti i kartodromi e tutti gli eventi: sempre dagli endpoint pubblici
         group.enter()
         fetch(url: serverURL.appendingPathComponent("events/"),
               token: token,
@@ -136,30 +186,11 @@ class AnalisiViewModel: ObservableObject {
             group.leave()
         }
 
-        // I miei risultati
-        group.enter()
-        fetch(url: serverURL.appendingPathComponent("events/results/me"),
-              token: token,
-              type: [EventResult].self) { [weak self] result in
-            if let res = result { self?.myResults = res }
-            group.leave()
-        }
-        
-        // Tutti i kartodromi attivi
         group.enter()
         fetch(url: serverURL.appendingPathComponent("kartodromi/"),
               token: token,
               type: [Kartodromo].self) { [weak self] result in
             if let k = result { self?.allKartodromi = k }
-            group.leave()
-        }
-        
-        // Risultati sui kartodromi
-        group.enter()
-        fetch(url: serverURL.appendingPathComponent("kartodromi/results/me"),
-              token: token,
-              type: [KartodromoResultResponse].self) { [weak self] result in
-            if let kr = result { self?.kartodromiResults = kr }
             group.leave()
         }
 

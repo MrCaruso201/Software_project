@@ -46,6 +46,18 @@ def get_my_registrations(user_payload: dict = Depends(get_current_user), db: Ses
     regs = db.query(EventRegistration).filter(EventRegistration.user_id == user_id).all()
     return regs
 
+@router.get("/registrations/user/{target_user_id}", response_model=List[EventRegistrationResponse])
+def get_user_registrations_admin(
+    target_user_id: int,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Restituisce tutte le iscrizioni di un utente specifico. Solo race_director e admin."""
+    if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    regs = db.query(EventRegistration).filter(EventRegistration.user_id == target_user_id).all()
+    return regs
+
 @router.get("/{event_id}", response_model=EventResponse)
 def get_event(event_id: int, db: Session = Depends(get_db)):
     event = db.query(Event).filter(Event.id == event_id).first()
