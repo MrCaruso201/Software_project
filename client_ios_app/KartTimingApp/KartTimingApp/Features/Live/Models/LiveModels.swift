@@ -122,34 +122,37 @@ struct MyKartResponse: Codable {
 
 // MARK: - Preset Penalty Types
 
-enum PenaltyPreset: String, CaseIterable, Identifiable {
-    case driveThroughs = "drive_through"
-    case stopGo = "stop_go"
-    case timeAdded = "time_added"
-    case generic = "generic"
+// MARK: - Penalty Type
 
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .driveThroughs: return "Drive-Through"
-        case .stopGo:        return "Stop & Go"
-        case .timeAdded:     return "Tempo Aggiunto"
-        case .generic:       return "Penalità Generica"
-        }
-    }
-
-    var systemIcon: String {
-        switch self {
-        case .driveThroughs: return "arrow.right.circle.fill"
-        case .stopGo:        return "stop.circle.fill"
-        case .timeAdded:     return "plus.circle.fill"
-        case .generic:       return "exclamationmark.triangle.fill"
-        }
+struct PenaltyType: Identifiable, Codable, Equatable {
+    let id: Int
+    let code: String
+    let name: String
+    let action: String
+    let defaultSeconds: Int?
+    let warningThreshold: Int?
+    let autoPenaltyCode: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, code, name, action
+        case defaultSeconds = "default_seconds"
+        case warningThreshold = "warning_threshold"
+        case autoPenaltyCode = "auto_penalty_code"
     }
 
     var requiresSeconds: Bool {
-        self == .stopGo || self == .timeAdded
+        action == "time_added" || action == "stop_go" || action == "custom"
+    }
+
+    var systemIcon: String {
+        switch action {
+        case "drive_through": return "arrow.right.circle.fill"
+        case "stop_go":       return "stop.circle.fill"
+        case "time_added":    return "plus.circle.fill"
+        case "warning":       return "exclamationmark.bubble.fill"
+        case "custom":        return "exclamationmark.triangle.fill"
+        default:              return "flag.fill"
+        }
     }
 }
 

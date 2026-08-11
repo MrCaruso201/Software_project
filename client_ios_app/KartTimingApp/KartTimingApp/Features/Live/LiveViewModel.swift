@@ -8,6 +8,7 @@ class LiveViewModel: ObservableObject {
 
     @Published var kartAssignments: [LiveKartAssignment] = []
     @Published var penalties: [RacePenalty] = []
+    @Published var penaltyTypes: [PenaltyType] = []
     @Published var messages: [RaceMessage] = []
     @Published var myKart: MyKartResponse = MyKartResponse()
     @Published var registeredTeams: [TeamRegistrationResponse] = []
@@ -53,6 +54,7 @@ class LiveViewModel: ObservableObject {
     func fetchAll() async {
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await self.fetchKartAssignments() }
+            group.addTask { await self.fetchPenaltyTypes() }
             group.addTask { await self.fetchPenalties() }
             group.addTask { await self.fetchMessages() }
             group.addTask { await self.fetchRegisteredTeams() }
@@ -145,6 +147,17 @@ class LiveViewModel: ObservableObject {
 
     // MARK: - Penalties
 
+    private func fetchPenaltyTypes() async {
+        guard let url = endpoint("/live/penalty-types"),
+              let token = token else { return }
+        do {
+            var req = URLRequest(url: url)
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            let (data, _) = try await URLSession.shared.data(for: req)
+            self.penaltyTypes = try JSONDecoder().decode([PenaltyType].self, from: data)
+        } catch { }
+    }
+
     private func fetchPenalties() async {
         guard let url = endpoint("/live/\(eventId)/penalties"),
               let token = token else { return }
@@ -156,14 +169,14 @@ class LiveViewModel: ObservableObject {
         } catch { }
     }
 
-    func addPenalty(kartNumber: Int, type: PenaltyPreset, seconds: Int?, note: String?) async throws {
+    func addPenalty(kartNumber: Int, type: PenaltyType, seconds: Int?, note: String?) async throws {
         guard let url = endpoint("/live/\(eventId)/penalties"),
               let token = token else { throw URLError(.badURL) }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        var body: [String: Any] = ["kart_number": kartNumber, "penalty_type": type.rawValue]
+        var body: [String: Any] = ["kart_number": kartNumber, "penalty_type": type.code]
         if let s = seconds { body["seconds"] = s }
         if let n = note, !n.isEmpty { body["note"] = n }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)

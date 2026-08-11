@@ -6,7 +6,7 @@ struct PenaltySheetView: View {
     @ObservedObject var viewModel: LiveViewModel
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedPreset: PenaltyPreset = .driveThroughs
+    @State private var selectedType: PenaltyType? = nil
     @State private var seconds: String = ""
     @State private var note: String = ""
     @State private var isLoading = false
@@ -45,45 +45,48 @@ struct PenaltySheetView: View {
                                 .font(.system(size: 10, weight: .bold, design: .monospaced))
                                 .foregroundColor(.kartAccent)
 
-                            ForEach(PenaltyPreset.allCases) { preset in
+                            ForEach(viewModel.penaltyTypes) { pType in
                                 Button(action: {
                                     withAnimation(.spring(response: 0.25)) {
-                                        selectedPreset = preset
-                                        if !preset.requiresSeconds { seconds = "" }
+                                        selectedType = pType
+                                        if let defSec = pType.defaultSeconds {
+                                            seconds = String(defSec)
+                                        } else if !pType.requiresSeconds {
+                                            seconds = ""
+                                        }
                                     }
                                 }) {
                                     HStack(spacing: 12) {
-                                        Image(systemName: preset.systemIcon)
+                                        Image(systemName: pType.systemIcon)
                                             .font(.system(size: 18))
-                                            .foregroundColor(selectedPreset == preset ? .kartAccent : .kartDim)
+                                            .foregroundColor(selectedType?.id == pType.id ? .kartAccent : .kartDim)
                                             .frame(width: 28)
-
-                                        Text(preset.label)
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(selectedPreset == preset ? .white : .kartDim)
-
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(pType.name.uppercased())
+                                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                                .foregroundColor(selectedType?.id == pType.id ? .white : .kartDim)
+                                            
+                                            // Show auto-penalty hint if threshold exists
+                                            if let threshold = pType.warningThreshold {
+                                                Text("Auto-penalty alla \(threshold)ª volta")
+                                                    .font(.system(size: 10))
+                                                    .foregroundColor(.kartAccent.opacity(0.8))
+                                            }
+                                        }
                                         Spacer()
-
-                                        if selectedPreset == preset {
-                                            Image(systemName: "checkmark.circle.fill")
+                                        if selectedType?.id == pType.id {
+                                            Image(systemName: "checkmark")
                                                 .foregroundColor(.kartAccent)
+                                                .font(.system(size: 14, weight: .bold))
                                         }
                                     }
-                                    .padding(14)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(selectedPreset == preset
-                                                  ? Color.kartAccent.opacity(0.12)
-                                                  : Color.kartPanel)
-                                    )
+                                    .padding()
+                                    .background(selectedType?.id == pType.id ? Color.kartAccent.opacity(0.15) : Color.kartPanel)
+                                    .cornerRadius(12)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(
-                                                selectedPreset == preset
-                                                    ? Color.kartAccent.opacity(0.4)
-                                                    : Color.white.opacity(0.05),
-                                                lineWidth: 1
-                                            )
+                                            .stroke(selectedType?.id == pType.id ? Color.kartAccent : Color.white.opacity(0.05), lineWidth: 1)
                                     )
                                 }
                                 .buttonStyle(.plain)
@@ -91,7 +94,7 @@ struct PenaltySheetView: View {
                         }
 
                         // Secondi (solo per stop_go e time_added)
-                        if selectedPreset.requiresSeconds {
+                        if let selected = selectedType, selected.requiresSeconds {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("SECONDI DI PENALITÀ")
                                     .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -160,11 +163,24 @@ struct PenaltySheetView: View {
                 }
             }
         }
+        .onAppear {
+            if selectedType == nil, let first = viewModel.penaltyTypes.first {
+                selectedType = first
+                if let defSec = first.defaultSeconds {
+                    seconds = String(defSec)
+                }
+            }
+        }
     }
 
     private func confirm() {
-        let sec: Int? = selectedPreset.requiresSeconds ? Int(seconds) : nil
-        if selectedPreset.requiresSeconds && sec == nil {
+        guard let selected = selectedType else {
+            errorMsg = "Seleziona un tipo di penalità."
+            return
+        }
+        
+        let sec: Int? = selected.requiresSeconds ? Int(seconds) : nil
+        if selected.requiresSeconds && sec == nil {
             errorMsg = "Inserisci un numero di secondi valido."
             return
         }
@@ -174,7 +190,7 @@ struct PenaltySheetView: View {
             do {
                 try await viewModel.addPenalty(
                     kartNumber: kartAssignment.kartNumber,
-                    type: selectedPreset,
+                    type: selected,
                     seconds: sec,
                     note: note.isEmpty ? nil : note
                 )
