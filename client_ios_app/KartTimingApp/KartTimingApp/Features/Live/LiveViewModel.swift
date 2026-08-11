@@ -51,11 +51,12 @@ class LiveViewModel: ObservableObject {
     // MARK: - Fetch All (director)
 
     func fetchAll() async {
-        async let karts = fetchKartAssignments()
-        async let pens = fetchPenalties()
-        async let msgs = fetchMessages()
-        async let teams = fetchRegisteredTeams()
-        _ = await (karts, pens, msgs, teams)
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await self.fetchKartAssignments() }
+            group.addTask { await self.fetchPenalties() }
+            group.addTask { await self.fetchMessages() }
+            group.addTask { await self.fetchRegisteredTeams() }
+        }
     }
 
     // MARK: - Fetch My Kart (user)
