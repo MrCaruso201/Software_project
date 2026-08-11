@@ -42,7 +42,7 @@ BASE_URL    = "https://live.racefacer.com/simulator"
 # min_stint / max_stint: durata minima/massima dello stint in secondi.
 TEAMS: List[Dict] = [
     {
-        "name": "Scuderia Alpha",
+        "name": "Topini",
         "kart": "101",
         "min_stint": 600,
         "max_stint": 1200,

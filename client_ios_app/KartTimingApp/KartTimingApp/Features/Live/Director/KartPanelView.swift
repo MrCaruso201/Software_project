@@ -273,6 +273,39 @@ struct AssignKartSheet: View {
             ZStack {
                 Color.kartBG.ignoresSafeArea()
                 VStack(spacing: 20) {
+                    // Team Selection
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("SQUADRA")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(.kartAccent)
+                        
+                        Menu {
+                            ForEach(viewModel.registeredTeams) { team in
+                                Button(action: {
+                                    selectedTeamId = team.teamId
+                                    selectedTeamName = team.teamName
+                                }) {
+                                    Text(team.teamName)
+                                    if selectedTeamId == team.teamId {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Text(selectedTeamName.isEmpty ? "Seleziona Squadra" : selectedTeamName)
+                                    .foregroundColor(selectedTeamName.isEmpty ? .kartDim : .white)
+                                    .font(.system(size: 16, weight: .semibold))
+                                Spacer()
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .foregroundColor(.kartDim)
+                            }
+                            .padding()
+                            .background(Color.kartPanel)
+                            .cornerRadius(12)
+                        }
+                    }
+
                     // Kart number input
                     VStack(alignment: .leading, spacing: 8) {
                         Text("NUMERO KART")

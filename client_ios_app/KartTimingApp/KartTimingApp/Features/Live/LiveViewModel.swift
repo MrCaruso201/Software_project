@@ -10,6 +10,7 @@ class LiveViewModel: ObservableObject {
     @Published var penalties: [RacePenalty] = []
     @Published var messages: [RaceMessage] = []
     @Published var myKart: MyKartResponse = MyKartResponse()
+    @Published var registeredTeams: [TeamRegistrationResponse] = []
 
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
@@ -53,7 +54,8 @@ class LiveViewModel: ObservableObject {
         async let karts = fetchKartAssignments()
         async let pens = fetchPenalties()
         async let msgs = fetchMessages()
-        _ = await (karts, pens, msgs)
+        async let teams = fetchRegisteredTeams()
+        _ = await (karts, pens, msgs, teams)
     }
 
     // MARK: - Fetch My Kart (user)
@@ -81,6 +83,19 @@ class LiveViewModel: ObservableObject {
                 try? await Task.sleep(nanoseconds: UInt64(pollingInterval * 1_000_000_000))
             }
         }
+    }
+
+    // MARK: - Registered Teams
+    
+    private func fetchRegisteredTeams() async {
+        guard let url = endpoint("/events/\(eventId)/registrations/teams"),
+              let token = token else { return }
+        do {
+            var req = URLRequest(url: url)
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            let (data, _) = try await URLSession.shared.data(for: req)
+            self.registeredTeams = try JSONDecoder().decode([TeamRegistrationResponse].self, from: data)
+        } catch { }
     }
 
     // MARK: - Kart Assignments
