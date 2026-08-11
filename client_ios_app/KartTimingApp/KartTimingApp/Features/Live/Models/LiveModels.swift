@@ -57,11 +57,19 @@ struct RacePenalty: Identifiable, Codable {
         case "custom": return seconds != nil ? "Penalità (+\(seconds!)s)" : "Penalità Custom"
         case "warning_generic": return "Avviso (Generico)"
         case "warning_track_limits": return "Avviso (Track Limits)"
+        case "warning_aggressive_driving": return "Avviso (Guida Aggressiva)"
         case "track_limits_10s": return seconds != nil ? "Track Limits (+\(seconds!)s)" : "Track Limits (+10s)"
         case "black_flag": return "Bandiera Nera (Espulsione)"
         case "blue_flag": return "Bandiera Blu (Doppiaggio)"
         default: return "Penalità"
         }
+    }
+
+    var isWarning: Bool {
+        return penaltyType == "warning_generic"
+            || penaltyType == "warning_track_limits"
+            || penaltyType == "warning_aggressive_driving"
+            || penaltyType == "blue_flag"
     }
 
     var parsedDate: Date? {
@@ -137,6 +145,9 @@ struct MyKartResponse: Codable {
         case messages
         case totalPenaltySeconds = "total_penalty_seconds"
     }
+    var actualPenalties: [RacePenalty] {
+        penalties.filter { !$0.isWarning }
+    }
 
     init() {
         kartNumber = nil; teamId = nil; teamName = nil
@@ -164,11 +175,28 @@ struct PenaltyType: Identifiable, Codable, Equatable {
         case autoPenaltyCode = "auto_penalty_code"
     }
 
+    var isWarning: Bool {
+        // Basato sul codice, non sull'action (black_flag è una penalità nonostante action=drive_through)
+        return code == "warning_generic"
+            || code == "warning_track_limits"
+            || code == "warning_aggressive_driving"
+            || code == "blue_flag"
+    }
+
+    /// Solo penalità personalizzata e avviso generico possono essere modificati (secondi/nota liberi)
+    var isCustomizable: Bool {
+        return code == "custom" || code == "warning_generic"
+    }
+
     var requiresSeconds: Bool {
-        action == "time_added" || action == "stop_go" || action == "custom"
+        isCustomizable && (action == "time_added" || action == "stop_go" || action == "custom")
     }
 
     var systemIcon: String {
+        switch code {
+        case "black_flag": return "xmark.circle.fill"
+        default: break
+        }
         switch action {
         case "drive_through": return "arrow.right.circle.fill"
         case "stop_go":       return "stop.circle.fill"
@@ -183,29 +211,32 @@ struct PenaltyType: Identifiable, Codable, Equatable {
 // MARK: - Preset Message Types
 
 enum MessagePreset: String, CaseIterable, Identifiable {
-    case yellowFlag  = "yellow_flag"
-    case redFlag     = "red_flag"
-    case greenFlag   = "green_flag"
-    case info        = "info"
-    case custom      = "custom"
+    case yellowFlag      = "yellow_flag"
+    case redFlag         = "red_flag"
+    case greenFlag       = "green_flag"
+    case checkeredFlag   = "checkered_flag"
+    case info            = "info"
+    case custom          = "custom"
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .yellowFlag: return "⚠️ Bandiera Gialla"
-        case .redFlag:    return "🔴 Gara Sospesa"
-        case .greenFlag:  return "✅ Gara Ripresa"
-        case .info:       return "📢 Informazione"
-        case .custom:     return "✏️ Testo Libero"
+        case .yellowFlag:    return "⚠️ Bandiera Gialla"
+        case .redFlag:       return "🔴 Gara Sospesa"
+        case .greenFlag:     return "✅ Gara Ripresa"
+        case .checkeredFlag: return "🏁 Bandiera a Scacchi"
+        case .info:          return "📢 Informazione"
+        case .custom:        return "✏️ Testo Libero"
         }
     }
 
     var defaultText: String {
         switch self {
-        case .yellowFlag: return "Attenzione! Bandiera gialla in pista."
-        case .redFlag:    return "Gara sospesa. Rallentare e portarsi ai box."
-        case .greenFlag:  return "Gara ripresa. Si può procedere normalmente."
+        case .yellowFlag:    return "Attenzione! Bandiera gialla in pista."
+        case .redFlag:       return "Gara sospesa. Rallentare e portarsi ai box."
+        case .greenFlag:     return "Gara ripresa. Si può procedere normalmente."
+        case .checkeredFlag: return "Gara terminata. Rientrate ai box."
         case .info:       return ""
         case .custom:     return ""
         }

@@ -93,9 +93,9 @@ struct PilotLiveView: View {
         HStack(spacing: 0) {
             statBlock(
                 icon: "exclamationmark.triangle.fill",
-                value: "\(myKart.penalties.count)",
+                value: "\(myKart.actualPenalties.count)",
                 label: "Penalità",
-                color: myKart.penalties.isEmpty ? .kartDim : .orange
+                color: myKart.actualPenalties.isEmpty ? .kartDim : .yellow
             )
 
             Divider().background(Color.white.opacity(0.08)).frame(height: 40)
@@ -141,16 +141,19 @@ struct PilotLiveView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 11, weight: .bold)).foregroundColor(.orange)
-                Text("LE TUE PENALITÀ")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundColor(.orange)
+                    .font(.system(size: 11, weight: .bold)).foregroundColor(.yellow)
+                Text("PENALITÀ E AVVISI")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundColor(.yellow)
                 Spacer()
             }
             .padding(12)
             .background(Color.orange.opacity(0.08))
 
             ForEach(myKart.penalties) { penalty in
-                HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: penalty.isWarning ? "exclamationmark.bubble.fill" : "exclamationmark.triangle.fill")
+                        .foregroundColor(penalty.isWarning ? .kartDim : .yellow)
+                        .font(.system(size: 11))
                     Text(penalty.displayLabel)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.white)
@@ -176,21 +179,33 @@ struct PilotLiveView: View {
     // MARK: - Latest Message
 
     private var latestMessageCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let latest = myKart.messages.last
+        let isCheckered = latest?.messageType == "checkered_flag"
+        let accentCol: Color = isCheckered ? .white : .cyan
+        let bgCol: Color = isCheckered ? Color(white: 0.9) : .cyan
+
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
-                Image(systemName: "megaphone.fill")
-                    .font(.system(size: 11, weight: .bold)).foregroundColor(.cyan)
-                Text("ULTIMO MESSAGGIO")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundColor(.cyan)
+                if isCheckered {
+                    Image(systemName: "flag.checkered.2.crossed")
+                        .font(.system(size: 11, weight: .bold)).foregroundColor(.black)
+                } else {
+                    Image(systemName: "megaphone.fill")
+                        .font(.system(size: 11, weight: .bold)).foregroundColor(accentCol)
+                }
+                
+                Text(isCheckered ? "FINE GARA" : "ULTIMO MESSAGGIO")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundColor(isCheckered ? .black : accentCol)
+                
                 Spacer()
                 Text("\(myKart.messages.count) totali")
-                    .font(.system(size: 9, design: .monospaced)).foregroundColor(.kartDim)
+                    .font(.system(size: 9, design: .monospaced)).foregroundColor(isCheckered ? .black.opacity(0.6) : .kartDim)
             }
             .padding(12)
-            .background(Color.cyan.opacity(0.08))
+            .background(bgCol.opacity(isCheckered ? 0.8 : 0.08))
 
-            if let latest = myKart.messages.last {
-                Text(latest.text)
+            if let msg = latest {
+                Text(msg.text)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white)
                     .fixedSize(horizontal: false, vertical: true)
@@ -199,7 +214,7 @@ struct PilotLiveView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.cyan.opacity(0.2), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(bgCol.opacity(0.2), lineWidth: 1))
     }
 
     // MARK: - No Kart

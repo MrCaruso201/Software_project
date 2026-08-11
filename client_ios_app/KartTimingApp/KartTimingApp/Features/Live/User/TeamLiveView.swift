@@ -98,23 +98,23 @@ struct TeamLiveView: View {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.orange)
-                Text("PENALITÀ RICEVUTE (\(myKart.penalties.count))")
+                    .foregroundColor(.yellow)
+                Text("PENALITÀ E AVVISI (\(myKart.actualPenalties.count))")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.orange)
+                    .foregroundColor(.yellow)
                 Spacer()
                 Text("+\(myKart.totalPenaltySeconds)s totali")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.orange)
+                    .foregroundColor(.yellow)
             }
             .padding(14)
-            .background(Color.orange.opacity(0.08))
+            .background(Color.yellow.opacity(0.08))
 
             VStack(spacing: 0) {
                 ForEach(myKart.penalties) { penalty in
                     HStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.orange)
+                        Image(systemName: penalty.isWarning ? "exclamationmark.bubble.fill" : "exclamationmark.triangle.fill")
+                            .foregroundColor(penalty.isWarning ? .kartDim : .yellow)
                             .font(.system(size: 14))
 
                         VStack(alignment: .leading, spacing: 2) {
@@ -175,19 +175,30 @@ struct TeamLiveView: View {
     }
 
     private func userMessageRow(_ msg: RaceMessage) -> some View {
+        let isCheckered = msg.messageType == "checkered_flag"
         let color: Color = {
             switch msg.messageType {
             case "yellow_flag": return .yellow
             case "red_flag":    return .red
             case "green_flag":  return .green
+            case "checkered_flag": return .white
             default:            return .cyan
             }
         }()
 
         return HStack(spacing: 12) {
-            Circle()
-                .fill(color)
-                .frame(width: 8, height: 8)
+            if isCheckered {
+                Image(systemName: "flag.checkered.2.crossed")
+                    .font(.system(size: 10))
+                    .foregroundColor(.black)
+                    .frame(width: 18, height: 18)
+                    .background(Color.white)
+                    .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(msg.text)

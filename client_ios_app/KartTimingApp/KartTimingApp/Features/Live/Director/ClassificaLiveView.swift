@@ -154,8 +154,10 @@ struct ClassificaLiveView: View {
 
         // Penalties extraction from LiveViewModel
         let parsedKart = Int(kart) ?? -1
+        let kartPenaltiesList = parsedKart > 0 ? (viewModel.penaltiesByKart[parsedKart] ?? []) : []
+        let actualPenaltiesCount = kartPenaltiesList.filter { !$0.isWarning }.count
+        let totalCount = kartPenaltiesList.count
         let totalSec = parsedKart > 0 ? viewModel.totalPenaltySeconds(for: parsedKart) : 0
-        let penCount = parsedKart > 0 ? (viewModel.penaltiesByKart[parsedKart]?.count ?? 0) : 0
 
         ZStack {
             RoundedRectangle(cornerRadius: 12)
@@ -198,7 +200,7 @@ struct ClassificaLiveView: View {
                             }
                             
                             // Badges Penalità
-                            if penCount > 0 {
+                            if actualPenaltiesCount > 0 {
                                 HStack(spacing: 4) {
                                     Text("+\(totalSec)s")
                                         .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -207,12 +209,6 @@ struct ClassificaLiveView: View {
                                         .padding(.vertical, 2)
                                         .background(Color.orange)
                                         .cornerRadius(4)
-                                        
-                                    if penCount > 1 {
-                                        Text("\(penCount)x")
-                                            .font(.system(size: 9, weight: .black))
-                                            .foregroundColor(.orange)
-                                    }
                                 }
                                 .padding(.leading, 4)
                             }
@@ -308,30 +304,60 @@ struct ClassificaLiveView: View {
                             }
                         }
                         
-                        if penCount > 0 {
+                        if totalCount > 0 {
                             let kartPenalties = viewModel.penaltiesByKart[parsedKart] ?? []
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("PENALITÀ ATTIVE")
-                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.orange)
-                                
-                                ForEach(kartPenalties) { penalty in
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                            .foregroundColor(.orange)
-                                            .font(.system(size: 11))
-                                        Text(penalty.displayLabel)
-                                            .font(.system(size: 13, weight: .bold))
-                                            .foregroundColor(.white)
-                                        if let note = penalty.note, !note.isEmpty {
-                                            Text("- \(note)")
+                            let actualPenalties = kartPenalties.filter { !$0.isWarning }
+                            let warnings = kartPenalties.filter { $0.isWarning }
+                            
+                            if !actualPenalties.isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("PENALITÀ")
+                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.yellow)
+                                    
+                                    ForEach(actualPenalties) { penalty in
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "exclamationmark.triangle.fill")
+                                                .foregroundColor(.yellow)
                                                 .font(.system(size: 11))
-                                                .foregroundColor(.kartDim)
+                                            Text(penalty.displayLabel)
+                                                .font(.system(size: 13, weight: .bold))
+                                                .foregroundColor(.white)
+                                            if let note = penalty.note, !note.isEmpty {
+                                                Text("- \(note)")
+                                                    .font(.system(size: 11))
+                                                    .foregroundColor(.kartDim)
+                                            }
                                         }
                                     }
                                 }
+                                .padding(.top, 4)
                             }
-                            .padding(.top, 4)
+                            
+                            if !warnings.isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("AVVISI")
+                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.kartDim)
+                                    
+                                    ForEach(warnings) { warning in
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "exclamationmark.bubble.fill")
+                                                .foregroundColor(.kartDim)
+                                                .font(.system(size: 11))
+                                            Text(warning.displayLabel)
+                                                .font(.system(size: 13, weight: .bold))
+                                                .foregroundColor(.white)
+                                            if let note = warning.note, !note.isEmpty {
+                                                Text("- \(note)")
+                                                    .font(.system(size: 11))
+                                                    .foregroundColor(.kartDim)
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.top, actualPenalties.isEmpty ? 4 : 8)
+                            }
                         }
                     }
                     .padding(.horizontal, 16)

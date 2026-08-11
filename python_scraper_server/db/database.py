@@ -229,32 +229,38 @@ def _seed_kartodromi() -> None:
 
 def _seed_penalty_types() -> None:
     """Popola la tabella penalty_types con le penalità standard."""
-    from db.models import PenaltyType  # import locale per evitare circolarità
-
+    from db.models import PenaltyType
     _DEFAULT_PENALTIES = [
         # code, name, action, default_seconds, warning_threshold, auto_penalty_code, sort_order
-        {"code": "false_start", "name": "Falsa partenza", "action": "time_added", "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 10},
-        {"code": "aggressive_driving", "name": "Guida aggressiva", "action": "time_added", "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 20},
-        {"code": "stint_time", "name": "Tempo stint non rispettato", "action": "time_added", "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 30},
-        {"code": "pit_stop_time", "name": "Tempo pit stop non rispettato", "action": "time_added", "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 40},
-        {"code": "weight", "name": "Peso non rispettato", "action": "time_added", "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 50},
-        {"code": "directive", "name": "Direttive non rispettate", "action": "time_added", "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 60},
-        {"code": "custom", "name": "Penalità personalizzata", "action": "custom", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 70},
-        
-        # Warnings
-        {"code": "warning_generic", "name": "Avviso (Generico)", "action": "warning", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 80},
-        {"code": "warning_track_limits", "name": "Avviso (Track Limits)", "action": "warning", "default_seconds": None, "warning_threshold": 3, "auto_penalty_code": "track_limits_10s", "sort_order": 90},
-        
-        # Bandiere
-        {"code": "black_flag", "name": "Bandiera Nera (Espulsione)", "action": "warning", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 92},
-        {"code": "blue_flag", "name": "Bandiera Blu (Doppiaggio)", "action": "warning", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 94},
-
-        # Auto-penalità per track limits
-        {"code": "track_limits_10s", "name": "Track Limits (+10s)", "action": "time_added", "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 100},
+        # ── Penalità ─────────────────────────────────────────────────────────────
+        {"code": "false_start",    "name": "Falsa partenza",                "action": "time_added",    "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 10},
+        {"code": "aggressive_driving", "name": "Guida aggressiva",          "action": "time_added",    "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 20},
+        {"code": "stint_time",     "name": "Tempo stint non rispettato",    "action": "time_added",    "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 30},
+        {"code": "pit_stop_time",  "name": "Tempo pit stop non rispettato", "action": "time_added",    "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 40},
+        {"code": "weight",         "name": "Peso non rispettato",           "action": "time_added",    "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 50},
+        {"code": "track_limits_10s","name": "Track Limits (+10s)",          "action": "time_added",    "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 55},
+        # ── Avvisi (auto-penalty) ─────────────────────────────────────────────
+        {"code": "warning_track_limits",      "name": "Avviso (Track Limits)",      "action": "warning", "default_seconds": None, "warning_threshold": 3, "auto_penalty_code": "track_limits_10s",   "sort_order": 60},
+        {"code": "warning_aggressive_driving","name": "Avviso (Guida Aggressiva)",  "action": "warning", "default_seconds": None, "warning_threshold": 3, "auto_penalty_code": "aggressive_driving", "sort_order": 70},
+        # ── Bandiere ──────────────────────────────────────────────────────────
+        {"code": "black_flag",     "name": "Bandiera Nera (Espulsione)",    "action": "drive_through", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 80},
+        {"code": "blue_flag",      "name": "Bandiera Blu (Doppiaggio)",     "action": "warning",       "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 90},
+        # ── Personalizzati (ultimi) ───────────────────────────────────────────
+        {"code": "custom",         "name": "Penalità personalizzata",       "action": "custom",        "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 100},
+        {"code": "warning_generic","name": "Avviso (Generico)",             "action": "warning",       "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 110},
     ]
+
+    # Codici obsoleti da rimuovere dal DB
+    _OBSOLETE_CODES = ["directive"]
 
     db: Session = SessionLocal()
     try:
+        # Rimuovi codici obsoleti (solo se non usati da penalità esistenti)
+        for code in _OBSOLETE_CODES:
+            obsolete = db.query(PenaltyType).filter(PenaltyType.code == code).first()
+            if obsolete:
+                db.delete(obsolete)
+
         for data in _DEFAULT_PENALTIES:
             existing = db.query(PenaltyType).filter(PenaltyType.code == data["code"]).first()
             if existing:
