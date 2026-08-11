@@ -7,10 +7,27 @@ struct EventDetailView: View {
     let event: RaceEvent
     @StateObject private var kartodromoVM = KartodromoViewModel()
 
+    @State private var showLive = false
+    @State private var isUpdatingStatus = false
+    @State private var statusError: String? = nil
+    @State private var localEvent: RaceEvent
+
+    init(server: DiscoveredServer, event: RaceEvent) {
+        self.server = server
+        self.event = event
+        _localEvent = State(initialValue: event)
+    }
+
     // Ruolo utente — usato in tutti i sotto-componenti per decidere
     // se mostrare i campi non compilati (solo l'admin li vede).
     private var isAdmin: Bool {
         authState.currentUser?.role.canManageUsers == true
+    }
+
+    /// True se l'utente può gestire lo stato della gara (race_director o admin)
+    private var isDirectorOrAdmin: Bool {
+        let role = authState.currentUser?.role
+        return role == .raceDirector || role == .admin
     }
 
     // MARK: - Visibilità sezioni
@@ -45,6 +62,9 @@ struct EventDetailView: View {
 
                         // ── Hero ────────────────────────────────────────────
                         heroCard
+
+                        // ── Pulsanti Live ────────────────────────────────────
+                        liveActionsSection
 
                         // ── Immagine circuito ────────────────────────────────
                         circuitImageSection
@@ -191,7 +211,142 @@ struct EventDetailView: View {
         .onAppear {
             kartodromoVM.fetchActive(serverURL: server.httpURL, token: authState.currentToken)
         }
+        .fullScreenCover(isPresented: $showLive) {
+            LiveRootView(server: server, event: localEvent)
+                .environmentObject(authState)
+        }
     }
+
+    // MARK: - Live Actions Section
+
+    @ViewBuilder
+    private var liveActionsSection: some View {
+        // Il director/admin vede sempre i pulsanti di controllo gara
+        // Gli utenti iscritti vedono "Entra in Live" solo se la gara è avviata
+        let canControl = isDirectorOrAdmin
+        let isStarted = localEvent.status == "started"
+        let isFinished = localEvent.status == "finished"
+
+        if canControl || isStarted {
+            VStack(spacing: 10) {
+                // Pulsante Avvia / Termina (solo director/admin)
+                if canControl && !isFinished {
+                    Button(action: {
+                        let newStatus = isStarted ? "finished" : "started"
+                        Task { await toggleEventStatus(to: newStatus) }
+                    }) {
+                        HStack(spacing: 10) {
+                            if isUpdatingStatus {
+                                ProgressView().tint(isStarted ? .red : .black).scaleEffect(0.85)
+                            } else {
+                                Image(systemName: isStarted ? "stop.circle.fill" : "play.circle.fill")
+                                    .font(.system(size: 18))
+                                Text(isStarted ? "Termina Gara" : "Avvia Gara")
+                                    .font(.system(size: 15, weight: .bold))
+                            }
+                        }
+                        .foregroundColor(isStarted ? .red : .black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(isStarted ? Color.red.opacity(0.15) : Color.kartAccent)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(isStarted ? Color.red.opacity(0.4) : Color.clear, lineWidth: 1)
+                        )
+                    }
+                    .disabled(isUpdatingStatus)
+                }
+
+                // Pulsante Entra in Live (tutti se gara avviata)
+                if isStarted {
+                    Button(action: { showLive = true }) {
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle().fill(Color.red).frame(width: 8, height: 8)
+                            }
+                            Text("Entra in Live")
+                                .font(.system(size: 15, weight: .bold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.red.opacity(0.8), Color.orange.opacity(0.6)],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(12)
+                    }
+                }
+
+                if let err = statusError {
+                    Text(err).font(.system(size: 12)).foregroundColor(.red)
+                }
+
+                if isFinished {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkered.flag")
+                        Text("Gara terminata")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(.kartDim)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.kartPanel)
+                    .cornerRadius(10)
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func toggleEventStatus(to newStatus: String) async {
+        guard let httpURL = server.httpURL,
+              let token = authState.currentToken else { return }
+        isUpdatingStatus = true
+        statusError = nil
+        do {
+            // Costruisce l'URL corretto: la base senza /api
+            let base = httpURL.absoluteString.replacingOccurrences(of: "/api", with: "")
+            guard let fullURL = URL(string: "\(base)/events/\(localEvent.id)/status") else { return }
+            var req = URLRequest(url: fullURL)
+            req.httpMethod = "PATCH"
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try JSONSerialization.data(withJSONObject: ["status": newStatus])
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+                let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
+                statusError = msg
+            } else {
+                // Aggiorna localEvent con il nuovo status (RaceEvent è Codable: ricrea la struct)
+                localEvent = RaceEvent(
+                    id: localEvent.id, title: localEvent.title,
+                    eventDate: localEvent.eventDate,
+                    registrationDeadline: localEvent.registrationDeadline,
+                    daysBeforeDeadline: localEvent.daysBeforeDeadline,
+                    location: localEvent.location,
+                    maxParticipants: localEvent.maxParticipants,
+                    minPeoplePerGroup: localEvent.minPeoplePerGroup,
+                    maxPeoplePerGroup: localEvent.maxPeoplePerGroup,
+                    registrationCost: localEvent.registrationCost,
+                    weightLimit: localEvent.weightLimit,
+                    kart: localEvent.kart,
+                    description: localEvent.description,
+                    raceDuration: localEvent.raceDuration,
+                    maxStintDuration: localEvent.maxStintDuration,
+                    createdAt: localEvent.createdAt,
+                    status: newStatus
+                )
+            }
+        } catch {
+            statusError = error.localizedDescription
+        }
+        isUpdatingStatus = false
+    }
+
 
     // MARK: - Circuit Image Section
 

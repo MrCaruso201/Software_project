@@ -61,6 +61,7 @@ class Event(Base):
     description = Column(Text, nullable=True) # testo libero descrittivo dell'evento
     race_duration = Column(Integer, nullable=True) # durata gara in minuti
     max_stint_duration = Column(Integer, nullable=True) # durata massima stint in minuti
+    status = Column(String, default="scheduled", nullable=False) # "scheduled" | "started" | "finished"
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
@@ -151,3 +152,57 @@ class Notification(Base):
     message    = Column(Text, nullable=False)
     is_read    = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class LiveKartAssignment(Base):
+    """
+    Assegnazione numero kart → team per un evento live.
+    Creata dal Race Director all'inizio della gara.
+    Eliminata automaticamente quando l'evento viene cancellato (cascade).
+    """
+    __tablename__ = "live_kart_assignments"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    event_id    = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    team_id     = Column(String, nullable=False)       # UUID team (da EventRegistration.team_id)
+    kart_number = Column(Integer, nullable=False)      # numero kart fisico assegnato al team
+    team_name   = Column(String, nullable=True)        # nome squadra (denormalizzato per comodità)
+    created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+    __table_args__ = (
+        UniqueConstraint('event_id', 'kart_number', name='uq_event_kart'),
+    )
+
+
+class RacePenalty(Base):
+    """
+    Penalità assegnata da un Race Director a un numero kart durante la gara live.
+    Eliminata automaticamente quando l'evento viene cancellato (cascade).
+    Tipi: 'drive_through' | 'stop_go' | 'time_added' | 'generic'
+    """
+    __tablename__ = "race_penalties"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    event_id     = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    kart_number  = Column(Integer, nullable=False)     # kart destinatario della penalità
+    penalty_type = Column(String, nullable=False)      # tipo penalità
+    seconds      = Column(Integer, nullable=True)      # secondi (solo per 'time_added' e 'stop_go')
+    note         = Column(Text, nullable=True)         # nota libera opzionale
+    created_at   = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class RaceMessage(Base):
+    """
+    Messaggio live inviato dal Race Director durante la gara.
+    target_kart=None → broadcast a tutti i team.
+    target_kart=N    → visibile solo al team con quel numero kart.
+    Eliminato automaticamente quando l'evento viene cancellato (cascade).
+    """
+    __tablename__ = "race_messages"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    event_id     = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    target_kart  = Column(Integer, nullable=True)      # None = broadcast
+    message_type = Column(String, nullable=False)      # 'yellow_flag'|'red_flag'|'green_flag'|'info'|'custom'
+    text         = Column(String, nullable=False)      # testo del messaggio
+    created_at   = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

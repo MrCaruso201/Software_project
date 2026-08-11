@@ -77,6 +77,8 @@ def _apply_migrations() -> None:
         "ALTER TABLE events ADD COLUMN race_duration INTEGER",
         "ALTER TABLE events ADD COLUMN pit_stops_required INTEGER",
         "ALTER TABLE events ADD COLUMN max_stint_duration INTEGER",
+        # Stato gara live
+        "ALTER TABLE events ADD COLUMN status TEXT NOT NULL DEFAULT 'scheduled'",
     ]
     with engine.connect() as conn:
         for stmt in migrations:

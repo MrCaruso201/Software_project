@@ -41,10 +41,12 @@ class EventUpdate(BaseModel):
     description: Optional[str] = None
     race_duration: Optional[int] = None
     max_stint_duration: Optional[int] = None
+    status: Optional[str] = None  # "scheduled" | "started" | "finished"
 
 class EventResponse(EventBase):
     id: int
     created_at: datetime
+    status: str = "scheduled"  # incluso nella risposta
 
     class Config:
         from_attributes = True

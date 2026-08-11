@@ -38,6 +38,9 @@ enum UserRole: String, Codable {
 struct LoggedInUser {
     let id: Int
     let role: UserRole
+    let username: String
+    let firstName: String?
+    let lastName: String?
 }
 
 // ---------------------------------------------------------------------------
@@ -68,5 +71,9 @@ func decodeJWT(_ token: String) -> LoggedInUser? {
         let role    = UserRole(rawValue: roleStr)
     else { return nil }
 
-    return LoggedInUser(id: userId, role: role)
+    let username  = json["username"]   as? String ?? ""
+    let firstName = json["first_name"] as? String
+    let lastName  = json["last_name"]  as? String
+
+    return LoggedInUser(id: userId, role: role, username: username, firstName: firstName, lastName: lastName)
 }

@@ -43,8 +43,11 @@ async def start_bonjour() -> None:
     )
 
     zeroconf_instance = AsyncZeroconf()
-    await zeroconf_instance.async_register_service(info)
-    print(f"✅ Bonjour attivo: '{SERVICE_NAME}' su {local_ip}:{SERVICE_PORT}")
+    try:
+        await zeroconf_instance.async_register_service(info, allow_name_change=True)
+        print(f"✅ Bonjour attivo: '{info.name}' su {local_ip}:{SERVICE_PORT}")
+    except Exception as e:
+        print(f"⚠️  Bonjour: registrazione fallita ({e}). Il server continua senza mDNS.")
 
 
 async def stop_bonjour() -> None:

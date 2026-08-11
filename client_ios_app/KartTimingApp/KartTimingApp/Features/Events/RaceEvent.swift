@@ -17,6 +17,8 @@ struct RaceEvent: Identifiable, Codable {
     let raceDuration: Int?
     let maxStintDuration: Int?
     let createdAt: String
+    /// "scheduled" | "started" | "finished"
+    let status: String
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -35,6 +37,7 @@ struct RaceEvent: Identifiable, Codable {
         case raceDuration = "race_duration"
         case maxStintDuration = "max_stint_duration"
         case createdAt = "created_at"
+        case status
     }
 
     /// True se la gara è a squadre (max_people_per_group > 1)
