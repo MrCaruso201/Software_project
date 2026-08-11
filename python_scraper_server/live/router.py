@@ -20,13 +20,13 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from db.models import (
     Event, EventRegistration,
-    LiveKartAssignment, RacePenalty, RaceMessage
+    LiveKartAssignment, RacePenalty, RaceMessage, PenaltyType
 )
 from auth.dependencies import get_current_user
 from auth.roles import Role, has_permission
 from live.schemas import (
     KartAssignmentCreate, KartAssignmentResponse,
-    PenaltyCreate, PenaltyResponse,
+    PenaltyCreate, PenaltyResponse, PenaltyTypeResponse,
     MessageCreate, MessageResponse,
     MyKartResponse, EventStatusUpdate
 )
@@ -37,7 +37,6 @@ from scraper.storage import json_path_for
 router = APIRouter(tags=["live"])
 
 VALID_STATUSES = {"scheduled", "started", "finished"}
-VALID_PENALTY_TYPES = {"drive_through", "stop_go", "time_added", "generic"}
 VALID_MESSAGE_TYPES = {"yellow_flag", "red_flag", "green_flag", "info", "custom"}
 
 
@@ -287,6 +286,17 @@ def remove_kart_assignment(
 # Penalties
 # ─────────────────────────────────────────────────────────────────────────────
 
+@router.get("/live/penalty-types", response_model=List[PenaltyTypeResponse])
+def get_penalty_types(
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Lista dei tipi di penalità standard configurati nel database.
+    """
+    return db.query(PenaltyType).filter(PenaltyType.is_active == True).order_by(PenaltyType.sort_order).all()
+
+
 @router.get("/live/{event_id}/penalties", response_model=List[PenaltyResponse])
 def get_penalties(
     event_id: int,
@@ -316,27 +326,62 @@ def add_penalty(
     user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Assegna una penalità a un kart. Solo race_director/admin."""
+    """Assegna una penalità a un kart (e triggera auto-penalità se si supera la soglia di warning). Solo race_director/admin."""
     _require_director(user_payload)
     _get_event_or_404(event_id, db)
 
-    if body.penalty_type not in VALID_PENALTY_TYPES:
+    # Verifica validità tipo penalità dal DB
+    p_type = db.query(PenaltyType).filter(PenaltyType.code == body.penalty_type, PenaltyType.is_active == True).first()
+    if not p_type:
         raise HTTPException(
             status_code=400,
-            detail=f"Tipo penalità non valido. Valori accettati: {VALID_PENALTY_TYPES}"
+            detail=f"Tipo penalità non valido o inattivo: {body.penalty_type}"
         )
+
+    # Applica i secondi di default se non specificati
+    seconds = body.seconds if body.seconds is not None else p_type.default_seconds
+    
+    # Per i warning, forziamo seconds a None (o 0) per non alterare il total time
+    if p_type.action == "warning":
+        seconds = None
 
     penalty = RacePenalty(
         event_id=event_id,
         kart_number=body.kart_number,
         penalty_type=body.penalty_type,
-        seconds=body.seconds,
+        seconds=seconds,
         note=body.note
     )
     db.add(penalty)
     db.commit()
     db.refresh(penalty)
+    
+    # Auto-penalty logic (e.g. 3 track limits warnings -> 1 auto-penalty)
+    if p_type.warning_threshold is not None and p_type.auto_penalty_code is not None:
+        # Conta quanti warning di questo tipo ha il kart in questo evento (incluso quello appena inserito)
+        count = db.query(RacePenalty).filter(
+            RacePenalty.event_id == event_id,
+            RacePenalty.kart_number == body.kart_number,
+            RacePenalty.penalty_type == body.penalty_type
+        ).count()
+        
+        # Ogni volta che count supera/raggiunge la soglia, assegna la penalità associata.
+        # Es. se soglia=3, alla 3° -> penalità. Alla 4° -> penalità.
+        if count >= p_type.warning_threshold:
+            auto_p_type = db.query(PenaltyType).filter(PenaltyType.code == p_type.auto_penalty_code).first()
+            if auto_p_type:
+                auto_penalty = RacePenalty(
+                    event_id=event_id,
+                    kart_number=body.kart_number,
+                    penalty_type=auto_p_type.code,
+                    seconds=auto_p_type.default_seconds,
+                    note=f"Assegnata automaticamente dopo {count} warning ({p_type.name})"
+                )
+                db.add(auto_penalty)
+                db.commit()
+
     return penalty
+
 
 
 @router.delete("/live/{event_id}/penalties/{penalty_id}", status_code=status.HTTP_204_NO_CONTENT)

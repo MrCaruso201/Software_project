@@ -26,9 +26,21 @@ class KartAssignmentResponse(BaseModel):
 
 # ── Race Penalty ─────────────────────────────────────────────────────────────
 
+class PenaltyTypeResponse(BaseModel):
+    id: int
+    code: str
+    name: str
+    action: str
+    default_seconds: Optional[int] = None
+    warning_threshold: Optional[int] = None
+    auto_penalty_code: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
 class PenaltyCreate(BaseModel):
     kart_number: int
-    penalty_type: str   # 'drive_through' | 'stop_go' | 'time_added' | 'generic'
+    penalty_type: str   # Deve corrispondere a penalty_types.code
     seconds: Optional[int] = None
     note: Optional[str] = None
 

@@ -174,11 +174,29 @@ class LiveKartAssignment(Base):
     )
 
 
+class PenaltyType(Base):
+    """
+    Tipi di penalità predefinite e avvisi standard (es. track limits).
+    """
+    __tablename__ = "penalty_types"
+
+    id                = Column(Integer, primary_key=True, index=True)
+    code              = Column(String, unique=True, nullable=False, index=True) # es. "false_start"
+    name              = Column(String, nullable=False)                          # es. "Falsa Partenza"
+    action            = Column(String, nullable=False)                          # "time_added", "stop_go", "drive_through", "warning", "custom"
+    default_seconds   = Column(Integer, nullable=True)                          # 10, 30, ecc.
+    is_active         = Column(Boolean, default=True, nullable=False)
+    sort_order        = Column(Integer, default=0, nullable=False)
+    
+    # Auto-penalty per avvisi (es. track limits)
+    warning_threshold = Column(Integer, nullable=True)                          # Numero avvisi prima della penalità (es. 3)
+    auto_penalty_code = Column(String, nullable=True)                           # Codice della penalità automatica da assegnare
+
+
 class RacePenalty(Base):
     """
     Penalità assegnata da un Race Director a un numero kart durante la gara live.
     Eliminata automaticamente quando l'evento viene cancellato (cascade).
-    Tipi: 'drive_through' | 'stop_go' | 'time_added' | 'generic'
     """
     __tablename__ = "race_penalties"
 

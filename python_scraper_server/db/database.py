@@ -60,6 +60,9 @@ def init_db() -> None:
     # --- Seed: kartodromi di default ---
     _seed_kartodromi()
 
+    # --- Seed: tipi di penalità di default ---
+    _seed_penalty_types()
+
 
 def _apply_migrations() -> None:
     """Aggiunge colonne al DB esistente senza sovrascrivere i dati (migration manuale)."""
@@ -220,5 +223,47 @@ def _seed_kartodromi() -> None:
             db.add(Kartodromo(**data))
         db.commit()
         print("🏎️  Kartodromi di default caricati.")
+    finally:
+        db.close()
+
+
+def _seed_penalty_types() -> None:
+    """Popola la tabella penalty_types con le penalità standard."""
+    from db.models import PenaltyType  # import locale per evitare circolarità
+
+    _DEFAULT_PENALTIES = [
+        # code, name, action, default_seconds, warning_threshold, auto_penalty_code, sort_order
+        {"code": "false_start", "name": "Falsa partenza", "action": "time_added", "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 10},
+        {"code": "aggressive_driving", "name": "Guida aggressiva", "action": "time_added", "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 20},
+        {"code": "stint_time", "name": "Tempo stint non rispettato", "action": "time_added", "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 30},
+        {"code": "pit_stop_time", "name": "Tempo pit stop non rispettato", "action": "time_added", "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 40},
+        {"code": "weight", "name": "Peso non rispettato", "action": "time_added", "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 50},
+        {"code": "directive", "name": "Direttive non rispettate", "action": "time_added", "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 60},
+        {"code": "custom", "name": "Penalità personalizzata", "action": "custom", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 70},
+        
+        # Warnings
+        {"code": "warning_generic", "name": "Avviso (Generico)", "action": "warning", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 80},
+        {"code": "warning_track_limits", "name": "Avviso (Track Limits)", "action": "warning", "default_seconds": None, "warning_threshold": 3, "auto_penalty_code": "track_limits_10s", "sort_order": 90},
+        
+        # Auto-penalità per track limits
+        {"code": "track_limits_10s", "name": "Track Limits (+10s)", "action": "time_added", "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 100},
+    ]
+
+    db: Session = SessionLocal()
+    try:
+        for data in _DEFAULT_PENALTIES:
+            existing = db.query(PenaltyType).filter(PenaltyType.code == data["code"]).first()
+            if existing:
+                # Update existing in case fields changed (e.g. seconds or threshold)
+                existing.name = data["name"]
+                existing.action = data["action"]
+                existing.default_seconds = data["default_seconds"]
+                existing.warning_threshold = data["warning_threshold"]
+                existing.auto_penalty_code = data["auto_penalty_code"]
+                existing.sort_order = data["sort_order"]
+            else:
+                db.add(PenaltyType(**data))
+        db.commit()
+        print("🚩  Tipi di penalità di default caricati.")
     finally:
         db.close()
