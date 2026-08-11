@@ -22,11 +22,15 @@ struct DirectorLiveView: View {
                 ClassificaLiveView(viewModel: viewModel)
                     .tabItem { Label("Classifica", systemImage: "list.number") }
 
-                // ── Tab 2: Kart & Penalità ────────────────────────────
-                KartPanelView(event: event, viewModel: viewModel)
-                    .tabItem { Label("Kart & Penalità", systemImage: "flag.2.crossed.fill") }
+                // ── Tab 2: Kart (Assegnazione) ────────────────────────
+                KartPanelView(event: event, viewModel: viewModel, mode: .assignment)
+                    .tabItem { Label("Kart", systemImage: "flag.2.crossed.fill") }
+                    
+                // ── Tab 3: Penalità ───────────────────────────────────
+                KartPanelView(event: event, viewModel: viewModel, mode: .penalty)
+                    .tabItem { Label("Penalità", systemImage: "exclamationmark.triangle.fill") }
 
-                // ── Tab 3: Messaggi ───────────────────────────────────
+                // ── Tab 4: Messaggi ───────────────────────────────────
                 MessaggiView(viewModel: viewModel)
                     .tabItem { Label("Messaggi", systemImage: "bubble.left.and.bubble.right.fill") }
             }
