@@ -3,9 +3,9 @@
 Karting Team Race Simulator
 ================================
 Simula una gara di kart A SQUADRE con pit stop per cambio pilota.
-Ogni squadra ha più piloti che si alternano in pista tramite soste ai box.
-Il file JSON viene aggiornato ad ogni giro completato, esattamente come il
-simulatore individuale. Al termine viene salvata anche una classifica CSV.
+I tempi sono registrati per kart (non per singolo pilota): l'identità
+dei piloti è interna alla logica di cambio, ma nel timing live e nel
+CSV finale compare solo il numero kart e il nome squadra.
 
 Utilizzo:
     python kart_team_race_simulator.py                        # velocità 10x (default)
@@ -15,8 +15,8 @@ Utilizzo:
     python kart_team_race_simulator.py --duration 60          # 60 min di gara
     python kart_team_race_simulator.py --pit-duration 90      # pit stop da 90 secondi
 
-Struttura del file JSON: identica al simulatore individuale (compatibile con lo scraper).
-Classifica CSV: Posizione, Pilota, Squadra, Miglior Giro, Gap, Giri, username
+JSON headers:   P | Kart | Driver (nome squadra) | Lap Time | Gap | Int | Best | Laps | Pit
+CSV columns:    Posizione, Squadra, Miglior Giro, Gap, Giri
 """
 
 import json
@@ -37,18 +37,19 @@ DEFAULT_PIT_DURATION_SEC = 60       # Sosta ai box: 1 minuto fisso
 OUTPUT_FILE = script_dir + "/sim_data/live_timing.json"
 BASE_URL    = "https://live.racefacer.com/simulator"
 
-# Squadre: ogni squadra ha una lista di piloti con i propri parametri
-# min_stint / max_stint: durata minima/massima dello stint in secondi prima di poter/dover rientrare
+# Squadre: ogni squadra ha una lista di piloti con i propri parametri.
+# I piloti si alternano internamente, ma il timing live mostra solo il kart.
+# min_stint / max_stint: durata minima/massima dello stint in secondi.
 TEAMS: List[Dict] = [
     {
         "name": "Scuderia Alpha",
         "kart": "101",
-        "min_stint": 600,    # almeno 10 min in pista
-        "max_stint": 1200,   # massimo 20 min prima del pit obbligatorio
+        "min_stint": 600,
+        "max_stint": 1200,
         "drivers": [
-            {"name": "Marco Rossi",   "base_time": 73.5, "sigma": 0.35, "username": "marco"},
-            {"name": "Luca Ferrari",  "base_time": 74.2, "sigma": 0.40, "username": None},
-            {"name": "Sofia Conti",   "base_time": 75.0, "sigma": 0.45, "username": "sofia"},
+            {"base_time": 73.5, "sigma": 0.35},
+            {"base_time": 74.2, "sigma": 0.40},
+            {"base_time": 75.0, "sigma": 0.45},
         ],
     },
     {
@@ -57,9 +58,9 @@ TEAMS: List[Dict] = [
         "min_stint": 600,
         "max_stint": 1200,
         "drivers": [
-            {"name": "Andrea Ricci",     "base_time": 73.8, "sigma": 0.38, "username": None},
-            {"name": "Giovanni Bianchi", "base_time": 76.1, "sigma": 0.45, "username": None},
-            {"name": "Elena Bruno",      "base_time": 77.0, "sigma": 0.60, "username": None},
+            {"base_time": 73.8, "sigma": 0.38},
+            {"base_time": 76.1, "sigma": 0.45},
+            {"base_time": 77.0, "sigma": 0.60},
         ],
     },
     {
@@ -68,8 +69,8 @@ TEAMS: List[Dict] = [
         "min_stint": 700,
         "max_stint": 1100,
         "drivers": [
-            {"name": "Matteo Romano",  "base_time": 74.5, "sigma": 0.55, "username": None},
-            {"name": "Chiara Colombo", "base_time": 79.2, "sigma": 0.65, "username": None},
+            {"base_time": 74.5, "sigma": 0.55},
+            {"base_time": 79.2, "sigma": 0.65},
         ],
     },
     {
@@ -78,9 +79,9 @@ TEAMS: List[Dict] = [
         "min_stint": 500,
         "max_stint": 1300,
         "drivers": [
-            {"name": "Francesco Mancini", "base_time": 75.2, "sigma": 0.50, "username": None},
-            {"name": "Valentina Leone",   "base_time": 76.8, "sigma": 0.62, "username": None},
-            {"name": "Roberto Gallo",     "base_time": 77.5, "sigma": 0.58, "username": None},
+            {"base_time": 75.2, "sigma": 0.50},
+            {"base_time": 76.8, "sigma": 0.62},
+            {"base_time": 77.5, "sigma": 0.58},
         ],
     },
     {
@@ -89,8 +90,8 @@ TEAMS: List[Dict] = [
         "min_stint": 600,
         "max_stint": 1200,
         "drivers": [
-            {"name": "Sara Fontana",  "base_time": 74.8, "sigma": 0.42, "username": None},
-            {"name": "Paolo Marini",  "base_time": 76.3, "sigma": 0.50, "username": None},
+            {"base_time": 74.8, "sigma": 0.42},
+            {"base_time": 76.3, "sigma": 0.50},
         ],
     },
 ]
@@ -121,63 +122,52 @@ def simulate_lap(base_time: float, sigma: float, lap_num: int) -> float:
     return max(lap_time, base_time * 0.98)
 
 
-# ─── Stato pilota (dentro una squadra) ───────────────────────────────────────
+# ─── Stato pilota (interno alla squadra, non esposto nel timing) ──────────────
 
-class TeamDriver:
-    def __init__(self, name: str, base_time: float, sigma: float, username: Optional[str]):
-        self.name      = name
+class _Driver:
+    """Rappresenta un pilota interno: i suoi parametri fisici servono solo per
+    calcolare i tempi; non compaiono nel JSON/CSV di output."""
+    def __init__(self, base_time: float, sigma: float):
         self.base_time = base_time
         self.sigma     = sigma
-        self.username  = username
-
-        self.lap_count: int         = 0
-        self.lap_times: List[float] = []   # solo giri completati da questo pilota
-
-    @property
-    def best_lap(self) -> Optional[float]:
-        return min(self.lap_times) if self.lap_times else None
-
-    @property
-    def total_drive_time(self) -> float:
-        return sum(self.lap_times)
 
 
 # ─── Stato squadra ────────────────────────────────────────────────────────────
 
 class Team:
     def __init__(self, cfg: Dict, grid_pos: int):
-        self.name        = cfg["name"]
-        self.kart        = cfg["kart"]
-        self.min_stint   = cfg["min_stint"]
-        self.max_stint   = cfg["max_stint"]
+        self.name      = cfg["name"]
+        self.kart      = cfg["kart"]
+        self.min_stint = cfg["min_stint"]
+        self.max_stint = cfg["max_stint"]
 
-        self.drivers: List[TeamDriver] = [
-            TeamDriver(d["name"], d["base_time"], d["sigma"], d["username"])
-            for d in cfg["drivers"]
+        self._drivers: List[_Driver] = [
+            _Driver(d["base_time"], d["sigma"]) for d in cfg["drivers"]
         ]
 
         # ── Stato gara ────────────────────────────────────────────────
-        self.current_driver_idx: int = 0          # indice pilota attivo
-        self.current_stint_time: float = 0.0      # secondi passati in pista in questo stint
-        self.current_lap_in_stint: int = 0        # giri nello stint corrente (per penalità in-lap)
-        self.lap_count: int = 0                   # giri totali della squadra (kart)
-        self.lap_times: List[float] = []          # tempo di ogni giro completato dal kart
-        self.last_cross_time: float = 0.0         # tempo simulato dell'ultimo traguardo tagliato
-        self.in_pit: bool = False                 # True mentre il kart è ai box
-        self.pit_end_time: float = 0.0            # quando finirà la sosta corrente
-        self.total_pit_time: float = 0.0          # tempo totale speso ai box
+        self._driver_idx: int        = 0
+        self.current_stint_time: float = 0.0
+        self.current_lap_in_stint: int = 0
+        self.lap_count: int          = 0
+        self.lap_times: List[float]  = []     # tutti i giri del kart
+        self.last_cross_time: float  = 0.0
+        self.in_pit: bool            = False
+        self.pit_end_time: float     = 0.0
+        self.total_pit_time: float   = 0.0
+        self.pit_count: int          = 0
 
-        # Partenza sfalsata in griglia
-        self.initial_offset: float = grid_pos * 0.5
+        # Partenza sfalsata
+        self.initial_offset: float   = grid_pos * 0.5
 
         # Pre-genera il primo giro
-        driver = self.current_driver
-        self.current_lap_time: float = simulate_lap(driver.base_time, driver.sigma, 1)
-        self.next_event: float = self.initial_offset + self.current_lap_time
+        drv = self._current_driver
+        self.current_lap_time: float = simulate_lap(drv.base_time, drv.sigma, 1)
+        self.next_event: float       = self.initial_offset + self.current_lap_time
 
     @property
-    def current_driver(self) -> TeamDriver:
-        return self.drivers[self.current_driver_idx]
+    def _current_driver(self) -> _Driver:
+        return self._drivers[self._driver_idx]
 
     @property
     def best_lap(self) -> Optional[float]:
@@ -188,37 +178,31 @@ class Team:
         return self.lap_times[-1] if self.lap_times else None
 
     def should_pit(self) -> bool:
-        """Decide se la squadra deve/può fare il pit stop dopo questo giro."""
-        # Solo se c'è più di un pilota
-        if len(self.drivers) == 1:
+        if len(self._drivers) == 1:
             return False
-        # Pit obbligatorio se supera il max stint
         if self.current_stint_time >= self.max_stint:
             return True
-        # Pit facoltativo se supera il min stint con una probabilità crescente
         if self.current_stint_time >= self.min_stint:
             overtime = self.current_stint_time - self.min_stint
             window   = self.max_stint - self.min_stint
-            prob     = overtime / window  # 0→1 man mano che si avvicina al max
-            if random.random() < prob * 0.4:   # smorzato: decisione graduale
+            prob     = overtime / window
+            if random.random() < prob * 0.4:
                 return True
         return False
 
     def do_pit_stop(self, sim_time: float, pit_duration: float) -> None:
-        """Esegue il cambio pilota e imposta il tempo di fine sosta."""
         self.in_pit       = True
         self.pit_end_time = sim_time + pit_duration
         self.total_pit_time += pit_duration
+        self.pit_count += 1
 
-        # Cambia pilota (round-robin)
-        self.current_driver_idx = (self.current_driver_idx + 1) % len(self.drivers)
-        self.current_stint_time = 0.0
-        self.current_lap_in_stint = 0
+        # Cambio pilota (round-robin, interno)
+        self._driver_idx = (self._driver_idx + 1) % len(self._drivers)
+        self.current_stint_time    = 0.0
+        self.current_lap_in_stint  = 0
 
-        # Primo giro del nuovo pilota (ha la penalità out-lap)
-        driver = self.current_driver
-        self.current_lap_time = simulate_lap(driver.base_time, driver.sigma, 1)
-        # Il prossimo evento è la fine sosta + il primo giro
+        drv = self._current_driver
+        self.current_lap_time = simulate_lap(drv.base_time, drv.sigma, 1)
         self.next_event = self.pit_end_time + self.current_lap_time
 
 
@@ -226,14 +210,13 @@ class Team:
 
 def build_snapshot(teams: List[Team], session_start: datetime, sim_time: float) -> dict:
     """
-    Costruisce il dict JSON aggiornamento timing.
+    Costruisce il dict JSON per l'aggiornamento timing live.
 
-    Classifica: giri totali decrescenti, poi last_cross_time crescente.
-    Headers: P | Kart | Driver (pilota attivo) | Lap Time | Gap | Int | Best | Laps | Pit
+    Headers: P | Kart | Driver (nome squadra) | Lap Time | Gap | Int | Best | Laps | Pit
     """
-    ranked   = sorted([t for t in teams if t.lap_count > 0],
-                      key=lambda t: (-t.lap_count, t.last_cross_time))
-    no_time  = [t for t in teams if t.lap_count == 0]
+    ranked     = sorted([t for t in teams if t.lap_count > 0],
+                        key=lambda t: (-t.lap_count, t.last_cross_time))
+    no_time    = [t for t in teams if t.lap_count == 0]
     classified = ranked + no_time
 
     leader: Optional[Team] = ranked[0] if ranked else None
@@ -241,24 +224,24 @@ def build_snapshot(teams: List[Team], session_start: datetime, sim_time: float) 
     rows = []
     for pos, team in enumerate(classified, start=1):
         if team.lap_count > 0:
-            last_str = seconds_to_laptime(team.last_lap)      # type: ignore[arg-type]
-            best_str = seconds_to_laptime(team.best_lap)      # type: ignore[arg-type]
+            last_str = seconds_to_laptime(team.last_lap)   # type: ignore[arg-type]
+            best_str = seconds_to_laptime(team.best_lap)   # type: ignore[arg-type]
 
             if pos == 1:
                 gap_str = "-"
                 int_str = "-"
             else:
                 assert leader is not None
-                laps_behind_leader = leader.lap_count - team.lap_count
-                if laps_behind_leader == 0:
+                laps_behind = leader.lap_count - team.lap_count
+                if laps_behind == 0:
                     gap_val = team.last_cross_time - leader.last_cross_time
                     gap_str = f"+{gap_val:.3f}"
-                elif laps_behind_leader == 1:
+                elif laps_behind == 1:
                     leader_time = leader.initial_offset + sum(leader.lap_times[:team.lap_count])
                     gap_val = team.last_cross_time - leader_time
                     gap_str = f"+{gap_val:.3f}"
                 else:
-                    laps_down = laps_behind_leader - 1
+                    laps_down = laps_behind - 1
                     gap_str = f"+{laps_down} Laps" if laps_down > 1 else "+1 Lap"
 
                 prev_team = classified[pos - 2]
@@ -284,7 +267,7 @@ def build_snapshot(teams: List[Team], session_start: datetime, sim_time: float) 
         rows.append([
             str(pos),
             team.kart,
-            f"{team.current_driver.name} [{team.name}]",
+            team.name,          # Driver = nome squadra
             last_str,
             gap_str,
             int_str,
@@ -331,13 +314,10 @@ def run_simulation(
     print(f"    Durata: {duration_minutes} min  |  Squadre: {len(teams)}  |  Pit stop: {pit_duration:.0f}s")
     print(f"    Output: {output_file}  |  Speed: {speed}x")
     print()
-    print(f"  {'Tempo':>8}  {'G':>3}  {'Squadra':<18}  {'Pilota':<20}  {'Giro':>10}  {'Pit'}")
-    print("  " + "─" * 74)
+    print(f"  {'Tempo':>8}  {'G':>3}  {'Kart':<6}  {'Squadra':<20}  {'Giro':>10}  {'Best':>10}  {'Pit'}")
+    print("  " + "─" * 72)
 
     while True:
-        # Prossimo evento: completamento giro (tutte le squadre, anche quelle in pit)
-        # Le squadre in pit hanno next_event = pit_end_time + lap_time, quindi
-        # verranno selezionate solo quando la sosta sarà finita e il giro completato.
         candidates = [
             (t.next_event, i, t)
             for i, t in enumerate(teams)
@@ -352,18 +332,15 @@ def run_simulation(
         time.sleep(max(0.0, sleep_s))
         sim_time = event_time
 
-        # ── Uscita dal pit (se la sosta è terminata) ──────────────────
         if team.in_pit:
-            team.in_pit = False   # La sosta è finita, il pilota rientra in gara
+            team.in_pit = False
 
         # ── Completa il giro ──────────────────────────────────────────
-        driver = team.current_driver
-        lap_t  = team.current_lap_time
+        drv   = team._current_driver
+        lap_t = team.current_lap_time
         team.lap_count += 1
         team.lap_times.append(lap_t)
         team.last_cross_time = sim_time
-        driver.lap_count += 1
-        driver.lap_times.append(lap_t)
         team.current_stint_time += lap_t
         team.current_lap_in_stint += 1
 
@@ -375,10 +352,9 @@ def run_simulation(
             team.do_pit_stop(sim_time, pit_duration)
             pit_flag = " 🔧"
         else:
-            # Prossimo giro nello stesso stint
-            next_lap_t = simulate_lap(driver.base_time, driver.sigma, team.current_lap_in_stint + 1)
+            next_lap_t = simulate_lap(drv.base_time, drv.sigma, team.current_lap_in_stint + 1)
             team.current_lap_time = next_lap_t
-            team.next_event = sim_time + next_lap_t
+            team.next_event       = sim_time + next_lap_t
 
         # ── Sovrascrive il file JSON ──────────────────────────────────
         snapshot = build_snapshot(teams, session_start, sim_time)
@@ -387,22 +363,24 @@ def run_simulation(
 
         # ── Log a terminale ───────────────────────────────────────────
         is_new_best = (team.best_lap == lap_t)
-        flag = " ⚡" if is_new_best else ""
+        best_str    = seconds_to_laptime(team.best_lap) if team.best_lap else "-"
+        flag        = " ⚡" if is_new_best else ""
         print(
             f"  {sim_time/60:>6.2f}min"
             f"  G{team.lap_count:>2d}"
-            f"  {team.name:<18}"
-            f"  {driver.name:<20}"
+            f"  K{team.kart:<5}"
+            f"  {team.name:<20}"
             f"  {seconds_to_laptime(lap_t):>10}"
+            f"  {best_str:>10}"
             + flag + pit_flag
         )
 
         update_count += 1
 
     # ─── Classifica finale ────────────────────────────────────────────────────
-    print("\n" + "═" * 72)
+    print("\n" + "═" * 68)
     print("  CLASSIFICA FINALE — GARA A SQUADRE")
-    print("═" * 72)
+    print("═" * 68)
 
     finished = sorted(
         [t for t in teams if t.lap_count > 0],
@@ -422,20 +400,19 @@ def run_simulation(
                 laps_behind = leader.lap_count - t.lap_count
                 gap_str = f"+{laps_behind} giri" if laps_behind > 1 else "+1 giro"
 
+        best_str = seconds_to_laptime(t.best_lap) if t.best_lap else "-"
         print(
-            f"  P{i:2d}  K{t.kart}  {t.name:<18}"
+            f"  P{i:2d}  K{t.kart}  {t.name:<20}"
             f"  Giri: {t.lap_count:2d}"
+            f"  Best: {best_str}"
             f"  Gap: {gap_str:<12}"
-            f"  Pit: {t.total_pit_time/60:.1f}min"
+            f"  Pit: {t.pit_count}x ({t.total_pit_time/60:.1f}min)"
         )
-        for d in t.drivers:
-            best_str = seconds_to_laptime(d.best_lap) if d.best_lap else "-"
-            print(f"         └ {d.name:<22}  giri: {d.lap_count:2d}  best: {best_str}")
 
     for t in no_time_final:
-        print(f"  ---  K{t.kart}  {t.name:<18}  nessun giro completato")
+        print(f"  ---  K{t.kart}  {t.name:<20}  nessun giro completato")
 
-    print("═" * 72)
+    print("═" * 68)
     print(f"\n✅  {update_count} aggiornamenti scritti su '{output_file}'")
 
     # ─── Salva CSV ────────────────────────────────────────────────────────────
@@ -443,7 +420,7 @@ def run_simulation(
     try:
         with open(csv_file, mode="w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["Posizione", "Pilota", "Squadra", "Miglior Giro", "Gap", "Giri", "username"])
+            writer.writerow(["Posizione", "Squadra", "Miglior Giro", "Gap", "Giri"])
 
             for i, t in enumerate(finished, 1):
                 assert leader is not None
@@ -456,21 +433,17 @@ def run_simulation(
                         laps_behind = leader.lap_count - t.lap_count
                         gap_str = f"+{laps_behind} giro" if laps_behind == 1 else f"+{laps_behind} giri"
 
-                for d in t.drivers:
-                    best_lap_str = seconds_to_laptime(d.best_lap) if d.best_lap else "-"
-                    writer.writerow([
-                        str(i),
-                        d.name,
-                        t.name,
-                        best_lap_str,
-                        gap_str,
-                        str(d.lap_count),
-                        d.username if d.username else "",
-                    ])
+                best_lap_str = seconds_to_laptime(t.best_lap) if t.best_lap else "-"
+                writer.writerow([
+                    str(i),
+                    t.name,
+                    best_lap_str,
+                    gap_str,
+                    str(t.lap_count),
+                ])
 
             for t in no_time_final:
-                for d in t.drivers:
-                    writer.writerow(["-", d.name, t.name, "-", "-", "0", d.username if d.username else ""])
+                writer.writerow(["-", t.name, "-", "-", "0"])
 
         print(f"✅  Classifica finale salvata in CSV su '{csv_file}'")
     except Exception as e:
