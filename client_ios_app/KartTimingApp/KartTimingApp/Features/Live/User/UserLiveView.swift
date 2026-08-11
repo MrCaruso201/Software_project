@@ -7,6 +7,8 @@ struct UserLiveView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    @State private var navigateToPilot: Bool = false
+
     private var isStarted: Bool { event.status == "started" }
     private var kartNumber: Int? { viewModel.myKart.kartNumber }
 
@@ -20,10 +22,6 @@ struct UserLiveView: View {
                 // ── Tab 2: Team View ──────────────────────────────────
                 TeamLiveView(viewModel: viewModel)
                     .tabItem { Label("Team View", systemImage: "person.3.fill") }
-
-                // ── Tab 3: Pilot View ─────────────────────────────────
-                PilotLiveView(viewModel: viewModel)
-                    .tabItem { Label("Pilot View", systemImage: "person.fill") }
             }
             .tint(.kartAccent)
             .navigationTitle(event.title)
@@ -49,15 +47,19 @@ struct UserLiveView: View {
                             .foregroundColor(isStarted ? .red : .gray)
                     }
                 }
-
-                // ── Badge Kart ────────────────────────────────────────
+                // ── Pulsante Pilot View ────────────────────────────────
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if let kart = kartNumber {
-                        Text("#\(kart)")
-                            .font(.system(size: 15, weight: .black, design: .monospaced))
-                            .foregroundColor(.kartAccent)
+                    Button {
+                        navigateToPilot = true
+                    } label: {
+                        Image(systemName: "car.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.red)
                     }
                 }
+            }
+            .navigationDestination(isPresented: $navigateToPilot) {
+                PilotLiveView(viewModel: viewModel)
             }
         }
     }

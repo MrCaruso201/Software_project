@@ -37,8 +37,10 @@ private extension RaceMessage {
 /// Vista personale del pilota in gara.
 /// Layout identico a PilotView (landscape locked) + flash bandiera + badge penalità.
 struct PilotLiveView: View {
+    @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: LiveViewModel
     @EnvironmentObject var authState: AuthState
+    @EnvironmentObject var manager: KartTimingManager
 
     var myKart: MyKartResponse { viewModel.myKart }
 
@@ -76,11 +78,32 @@ struct PilotLiveView: View {
                 Spacer()
             }
         }
+        .navigationTitle("Vista Pilota")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.kartAccent)
+                }
+            }
+        }
         .onChange(of: myKart.messages.last?.id) { _, _ in
             checkForNewFlag(messages: myKart.messages)
         }
         // ── Orientation lock (identico a PilotView) ────────────────────────
         .onAppear {
+            if let latestFlag = myKart.messages.last(where: { $0.flagFlashColor != nil }) {
+                currentFlagMessage = latestFlag
+                lastFlagMessageId = latestFlag.id
+            }
+
             AppDelegate.orientationLock = .landscapeRight
             UIDevice.current.setValue(
                 UIInterfaceOrientation.landscapeRight.rawValue,
@@ -110,108 +133,114 @@ struct PilotLiveView: View {
 
     // MARK: - Dashboard (identico strutturalmente a PilotView)
 
+    @ViewBuilder
     private var dashboardView: some View {
-        VStack(spacing: 30) {
-            // Riga principale: kart number + tempi/penalità
-            HStack(spacing: 30) {
+        if let timing = manager.timing, let kartNum = myKart.kartNumber {
+            let h = timing.headers
+            let posIdx  = colIndex(in: h, keywords: ["pos", "pos.", "p", "#"]) ?? 0
+            let kartIdx = colIndex(in: h, keywords: ["kart", "num", "n°", "no", "bib"])
+            let nameIdx = colIndex(in: h, keywords: ["driver", "pilota", "name", "nome", "pilot"])
+            let lapIdx  = colIndex(in: h, keywords: ["last", "lap", "giro", "time", "tempo"])
+            let bestIdx = colIndex(in: h, keywords: ["best", "migliore", "fastest", "record"])
+            let gapIdx  = colIndex(in: h, keywords: ["gap", "diff", "distanza", "behind"])
 
-                // Kart number (ruolo di "posizione" come P1 in PilotView)
-                Text("#\(myKart.kartNumber ?? 0)")
-                    .font(.system(size: 80, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.white)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    // Nome pilota (ruolo di "LAST LAP")
-                    if let user = authState.currentUser {
-                        let name = [user.firstName, user.lastName]
-                            .compactMap { $0 }
-                            .filter { !$0.isEmpty }
-                            .joined(separator: " ")
-
-                        VStack(alignment: .leading, spacing: -6) {
-                            Text("PILOTA")
-                                .font(.system(size: 12, weight: .heavy, design: .monospaced))
-                                .foregroundColor(.kartDim)
-                            Text(name.isEmpty ? "@\(user.username)" : name)
-                                .font(.system(size: 46, weight: .heavy, design: .monospaced))
-                                .foregroundColor(.white)
-                                .minimumScaleFactor(0.4)
-                                .lineLimit(1)
-                        }
-
-                        // Username / team (ruolo di "BEST")
-                        VStack(alignment: .leading, spacing: -2) {
-                            Text("TEAM")
-                                .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                                .foregroundColor(.kartDim)
-                            Text(myKart.teamName ?? "@\(user.username)")
-                                .font(.system(size: 24, weight: .heavy, design: .monospaced))
-                                .foregroundColor(.kartAccent)
-                                .minimumScaleFactor(0.5)
-                                .lineLimit(1)
+            if let kIdx = kartIdx, let pilotRowIdx = timing.rows.firstIndex(where: { $0.indices.contains(kIdx) && $0[kIdx] == String(kartNum) }) {
+                
+                let pilotRow = timing.rows[pilotRowIdx]
+                let pos = posIdx < pilotRow.count ? pilotRow[posIdx] : "-"
+                let lapTime = (lapIdx != nil && lapIdx! < pilotRow.count) ? pilotRow[lapIdx!] : "-"
+                let bestTime = (bestIdx != nil && bestIdx! < pilotRow.count) ? pilotRow[bestIdx!] : "-"
+                let isPersonalBest = lapTime != "-" && lapTime == bestTime
+                
+                VStack(spacing: 30) {
+                    // Posizione e Tempi
+                    HStack(spacing: 30) {
+                        Text("P\(pos)")
+                            .font(.system(size: 80, weight: .heavy, design: .monospaced))
+                            .foregroundColor(.white)
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            // LAST LAP (più visibile)
+                            VStack(alignment: .leading, spacing: -6) {
+                                Text("LAST LAP")
+                                    .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                                    .foregroundColor(.kartDim)
+                                Text(lapTime)
+                                    .font(.system(size: 46, weight: .heavy, design: .monospaced))
+                                    .foregroundColor(isPersonalBest ? .kartGreen : .white)
+                            }
+                            
+                            // BEST LAP (più piccolo, in verde)
+                            VStack(alignment: .leading, spacing: -2) {
+                                Text("BEST")
+                                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                                    .foregroundColor(.kartDim)
+                                Text(bestTime)
+                                    .font(.system(size: 24, weight: .heavy, design: .monospaced))
+                                    .foregroundColor(.kartGreen)
+                            }
                         }
                     }
+                    .padding(.top, 20)
+
+                    // Distacchi (Davanti e Dietro)
+                    HStack(spacing: 20) {
+                        // Davanti (nascosto se primo)
+                        if pilotRowIdx > 0 {
+                            let aheadRow = timing.rows[pilotRowIdx - 1]
+                            let aheadName = (nameIdx != nil && nameIdx! < aheadRow.count) ? aheadRow[nameIdx!] : "Pilota"
+                            let aheadGap = (gapIdx != nil && gapIdx! < pilotRow.count) ? pilotRow[gapIdx!] : "-"
+                            gapCard(name: aheadName, gap: aheadGap, isAhead: true)
+                        }
+
+                        // Dietro (nascosto se ultimo)
+                        if pilotRowIdx < timing.rows.count - 1 {
+                            let behindRow = timing.rows[pilotRowIdx + 1]
+                            let behindName = (nameIdx != nil && nameIdx! < behindRow.count) ? behindRow[nameIdx!] : "Pilota"
+                            let behindGap = (gapIdx != nil && gapIdx! < behindRow.count) ? behindRow[gapIdx!] : "-"
+                            gapCard(name: behindName, gap: behindGap, isAhead: false)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40))
+                        .foregroundColor(.kartRed)
+                    Text("Kart #\(kartNum) non in pista")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Attendi che il kart completi un giro...")
+                        .font(.system(size: 14))
+                        .foregroundColor(.kartDim)
                 }
             }
-            .padding(.top, 20)
-
-            // Riga inferiore: penalità + ultimo messaggio
-            // (ruolo delle gapCard in PilotView)
-            HStack(spacing: 20) {
-                // Card penalità totali
-                if !myKart.penalties.isEmpty {
-                    infoCard(
-                        title: "PENALITÀ",
-                        value: "+\(myKart.totalPenaltySeconds)s",
-                        subtitle: "\(myKart.penalties.count) ricevute",
-                        color: .orange,
-                        icon: "exclamationmark.triangle.fill"
-                    )
-                }
-
-                // Card ultimo messaggio
-                if let latest = myKart.messages.last {
-                    let color: Color = latest.flagColor ?? .cyan
-                    infoCard(
-                        title: "ULTIMO MESSAGGIO",
-                        value: latest.text,
-                        subtitle: nil,
-                        color: color,
-                        icon: latest.flagIcon ?? "megaphone.fill"
-                    )
-                }
+        } else {
+            VStack(spacing: 12) {
+                ProgressView()
+                    .scaleEffect(1.5)
+                Text("In attesa del live timing...")
+                    .font(.system(size: 14))
+                    .foregroundColor(.kartDim)
+                    .padding(.top, 8)
             }
-            .padding(.horizontal, 20)
         }
     }
 
-    // MARK: - Info Card (stile gapCard di PilotView)
-
-    private func infoCard(
-        title: String,
-        value: String,
-        subtitle: String?,
-        color: Color,
-        icon: String
-    ) -> some View {
+    private func gapCard(name: String, gap: String, isAhead: Bool) -> some View {
         VStack(spacing: 8) {
+            Text(name)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.white)
+                .lineLimit(1)
             HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(color)
-                Text(title)
-                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                    .foregroundColor(color)
-            }
-            Text(value)
-                .font(.system(size: 20, weight: .heavy, design: .monospaced))
-                .foregroundColor(color)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-            if let sub = subtitle {
-                Text(sub)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.kartDim)
+                Image(systemName: isAhead ? "arrow.up.right" : "arrow.down.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(isAhead ? .kartRed : .kartGreen)
+                Text(gap)
+                    .font(.system(size: 20, weight: .heavy, design: .monospaced))
+                    .foregroundColor(isAhead ? .kartRed : .kartGreen)
             }
         }
         .frame(maxWidth: .infinity)
@@ -224,6 +253,15 @@ struct PilotLiveView: View {
         )
     }
 
+    private func colIndex(in headers: [String], keywords: [String]) -> Int? {
+        for kw in keywords {
+            if let i = headers.firstIndex(where: { $0.lowercased().contains(kw) }) {
+                return i
+            }
+        }
+        return nil
+    }
+
     // MARK: - Flag Badge (top-left HUD)
 
     @ViewBuilder
@@ -231,19 +269,19 @@ struct PilotLiveView: View {
         if let flagMsg = currentFlagMessage,
            let icon = flagMsg.flagIcon,
            let color = flagMsg.flagColor {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .heavy))
+                    .font(.system(size: 28, weight: .heavy))
                     .foregroundColor(color)
                 Text(flagMsg.flagLabel)
-                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                    .font(.system(size: 20, weight: .heavy, design: .monospaced))
                     .foregroundColor(color)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(color.opacity(0.15))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(color.opacity(0.25))
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(color.opacity(0.4), lineWidth: 1))
+            .overlay(Capsule().stroke(color.opacity(0.8), lineWidth: 2))
         }
     }
 
@@ -252,22 +290,22 @@ struct PilotLiveView: View {
     @ViewBuilder
     private var penaltyBadge: some View {
         if myKart.totalPenaltySeconds > 0 || !myKart.penalties.isEmpty {
-            HStack(spacing: 5) {
+            HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.orange)
                 Text("+\(myKart.totalPenaltySeconds)s")
-                    .font(.system(size: 13, weight: .heavy, design: .monospaced))
+                    .font(.system(size: 22, weight: .heavy, design: .monospaced))
                     .foregroundColor(.orange)
                 Text("(\(myKart.penalties.count))")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 16, weight: .semibold, design: .monospaced))
                     .foregroundColor(.orange.opacity(0.7))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Color.orange.opacity(0.12))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.orange.opacity(0.2))
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(Color.orange.opacity(0.35), lineWidth: 1))
+            .overlay(Capsule().stroke(Color.orange.opacity(0.6), lineWidth: 2))
         }
     }
 
