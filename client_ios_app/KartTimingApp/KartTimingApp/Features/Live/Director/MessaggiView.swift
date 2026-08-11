@@ -108,6 +108,7 @@ struct MessageRow: View {
         case "yellow_flag": return .yellow
         case "red_flag":    return .red
         case "green_flag":  return .green
+        case "checkered_flag": return Color(white: 0.9)
         default:            return .cyan
         }
     }
@@ -115,7 +116,12 @@ struct MessageRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             // Tipo icona
-            Image(systemName: message.isBroadcast ? "antenna.radiowaves.left.and.right" : "flag.fill")
+            let iconName: String = {
+                if message.messageType == "checkered_flag" { return "flag.checkered.2.crossed" }
+                return message.isBroadcast ? "antenna.radiowaves.left.and.right" : "flag.fill"
+            }()
+
+            Image(systemName: iconName)
                 .font(.system(size: 16))
                 .foregroundColor(accentColor)
                 .frame(width: 24)
@@ -130,7 +136,7 @@ struct MessageRow: View {
                             .background(Color.kartAccent.opacity(0.12))
                             .cornerRadius(4)
                     } else {
-                        Text("BROADCAST")
+                        Text(message.messageType == "checkered_flag" ? "FINE GARA" : "BROADCAST")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(accentColor)
                             .padding(.horizontal, 6).padding(.vertical, 2)
@@ -177,9 +183,14 @@ struct PenaltyLogRow: View {
                 .frame(width: 36)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(penalty.displayLabel)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
+                HStack(spacing: 4) {
+                    Image(systemName: penalty.isWarning ? "exclamationmark.bubble.fill" : "exclamationmark.triangle.fill")
+                        .foregroundColor(penalty.isWarning ? .kartDim : .yellow)
+                        .font(.system(size: 11))
+                    Text(penalty.displayLabel)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                }
                 if let note = penalty.note, !note.isEmpty {
                     Text(note)
                         .font(.system(size: 11))
@@ -204,7 +215,7 @@ struct PenaltyLogRow: View {
         .padding(12)
         .background(Color.kartPanel)
         .cornerRadius(10)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.15), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(penalty.isWarning ? Color.white.opacity(0.15) : Color.yellow.opacity(0.3), lineWidth: 1))
     }
 }
 

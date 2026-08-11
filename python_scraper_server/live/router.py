@@ -37,7 +37,7 @@ from scraper.storage import json_path_for
 router = APIRouter(tags=["live"])
 
 VALID_STATUSES = {"scheduled", "started", "finished"}
-VALID_MESSAGE_TYPES = {"yellow_flag", "red_flag", "green_flag", "info", "custom"}
+VALID_MESSAGE_TYPES = {"yellow_flag", "red_flag", "green_flag", "checkered_flag", "info", "custom"}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
