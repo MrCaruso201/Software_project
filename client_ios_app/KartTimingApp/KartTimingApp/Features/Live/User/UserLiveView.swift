@@ -13,11 +13,15 @@ struct UserLiveView: View {
     var body: some View {
         NavigationStack {
             TabView {
-                // ── Tab 1: Team View ──────────────────────────────────
+                // ── Tab 1: Classifica ─────────────────────────────────
+                ClassificaLiveView(viewModel: viewModel)
+                    .tabItem { Label("Classifica", systemImage: "list.number") }
+                
+                // ── Tab 2: Team View ──────────────────────────────────
                 TeamLiveView(viewModel: viewModel)
                     .tabItem { Label("Team View", systemImage: "person.3.fill") }
 
-                // ── Tab 2: Pilot View ─────────────────────────────────
+                // ── Tab 3: Pilot View ─────────────────────────────────
                 PilotLiveView(viewModel: viewModel)
                     .tabItem { Label("Pilot View", systemImage: "person.fill") }
             }

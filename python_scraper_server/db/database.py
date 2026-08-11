@@ -245,6 +245,10 @@ def _seed_penalty_types() -> None:
         {"code": "warning_generic", "name": "Avviso (Generico)", "action": "warning", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 80},
         {"code": "warning_track_limits", "name": "Avviso (Track Limits)", "action": "warning", "default_seconds": None, "warning_threshold": 3, "auto_penalty_code": "track_limits_10s", "sort_order": 90},
         
+        # Bandiere
+        {"code": "black_flag", "name": "Bandiera Nera (Espulsione)", "action": "warning", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 92},
+        {"code": "blue_flag", "name": "Bandiera Blu (Doppiaggio)", "action": "warning", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 94},
+
         # Auto-penalità per track limits
         {"code": "track_limits_10s", "name": "Track Limits (+10s)", "action": "time_added", "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None, "sort_order": 100},
     ]

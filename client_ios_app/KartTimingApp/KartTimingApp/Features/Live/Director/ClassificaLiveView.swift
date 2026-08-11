@@ -300,16 +300,41 @@ struct ClassificaLiveView: View {
                                         Text(item.header.uppercased())
                                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                                             .foregroundColor(.kartDim)
-                                        Text(item.value.isEmpty ? "-" : item.value)
-                                            .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                                        Text(item.value)
+                                            .font(.system(size: 13, weight: .semibold, design: .rounded))
                                             .foregroundColor(.white)
                                     }
                                 }
                             }
                         }
+                        
+                        if penCount > 0 {
+                            let kartPenalties = viewModel.penaltiesByKart[parsedKart] ?? []
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("PENALITÀ ATTIVE")
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.orange)
+                                
+                                ForEach(kartPenalties) { penalty in
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundColor(.orange)
+                                            .font(.system(size: 11))
+                                        Text(penalty.displayLabel)
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundColor(.white)
+                                        if let note = penalty.note, !note.isEmpty {
+                                            Text("- \(note)")
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.kartDim)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 10)
                     .padding(.bottom, 16)
                     .transition(.opacity)
                 }

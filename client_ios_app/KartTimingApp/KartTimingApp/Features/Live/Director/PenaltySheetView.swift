@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Sheet per assegnare una penalità a un kart specifico.
 struct PenaltySheetView: View {
-    let kartAssignment: LiveKartAssignment
+    let kartNumber: Int
+    let teamName: String?
     @ObservedObject var viewModel: LiveViewModel
     @Environment(\.dismiss) private var dismiss
 
@@ -22,11 +23,11 @@ struct PenaltySheetView: View {
 
                         // Kart header
                         HStack {
-                            Text("#\(kartAssignment.kartNumber)")
+                            Text("#\(kartNumber)")
                                 .font(.system(size: 40, weight: .black, design: .monospaced))
                                 .foregroundColor(.kartAccent)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(kartAssignment.teamName ?? "Team")
+                                Text(teamName ?? "Team Sconosciuto")
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(.white)
                                 Text("Seleziona tipo di penalità")
@@ -154,7 +155,7 @@ struct PenaltySheetView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("Penalità Kart #\(kartAssignment.kartNumber)")
+            .navigationTitle("Penalità Kart #\(kartNumber)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
@@ -189,7 +190,7 @@ struct PenaltySheetView: View {
         Task {
             do {
                 try await viewModel.addPenalty(
-                    kartNumber: kartAssignment.kartNumber,
+                    kartNumber: kartNumber,
                     type: selected,
                     seconds: sec,
                     note: note.isEmpty ? nil : note

@@ -25,6 +25,7 @@ struct LiveRootView: View {
                     .environmentObject(timingManager)
             } else {
                 UserLiveView(event: event, viewModel: viewModel)
+                    .environmentObject(timingManager)
             }
         }
         .onAppear {
@@ -35,10 +36,10 @@ struct LiveRootView: View {
             )
             if isDirector {
                 viewModel.startPolling()
-                connectTimingManager()
             } else {
                 viewModel.startPollingMyKart()
             }
+            connectTimingManager()
         }
         .onDisappear {
             viewModel.stopPolling()

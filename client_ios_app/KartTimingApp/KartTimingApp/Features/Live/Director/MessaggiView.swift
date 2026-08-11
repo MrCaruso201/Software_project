@@ -5,8 +5,32 @@ import SwiftUI
 struct MessaggiView: View {
     @ObservedObject var viewModel: LiveViewModel
 
-    @State private var showComposeSheet = false
     @State private var actionError: String? = nil
+
+    enum LogItem: Identifiable {
+        case message(RaceMessage)
+        case penalty(RacePenalty)
+
+        var id: String {
+            switch self {
+            case .message(let m): return "msg_\(m.id)"
+            case .penalty(let p): return "pen_\(p.id)"
+            }
+        }
+
+        var date: Date {
+            switch self {
+            case .message(let m): return m.parsedDate ?? Date.distantPast
+            case .penalty(let p): return p.parsedDate ?? Date.distantPast
+            }
+        }
+    }
+
+    var combinedLog: [LogItem] {
+        let msgs = viewModel.messages.map { LogItem.message($0) }
+        let pens = viewModel.penalties.map { LogItem.penalty($0) }
+        return (msgs + pens).sorted { $0.date > $1.date }
+    }
 
     var body: some View {
         ZStack {
@@ -18,27 +42,18 @@ struct MessaggiView: View {
                     Text("Cronologia messaggi")
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundColor(.kartDim)
-                    Spacer()
-                    Button(action: { showComposeSheet = true }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "plus.bubble.fill")
-                            Text("Invia")
-                                .font(.system(size: 13, weight: .bold))
-                        }
-                        .foregroundColor(.kartAccent)
-                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(Color.kartPanel)
 
-                if viewModel.messages.isEmpty {
+                if combinedLog.isEmpty {
                     Spacer()
                     VStack(spacing: 12) {
                         Image(systemName: "bubble.left.and.bubble.right")
                             .font(.system(size: 40))
                             .foregroundColor(.kartDim.opacity(0.4))
-                        Text("Nessun messaggio inviato")
+                        Text("Nessun messaggio o penalità")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.kartDim)
                     }
@@ -47,22 +62,29 @@ struct MessaggiView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 8) {
-                            ForEach(viewModel.messages.reversed()) { msg in
-                                MessageRow(message: msg, onDelete: {
-                                    Task {
-                                        do { try await viewModel.deleteMessage(id: msg.id) }
-                                        catch { actionError = error.localizedDescription }
-                                    }
-                                })
+                            ForEach(combinedLog) { item in
+                                switch item {
+                                case .message(let msg):
+                                    MessageRow(message: msg, onDelete: {
+                                        Task {
+                                            do { try await viewModel.deleteMessage(id: msg.id) }
+                                            catch { actionError = error.localizedDescription }
+                                        }
+                                    })
+                                case .penalty(let pen):
+                                    PenaltyLogRow(penalty: pen, onDelete: {
+                                        Task {
+                                            do { try await viewModel.deletePenalty(id: pen.id) }
+                                            catch { actionError = error.localizedDescription }
+                                        }
+                                    })
+                                }
                             }
                         }
                         .padding(16)
                     }
                 }
             }
-        }
-        .sheet(isPresented: $showComposeSheet) {
-            ComposeMessageSheet(viewModel: viewModel)
         }
         .alert("Errore", isPresented: .init(
             get: { actionError != nil },
@@ -141,176 +163,48 @@ struct MessageRow: View {
     }
 }
 
-// MARK: - Compose Message Sheet
+// MARK: - Penalty Log Row
 
-struct ComposeMessageSheet: View {
-    @ObservedObject var viewModel: LiveViewModel
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var selectedPreset: MessagePreset = .yellowFlag
-    @State private var customText: String = ""
-    @State private var targetKartText: String = ""
-    @State private var isBroadcast: Bool = true
-    @State private var isLoading = false
-    @State private var errorMsg: String? = nil
+struct PenaltyLogRow: View {
+    let penalty: RacePenalty
+    let onDelete: () -> Void
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.kartBG.ignoresSafeArea()
+        HStack(spacing: 10) {
+            Text("#\(penalty.kartNumber)")
+                .font(.system(size: 13, weight: .black, design: .monospaced))
+                .foregroundColor(.kartAccent)
+                .frame(width: 36)
 
-                ScrollView {
-                    VStack(spacing: 20) {
-
-                        // Destinatario
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("DESTINATARIO")
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundColor(.kartAccent)
-
-                            HStack(spacing: 12) {
-                                Button(action: { isBroadcast = true }) {
-                                    Label("Tutti", systemImage: "antenna.radiowaves.left.and.right")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundColor(isBroadcast ? .black : .white)
-                                        .padding(.vertical, 10).padding(.horizontal, 14)
-                                        .background(isBroadcast ? Color.kartAccent : Color.kartPanel)
-                                        .cornerRadius(10)
-                                }
-                                .buttonStyle(.plain)
-
-                                Button(action: { isBroadcast = false }) {
-                                    Label("Kart specifico", systemImage: "flag.fill")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundColor(!isBroadcast ? .black : .white)
-                                        .padding(.vertical, 10).padding(.horizontal, 14)
-                                        .background(!isBroadcast ? Color.kartAccent : Color.kartPanel)
-                                        .cornerRadius(10)
-                                }
-                                .buttonStyle(.plain)
-                            }
-
-                            if !isBroadcast {
-                                TextField("Numero kart", text: $targetKartText)
-                                    .keyboardType(.numberPad)
-                                    .font(.system(size: 20, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.kartPanel)
-                                    .cornerRadius(12)
-                            }
-                        }
-
-                        // Tipo messaggio
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("TIPO MESSAGGIO")
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundColor(.kartAccent)
-
-                            ForEach(MessagePreset.allCases) { preset in
-                                Button(action: {
-                                    withAnimation(.spring(response: 0.25)) {
-                                        selectedPreset = preset
-                                        if preset != .custom && preset != .info {
-                                            customText = preset.defaultText
-                                        }
-                                    }
-                                }) {
-                                    HStack {
-                                        Text(preset.label)
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundColor(selectedPreset == preset ? .white : .kartDim)
-                                        Spacer()
-                                        if selectedPreset == preset {
-                                            Image(systemName: "checkmark.circle.fill").foregroundColor(.kartAccent)
-                                        }
-                                    }
-                                    .padding(14)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(selectedPreset == preset
-                                                  ? Color.kartAccent.opacity(0.12) : Color.kartPanel)
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(selectedPreset == preset
-                                                    ? Color.kartAccent.opacity(0.4) : Color.white.opacity(0.05),
-                                                    lineWidth: 1)
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-
-                        // Testo
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("TESTO DEL MESSAGGIO")
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundColor(.kartAccent)
-                            TextField("Scrivi il messaggio...", text: $customText, axis: .vertical)
-                                .lineLimit(3...6)
-                                .font(.system(size: 14))
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.kartPanel)
-                                .cornerRadius(12)
-                        }
-
-                        if let err = errorMsg {
-                            Text(err).font(.system(size: 12)).foregroundColor(.red)
-                        }
-
-                        // Invia
-                        Button(action: send) {
-                            HStack {
-                                if isLoading { ProgressView().tint(.black).scaleEffect(0.8) }
-                                else {
-                                    Image(systemName: "paperplane.fill")
-                                    Text("Invia Messaggio").font(.system(size: 15, weight: .bold))
-                                }
-                            }
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.kartAccent)
-                            .cornerRadius(14)
-                        }
-                        .disabled(isLoading || customText.isEmpty)
-                    }
-                    .padding(20)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(penalty.displayLabel)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+                if let note = penalty.note, !note.isEmpty {
+                    Text(note)
+                        .font(.system(size: 11))
+                        .foregroundColor(.kartDim)
                 }
             }
-            .navigationTitle("Invia Messaggio")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Annulla") { dismiss() }.foregroundColor(.kartDim)
-                }
-            }
-            .onAppear {
-                customText = selectedPreset.defaultText
-            }
-        }
-    }
 
-    private func send() {
-        guard !customText.isEmpty else { return }
-        let targetKart: Int? = isBroadcast ? nil : Int(targetKartText)
-        if !isBroadcast && targetKart == nil {
-            errorMsg = "Inserisci un numero kart valido."
-            return
-        }
-        isLoading = true
-        errorMsg = nil
-        Task {
-            do {
-                try await viewModel.sendMessage(targetKart: targetKart, type: selectedPreset, text: customText)
-                dismiss()
-            } catch {
-                errorMsg = error.localizedDescription
+            Spacer()
+
+            if let date = penalty.parsedDate {
+                Text(date, style: .time)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.kartDim)
             }
-            isLoading = false
+
+            Button(action: onDelete) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.red.opacity(0.6))
+                    .font(.system(size: 16))
+            }
         }
+        .padding(12)
+        .background(Color.kartPanel)
+        .cornerRadius(10)
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.15), lineWidth: 1))
     }
 }
+

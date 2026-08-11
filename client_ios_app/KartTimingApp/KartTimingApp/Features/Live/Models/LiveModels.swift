@@ -46,12 +46,20 @@ struct RacePenalty: Identifiable, Codable {
     var displayLabel: String {
         switch penaltyType {
         case "drive_through": return "Drive-Through"
-        case "stop_go":
-            if let s = seconds { return "Stop & Go (+\(s)s)" }
-            return "Stop & Go"
-        case "time_added":
-            if let s = seconds { return "+\(s)s" }
-            return "Tempo Aggiunto"
+        case "stop_go": return seconds != nil ? "Stop & Go (+\(seconds!)s)" : "Stop & Go"
+        case "time_added": return seconds != nil ? "Tempo Aggiunto (+\(seconds!)s)" : "Tempo Aggiunto"
+        case "false_start": return seconds != nil ? "Falsa Partenza (+\(seconds!)s)" : "Falsa Partenza"
+        case "aggressive_driving": return seconds != nil ? "Guida Aggressiva (+\(seconds!)s)" : "Guida Aggressiva"
+        case "stint_time": return seconds != nil ? "Stint (+\(seconds!)s)" : "Stint"
+        case "pit_stop_time": return seconds != nil ? "Pit Stop (+\(seconds!)s)" : "Pit Stop"
+        case "weight": return seconds != nil ? "Peso (+\(seconds!)s)" : "Peso"
+        case "directive": return seconds != nil ? "Direttive (+\(seconds!)s)" : "Direttive"
+        case "custom": return seconds != nil ? "Penalità (+\(seconds!)s)" : "Penalità Custom"
+        case "warning_generic": return "Avviso (Generico)"
+        case "warning_track_limits": return "Avviso (Track Limits)"
+        case "track_limits_10s": return seconds != nil ? "Track Limits (+\(seconds!)s)" : "Track Limits (+10s)"
+        case "black_flag": return "Bandiera Nera (Espulsione)"
+        case "blue_flag": return "Bandiera Blu (Doppiaggio)"
         default: return "Penalità"
         }
     }
@@ -61,7 +69,15 @@ struct RacePenalty: Identifiable, Codable {
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let d = f.date(from: createdAt) { return d }
         let f2 = ISO8601DateFormatter()
-        return f2.date(from: createdAt)
+        if let d = f2.date(from: createdAt) { return d }
+        
+        let df = DateFormatter()
+        df.timeZone = TimeZone(abbreviation: "UTC")
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        if let d = df.date(from: createdAt) { return d }
+        
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        return df.date(from: createdAt)
     }
 }
 
@@ -91,7 +107,15 @@ struct RaceMessage: Identifiable, Codable {
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let d = f.date(from: createdAt) { return d }
         let f2 = ISO8601DateFormatter()
-        return f2.date(from: createdAt)
+        if let d = f2.date(from: createdAt) { return d }
+        
+        let df = DateFormatter()
+        df.timeZone = TimeZone(abbreviation: "UTC")
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        if let d = df.date(from: createdAt) { return d }
+        
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        return df.date(from: createdAt)
     }
 }
 
