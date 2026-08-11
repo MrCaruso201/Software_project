@@ -35,7 +35,7 @@ struct TeamLiveView: View {
                 Image(systemName: "flag.2.crossed.fill")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(.kartAccent)
-                Text("IL VOSTRO KART")
+                Text("INFO SQUADRA")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundColor(.kartAccent)
                 Spacer()
@@ -43,48 +43,57 @@ struct TeamLiveView: View {
             .padding(14)
             .background(Color.kartAccent.opacity(0.08))
 
-            HStack(spacing: 20) {
-                VStack(spacing: 4) {
-                    if let kart = myKart.kartNumber {
-                        Text("#\(kart)")
-                            .font(.system(size: 52, weight: .black, design: .monospaced))
-                            .foregroundColor(.kartAccent)
-                    } else {
-                        Text("—")
-                            .font(.system(size: 52, weight: .black, design: .monospaced))
+            VStack(spacing: 24) {
+                // NOME TEAM E MEMBRI
+                VStack(spacing: 8) {
+                    Text(myKart.teamName ?? "—")
+                        .font(.system(size: 32, weight: .black))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        
+                    if let teamId = myKart.teamId, let team = viewModel.registeredTeams.first(where: { $0.teamId == teamId }) {
+                        let memberNames = team.members.compactMap { $0.username }.joined(separator: " • ")
+                        Text(memberNames)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.kartDim)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                
+                Divider().background(Color.white.opacity(0.1))
+
+                // NUMERO KART E PENALITÀ
+                HStack(spacing: 20) {
+                    VStack(spacing: 6) {
+                        if let kart = myKart.kartNumber {
+                            Text("#\(kart)")
+                                .font(.system(size: 56, weight: .black, design: .monospaced))
+                                .foregroundColor(.kartAccent)
+                        } else {
+                            Text("—")
+                                .font(.system(size: 56, weight: .black, design: .monospaced))
+                                .foregroundColor(.kartDim)
+                        }
+                        Text("NUMERO KART")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartDim)
                     }
-                    Text("NUMERO KART")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(.kartDim)
-                }
+                    .frame(maxWidth: .infinity)
 
-                Divider().background(Color.white.opacity(0.1)).frame(height: 60)
+                    Divider().background(Color.white.opacity(0.1)).frame(height: 70)
 
-                VStack(spacing: 4) {
-                    Text(myKart.teamName ?? "—")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                    Text("SQUADRA")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(.kartDim)
-                }
-                .frame(maxWidth: .infinity)
-
-                Divider().background(Color.white.opacity(0.1)).frame(height: 60)
-
-                VStack(spacing: 4) {
-                    Text("+\(myKart.totalPenaltySeconds)s")
-                        .font(.system(size: 24, weight: .black, design: .monospaced))
-                        .foregroundColor(myKart.totalPenaltySeconds > 0 ? .orange : .kartDim)
-                    Text("PENALITÀ")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(.kartDim)
+                    VStack(spacing: 6) {
+                        Text("+\(myKart.totalPenaltySeconds)s")
+                            .font(.system(size: 56, weight: .black, design: .monospaced))
+                            .foregroundColor(myKart.totalPenaltySeconds > 0 ? .orange : .kartDim)
+                        Text("PENALITÀ")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(.kartDim)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
-            .padding(16)
+            .padding(24)
         }
         .background(Color.kartPanel)
         .cornerRadius(14)

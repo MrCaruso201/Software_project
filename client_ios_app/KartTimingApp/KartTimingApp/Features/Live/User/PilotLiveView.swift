@@ -50,32 +50,40 @@ struct PilotLiveView: View {
     @State private var lastFlagMessageId: Int? = nil
     @State private var currentFlagMessage: RaceMessage? = nil
 
+    private var hasBlackFlag: Bool {
+        myKart.penalties.contains(where: { $0.penaltyType == "black_flag" })
+    }
+
     var body: some View {
         ZStack {
             Color.kartBG.ignoresSafeArea()
 
-            if myKart.kartNumber == nil {
-                noKartState
+            if hasBlackFlag {
+                blackFlagState
             } else {
-                dashboardView
-            }
-
-            // Flash overlay
-            flashColor
-                .opacity(flashOpacity)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
-            // HUD badges (flag top-left, penalty top-right)
-            VStack {
-                HStack(alignment: .top) {
-                    flagBadge
-                    Spacer()
-                    penaltyBadge
+                if myKart.kartNumber == nil {
+                    noKartState
+                } else {
+                    dashboardView
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                Spacer()
+
+                // Flash overlay
+                flashColor
+                    .opacity(flashOpacity)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+
+                // HUD badges (flag top-left, penalty top-right)
+                VStack {
+                    HStack(alignment: .top) {
+                        flagBadge
+                        Spacer()
+                        penaltyBadge
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                    Spacer()
+                }
             }
         }
         .navigationTitle("Vista Pilota")
@@ -349,5 +357,31 @@ struct PilotLiveView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(32)
+    }
+
+    // MARK: - Black Flag State
+
+    private var blackFlagState: some View {
+        ZStack {
+            Color.red.ignoresSafeArea()
+            VStack(spacing: 24) {
+                Image(systemName: "flag.fill")
+                    .font(.system(size: 90))
+                    .foregroundColor(.black)
+                
+                Text("TORNARE AI BOX")
+                    .font(.system(size: 70, weight: .black, design: .monospaced))
+                    .foregroundColor(.black)
+                    .minimumScaleFactor(0.4)
+                    .lineLimit(1)
+                
+                Text("BANDIERA NERA")
+                    .font(.system(size: 50, weight: .black, design: .monospaced))
+                    .foregroundColor(.black)
+                    .minimumScaleFactor(0.4)
+                    .lineLimit(1)
+            }
+            .padding(40)
+        }
     }
 }
