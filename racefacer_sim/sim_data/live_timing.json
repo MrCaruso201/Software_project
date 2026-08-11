@@ -1,7 +1,7 @@
 {
   "type": "timing_update",
   "url": "https://live.racefacer.com/simulator",
-  "updated_at": "2026-07-21T17:45:03.249223",
+  "updated_at": "2026-08-11T11:49:56.319004",
   "headers": [
     "P",
     "Kart",
@@ -17,57 +17,57 @@
     [
       "1",
       "101",
-      "Luca Ferrari [Scuderia Alpha]",
-      "1:12.598",
+      "Scuderia Alpha",
+      "1:14.735",
       "-",
       "-",
-      "1:12.468",
-      "14",
-      "PIT"
+      "1:12.030",
+      "46",
+      ""
     ],
     [
       "2",
-      "103",
-      "Chiara Colombo [Pit Stop FC]",
-      "1:13.792",
+      "105",
+      "Veloce Racing",
+      "1:13.800",
       "+1 Lap",
       "+1 Lap",
-      "1:13.010",
-      "12",
+      "1:13.304",
+      "44",
       "PIT"
     ],
     [
       "3",
-      "105",
-      "Paolo Marini [Veloce Racing]",
-      "1:14.083",
+      "102",
+      "Red Karts",
+      "1:16.118",
       "+1 Lap",
-      "+1.826",
-      "1:13.814",
-      "12",
+      "+1.245",
+      "1:12.324",
+      "44",
       "PIT"
     ],
     [
       "4",
-      "102",
-      "Giovanni Bianchi [Red Karts]",
-      "1:13.791",
-      "+3 Laps",
+      "103",
+      "Pit Stop FC",
+      "1:18.070",
       "+1 Lap",
-      "1:12.954",
-      "10",
-      "PIT"
+      "+99.129",
+      "1:13.010",
+      "44",
+      ""
     ],
     [
       "5",
       "104",
-      "Valentina Leone [Thunder Bulls]",
-      "1:14.731",
-      "+6 Laps",
-      "+2 Laps",
-      "1:14.536",
-      "7",
-      "PIT"
+      "Thunder Bulls",
+      "1:14.857",
+      "+1 Lap",
+      "+0.941",
+      "1:13.940",
+      "44",
+      ""
     ]
   ]
 }
