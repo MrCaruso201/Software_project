@@ -83,6 +83,7 @@ class LiveViewModel: ObservableObject {
         pollingTask = Task {
             while !Task.isCancelled {
                 await fetchMyKart()
+                await fetchPenalties()
                 try? await Task.sleep(nanoseconds: UInt64(pollingInterval * 1_000_000_000))
             }
         }
