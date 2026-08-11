@@ -30,6 +30,9 @@ from live.schemas import (
     MessageCreate, MessageResponse,
     MyKartResponse, EventStatusUpdate
 )
+import json
+from datetime import datetime, timezone
+from scraper.storage import json_path_for
 
 router = APIRouter(tags=["live"])
 
@@ -62,6 +65,21 @@ def _penalty_seconds_by_kart(event_id: int, db: Session) -> dict[int, int]:
     for p in penalties:
         totals[p.kart_number] = totals.get(p.kart_number, 0) + (p.seconds or 0)
     return totals
+
+def _get_kartodromo_url(event: Event, db: Session) -> Optional[str]:
+    from db.models import Kartodromo
+    kartodromo = db.query(Kartodromo).filter(Kartodromo.nome == event.location).first()
+    return kartodromo.url if kartodromo else None
+
+def _read_live_timing(url: str) -> dict:
+    if not url: return {}
+    path = json_path_for(url)
+    if not path.exists(): return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -104,20 +122,93 @@ def get_kart_assignments(
     user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Lista di tutti i kart assegnati per l'evento, con penalità totali per kart."""
-    _get_event_or_404(event_id, db)
-    assignments = (
+    """Lista di tutti i kart assegnati per l'evento, con penalità totali per kart.
+       Combina gli override manuali e i dati estrapolati automaticamente dal live timing."""
+    event = _get_event_or_404(event_id, db)
+    
+    # 1. Assegnazioni manuali (override)
+    manual_assignments = (
         db.query(LiveKartAssignment)
         .filter(LiveKartAssignment.event_id == event_id)
-        .order_by(LiveKartAssignment.kart_number)
         .all()
     )
+    manual_by_kart = {a.kart_number: a for a in manual_assignments}
+
+    # 2. Team e piloti iscritti per match automatico
+    from db.models import User
+    registrations = db.query(EventRegistration, User).outerjoin(User, EventRegistration.user_id == User.id).filter(EventRegistration.event_id == event_id).all()
+    
+    team_name_map = {}
+    for reg, user in registrations:
+        t_name = (reg.team_name or "").strip().lower()
+        if t_name:
+            team_name_map[t_name] = (reg.team_id, reg.team_name)
+        if user:
+            full_name = f"{user.first_name or ''} {user.last_name or ''}".strip().lower()
+            if full_name:
+                team_name_map[full_name] = (reg.team_id, f"{user.first_name or ''} {user.last_name or ''}".strip())
+            if user.username:
+                team_name_map[user.username.lower()] = (reg.team_id, user.username)
+
+    # 3. Leggi il JSON del live timing
+    url = _get_kartodromo_url(event, db)
+    live_data = _read_live_timing(url) if url else {}
+    rows = live_data.get("rows", [])
+    headers = live_data.get("headers", [])
+    
+    try:
+        kart_idx = headers.index("Kart")
+        driver_idx = headers.index("Driver")
+    except ValueError:
+        kart_idx = -1
+        driver_idx = -1
+
     penalty_map = _penalty_seconds_by_kart(event_id, db)
     result = []
-    for a in assignments:
-        r = KartAssignmentResponse.model_validate(a)
-        r.total_penalty_seconds = penalty_map.get(a.kart_number, 0)
-        result.append(r)
+    processed_karts = set()
+    
+    if kart_idx != -1 and driver_idx != -1:
+        for row in rows:
+            if len(row) <= max(kart_idx, driver_idx): continue
+            try:
+                kart_number = int(row[kart_idx])
+            except ValueError:
+                continue
+                
+            driver_name = row[driver_idx]
+            processed_karts.add(kart_number)
+            
+            if kart_number in manual_by_kart:
+                a = manual_by_kart[kart_number]
+                r = KartAssignmentResponse.model_validate(a)
+                r.total_penalty_seconds = penalty_map.get(a.kart_number, 0)
+                result.append(r)
+            else:
+                d_name_lower = driver_name.strip().lower()
+                matched_team_id = ""
+                matched_team_name = driver_name
+                if d_name_lower in team_name_map:
+                    matched_team_id, matched_team_name = team_name_map[d_name_lower]
+                
+                r = KartAssignmentResponse(
+                    id=0,
+                    event_id=event_id,
+                    team_id=matched_team_id,
+                    kart_number=kart_number,
+                    team_name=matched_team_name,
+                    created_at=datetime.now(timezone.utc).replace(tzinfo=None)
+                )
+                r.total_penalty_seconds = penalty_map.get(kart_number, 0)
+                result.append(r)
+
+    # Aggiungi eventuali kart assegnati manualmente che non sono (più) nel JSON live
+    for kart_num, a in manual_by_kart.items():
+        if kart_num not in processed_karts:
+            r = KartAssignmentResponse.model_validate(a)
+            r.total_penalty_seconds = penalty_map.get(a.kart_number, 0)
+            result.append(r)
+            
+    result.sort(key=lambda x: x.kart_number)
     return result
 
 
@@ -362,38 +453,79 @@ def get_my_kart(
 ):
     """
     Restituisce le informazioni sul kart del team dell'utente corrente per l'evento:
-    - numero kart assegnato
+    - numero kart (scoperto da manual override o JSON live timing)
     - penalità ricevute
     - messaggi rivolti al kart o broadcast
     """
     user_id = int(user_payload["sub"])
-    _get_event_or_404(event_id, db)
+    event = _get_event_or_404(event_id, db)
 
-    # Trova l'iscrizione dell'utente per recuperare il team_id
+    # Trova l'iscrizione dell'utente per recuperare il team_id e i nomi per il match
+    from db.models import User
+    user = db.query(User).filter(User.id == user_id).first()
     registration = db.query(EventRegistration).filter(
         EventRegistration.user_id == user_id,
         EventRegistration.event_id == event_id
     ).first()
 
-    if not registration or not registration.team_id:
-        # Utente non iscritto o non in un team: risponde con dati vuoti
+    if not registration:
         return MyKartResponse()
+        
+    team_id = registration.team_id or f"user_{user_id}"
 
-    team_id = registration.team_id
+    # 1. Prova a trovare un override manuale
+    assignment = None
+    if registration.team_id:
+        assignment = db.query(LiveKartAssignment).filter(
+            LiveKartAssignment.event_id == event_id,
+            LiveKartAssignment.team_id == registration.team_id
+        ).first()
 
-    # Trova il kart assegnato al team
-    assignment = db.query(LiveKartAssignment).filter(
-        LiveKartAssignment.event_id == event_id,
-        LiveKartAssignment.team_id == team_id
-    ).first()
+    kart_number = None
+    team_name = registration.team_name
 
-    if not assignment:
+    if assignment:
+        kart_number = assignment.kart_number
+        team_name = assignment.team_name or team_name
+    else:
+        # 2. Fallback al match automatico dal live timing
+        url = _get_kartodromo_url(event, db)
+        live_data = _read_live_timing(url) if url else {}
+        rows = live_data.get("rows", [])
+        headers = live_data.get("headers", [])
+        
+        try:
+            kart_idx = headers.index("Kart")
+            driver_idx = headers.index("Driver")
+        except ValueError:
+            kart_idx = -1
+            driver_idx = -1
+            
+        if kart_idx != -1 and driver_idx != -1:
+            match_names = set()
+            if registration.team_name:
+                match_names.add(registration.team_name.strip().lower())
+            if user:
+                full_name = f"{user.first_name or ''} {user.last_name or ''}".strip().lower()
+                if full_name: match_names.add(full_name)
+                if user.username: match_names.add(user.username.lower())
+                
+            for row in rows:
+                if len(row) <= max(kart_idx, driver_idx): continue
+                driver_name_lower = row[driver_idx].strip().lower()
+                if driver_name_lower in match_names:
+                    try:
+                        kart_number = int(row[kart_idx])
+                        team_name = row[driver_idx]
+                        break
+                    except ValueError:
+                        pass
+
+    if kart_number is None:
         return MyKartResponse(
-            team_id=team_id,
+            team_id=registration.team_id,
             team_name=registration.team_name
         )
-
-    kart_number = assignment.kart_number
 
     # Penalità per questo kart
     penalties = (

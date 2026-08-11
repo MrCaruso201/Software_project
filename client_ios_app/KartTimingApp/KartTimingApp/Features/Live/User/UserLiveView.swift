@@ -1,139 +1,60 @@
 import SwiftUI
 
-/// Vista Live per i piloti/componenti del team.
-/// Permette di switchare liberamente tra Team View e Pilot View.
+/// Vista Live per i piloti/componenti del team con TabView nativa iOS.
 struct UserLiveView: View {
     let event: RaceEvent
     @ObservedObject var viewModel: LiveViewModel
-    let dismiss: DismissAction
 
-    @State private var selectedTab: UserLiveTab = .team
+    @Environment(\.dismiss) private var dismiss
+
+    private var isStarted: Bool { event.status == "started" }
+    private var kartNumber: Int? { viewModel.myKart.kartNumber }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // ── Custom Navigation Bar ───────────────────────────────────────
-            userNavBar
-
-            // ── Tab Content ─────────────────────────────────────────────────
-            TabView(selection: $selectedTab) {
+        NavigationStack {
+            TabView {
+                // ── Tab 1: Team View ──────────────────────────────────
                 TeamLiveView(viewModel: viewModel)
-                    .tag(UserLiveTab.team)
+                    .tabItem { Label("Team View", systemImage: "person.3.fill") }
 
+                // ── Tab 2: Pilot View ─────────────────────────────────
                 PilotLiveView(viewModel: viewModel)
-                    .tag(UserLiveTab.pilot)
+                    .tabItem { Label("Pilot View", systemImage: "person.fill") }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut(duration: 0.2), value: selectedTab)
-
-            // ── Bottom Tab Bar ──────────────────────────────────────────────
-            userTabBar
-        }
-        .background(Color.kartBG)
-    }
-
-    // MARK: - Navigation Bar
-
-    private var userNavBar: some View {
-        HStack {
-            Button(action: { dismiss() }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("Chiudi")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .foregroundColor(.kartAccent)
-            }
-
-            Spacer()
-
-            VStack(spacing: 2) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 8, height: 8)
-                        .opacity(event.status == "started" ? 1 : 0)
-                    Text(event.status == "started" ? "LIVE" : "NON INIZIATA")
-                        .font(.system(size: 11, weight: .black, design: .monospaced))
-                        .foregroundColor(event.status == "started" ? .red : .kartDim)
-                }
-                Text(event.title)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            // Kart number badge
-            if let kart = viewModel.myKart.kartNumber {
-                VStack(spacing: 1) {
-                    Text("#\(kart)")
-                        .font(.system(size: 16, weight: .black, design: .monospaced))
+            .tint(.kartAccent)
+            .navigationTitle(event.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                // ── Chiudi ────────────────────────────────────────────
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Chiudi") { dismiss() }
                         .foregroundColor(.kartAccent)
-                    Text("KART")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundColor(.kartDim)
                 }
-                .frame(width: 52)
-            } else {
-                Color.clear.frame(width: 52)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.kartPanel)
-        .overlay(alignment: .bottom) {
-            Divider().background(Color.white.opacity(0.08))
-        }
-    }
 
-    // MARK: - Tab Bar
-
-    private var userTabBar: some View {
-        HStack(spacing: 0) {
-            ForEach(UserLiveTab.allCases) { tab in
-                Button(action: { withAnimation { selectedTab = tab } }) {
-                    VStack(spacing: 4) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 20))
-                        Text(tab.label)
-                            .font(.system(size: 10, weight: .semibold))
-                    }
-                    .foregroundColor(selectedTab == tab ? .kartAccent : .kartDim)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .overlay(alignment: .top) {
-                        if selectedTab == tab {
-                            Rectangle()
-                                .fill(Color.kartAccent)
-                                .frame(height: 2)
-                                .cornerRadius(1)
+                // ── Indicatore LIVE ───────────────────────────────────
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 6) {
+                        if isStarted {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 7, height: 7)
                         }
+                        Text(isStarted ? "LIVE" : "IN ATTESA")
+                            .font(.system(size: 11, weight: .black, design: .monospaced))
+                            .foregroundColor(isStarted ? .red : .gray)
+                    }
+                }
+
+                // ── Badge Kart ────────────────────────────────────────
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if let kart = kartNumber {
+                        Text("#\(kart)")
+                            .font(.system(size: 15, weight: .black, design: .monospaced))
+                            .foregroundColor(.kartAccent)
                     }
                 }
             }
-        }
-        .background(Color.kartPanel)
-        .overlay(alignment: .top) {
-            Divider().background(Color.white.opacity(0.08))
-        }
-    }
-}
-
-enum UserLiveTab: String, CaseIterable, Identifiable {
-    case team, pilot
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .team:  return "Team View"
-        case .pilot: return "Pilot View"
-        }
-    }
-    var icon: String {
-        switch self {
-        case .team:  return "person.3.fill"
-        case .pilot: return "person.fill"
         }
     }
 }

@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// Entry point della sezione Live. Determina quale UI mostrare in base al ruolo.
+/// Usa una NavigationStack nativa con TabView nativa per uniformità con il resto dell'app.
 struct LiveRootView: View {
     let server: DiscoveredServer
     let event: RaceEvent
@@ -16,13 +17,11 @@ struct LiveRootView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.kartBG.ignoresSafeArea()
-
+        Group {
             if isDirector {
-                DirectorLiveView(event: event, viewModel: viewModel, dismiss: dismiss)
+                DirectorLiveView(event: event, viewModel: viewModel)
             } else {
-                UserLiveView(event: event, viewModel: viewModel, dismiss: dismiss)
+                UserLiveView(event: event, viewModel: viewModel)
             }
         }
         .onAppear {

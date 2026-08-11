@@ -210,6 +210,7 @@ struct EventDetailView: View {
         }
         .onAppear {
             kartodromoVM.fetchActive(serverURL: server.httpURL, token: authState.currentToken)
+            Task { await fetchEventDetails() }
         }
         .fullScreenCover(isPresented: $showLive) {
             LiveRootView(server: server, event: localEvent)
@@ -230,32 +231,60 @@ struct EventDetailView: View {
         if canControl || isStarted {
             VStack(spacing: 10) {
                 // Pulsante Avvia / Termina (solo director/admin)
-                if canControl && !isFinished {
-                    Button(action: {
-                        let newStatus = isStarted ? "finished" : "started"
-                        Task { await toggleEventStatus(to: newStatus) }
-                    }) {
-                        HStack(spacing: 10) {
-                            if isUpdatingStatus {
-                                ProgressView().tint(isStarted ? .red : .black).scaleEffect(0.85)
-                            } else {
-                                Image(systemName: isStarted ? "stop.circle.fill" : "play.circle.fill")
-                                    .font(.system(size: 18))
-                                Text(isStarted ? "Termina Gara" : "Avvia Gara")
-                                    .font(.system(size: 15, weight: .bold))
+                if canControl {
+                    if !isFinished {
+                        Button(action: {
+                            let newStatus = isStarted ? "finished" : "started"
+                            Task { await toggleEventStatus(to: newStatus) }
+                        }) {
+                            HStack(spacing: 10) {
+                                if isUpdatingStatus {
+                                    ProgressView().tint(isStarted ? .red : .black).scaleEffect(0.85)
+                                } else {
+                                    Image(systemName: isStarted ? "stop.circle.fill" : "play.circle.fill")
+                                        .font(.system(size: 18))
+                                    Text(isStarted ? "Termina Gara" : "Avvia Gara")
+                                        .font(.system(size: 15, weight: .bold))
+                                }
                             }
+                            .foregroundColor(isStarted ? .red : .black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(isStarted ? Color.red.opacity(0.15) : Color.kartAccent)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(isStarted ? Color.red.opacity(0.4) : Color.clear, lineWidth: 1)
+                            )
                         }
-                        .foregroundColor(isStarted ? .red : .black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(isStarted ? Color.red.opacity(0.15) : Color.kartAccent)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(isStarted ? Color.red.opacity(0.4) : Color.clear, lineWidth: 1)
-                        )
+                        .disabled(isUpdatingStatus)
+                    } else if isAdmin {
+                        // Pulsante Ripristina per l'Admin
+                        Button(action: {
+                            Task { await toggleEventStatus(to: "scheduled") }
+                        }) {
+                            HStack(spacing: 10) {
+                                if isUpdatingStatus {
+                                    ProgressView().tint(.orange).scaleEffect(0.85)
+                                } else {
+                                    Image(systemName: "arrow.counterclockwise.circle.fill")
+                                        .font(.system(size: 18))
+                                    Text("Ripristina a 'Programmata'")
+                                        .font(.system(size: 15, weight: .bold))
+                                }
+                            }
+                            .foregroundColor(.orange)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.orange.opacity(0.15))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                            )
+                        }
+                        .disabled(isUpdatingStatus)
                     }
-                    .disabled(isUpdatingStatus)
                 }
 
                 // Pulsante Entra in Live (tutti se gara avviata)
@@ -345,6 +374,29 @@ struct EventDetailView: View {
             statusError = error.localizedDescription
         }
         isUpdatingStatus = false
+    }
+
+    @MainActor
+    private func fetchEventDetails() async {
+        guard let httpURL = server.httpURL,
+              let token = authState.currentToken else { return }
+        
+        do {
+            let base = httpURL.absoluteString.replacingOccurrences(of: "/api", with: "")
+            guard let fullURL = URL(string: "\(base)/events/\(localEvent.id)") else { return }
+            var req = URLRequest(url: fullURL)
+            req.httpMethod = "GET"
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            if let http = resp as? HTTPURLResponse, http.statusCode == 200 {
+                if let updatedEvent = try? JSONDecoder().decode(RaceEvent.self, from: data) {
+                    localEvent = updatedEvent
+                }
+            }
+        } catch {
+            print("Errore aggiornamento stato evento:", error)
+        }
     }
 
 

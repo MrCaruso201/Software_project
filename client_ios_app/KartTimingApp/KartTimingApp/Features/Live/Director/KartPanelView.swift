@@ -43,7 +43,7 @@ struct KartPanelView: View {
                             columns: [GridItem(.flexible()), GridItem(.flexible())],
                             spacing: 12
                         ) {
-                            ForEach(viewModel.kartAssignments) { assignment in
+                            ForEach(viewModel.kartAssignments, id: \.kartNumber) { assignment in
                                 KartCard(
                                     assignment: assignment,
                                     penaltyCount: viewModel.penaltiesByKart[assignment.kartNumber]?.count ?? 0,
