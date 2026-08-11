@@ -17,7 +17,9 @@ struct UserHomeView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         profileCard
-                        notificationsCard
+                        if viewModel.profile?.role == "user" {
+                            myRegistrationsCard
+                        }
                     }
                     .padding(16)
                 }
@@ -142,110 +144,182 @@ struct UserHomeView: View {
         }
         .frame(maxWidth: .infinity)
     }
-    
-    // MARK: - Notifications / Registrations Card
-    private var notificationsCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Iscrizioni e Avvisi")
-                .font(.headline)
-                .foregroundColor(.white)
-            
-            let pendingRegs = viewModel.registrations.filter { $0.status == "pending_payment" }
-            let waitlistRegs = viewModel.registrations.filter { $0.status == "waitlist" }
-            
-            if pendingRegs.isEmpty && waitlistRegs.isEmpty && viewModel.totalRegistrations == 0 {
-                Text("Non hai ancora effettuato nessuna iscrizione.")
-                    .font(.subheadline)
+
+    // MARK: - Le mie iscrizioni Card
+
+    private var myRegistrationsCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // ── Header ─────────────────────────────────────────────────────
+            HStack(spacing: 8) {
+                Image(systemName: "list.bullet.clipboard.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.kartAccent)
+                Text("LE MIE ISCRIZIONI")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(.kartAccent)
+                Spacer()
+                let upcomingCount = viewModel.registrations.filter { reg in
+                    (viewModel.events.first(where: { ev in ev.id == reg.eventId })?.dateObject ?? .distantFuture) >= Date()
+                }.count
+                Text("\(upcomingCount)")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(.kartDim)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
-            } else {
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.kartAccent.opacity(0.08))
+
+            // Filtra solo gli eventi futuri (data >= oggi)
+            let upcomingRegs = viewModel.registrations.filter { reg in
+                (viewModel.events.first(where: { ev in ev.id == reg.eventId })?.dateObject ?? .distantFuture) >= Date()
+            }
+
+            if upcomingRegs.isEmpty {
+                // Stato vuoto
                 VStack(spacing: 12) {
-                    ForEach(pendingRegs, id: \.id) { reg in
+                    Image(systemName: "flag.slash")
+                        .font(.system(size: 36))
+                        .foregroundColor(.kartDim.opacity(0.4))
+                    Text("Nessuna iscrizione")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.kartDim)
+                    Text("Iscriviti a un evento dalla sezione \"Eventi\"")
+                        .font(.system(size: 12))
+                        .foregroundColor(.kartDim.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 28)
+            } else {
+                // Lista iscrizioni ordinate per data evento
+                let sorted = upcomingRegs.sorted { r0, r1 in
+                    let d0 = viewModel.events.first(where: { $0.id == r0.eventId })?.dateObject ?? .distantFuture
+                    let d1 = viewModel.events.first(where: { $0.id == r1.eventId })?.dateObject ?? .distantFuture
+                    return d0 < d1
+                }
+
+                VStack(spacing: 0) {
+                    ForEach(Array(sorted.enumerated()), id: \.element.id) { idx, reg in
                         if let event = viewModel.events.first(where: { $0.id == reg.eventId }) {
-                            pendingEventRow(event: event)
-                        }
-                    }
-                    
-                    let confirmedCount = viewModel.confirmedRegistrations
-                    if confirmedCount > 0 {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                            Text("Hai \(confirmedCount) iscrizion\(confirmedCount == 1 ? "e" : "i") confermat\(confirmedCount == 1 ? "a" : "e").")
-                                .font(.subheadline)
-                                .foregroundColor(.kartDim)
-                        }
-                        .padding(.top, 4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    
-                    if !waitlistRegs.isEmpty {
-                        ForEach(waitlistRegs, id: \.id) { reg in
-                            if let event = viewModel.events.first(where: { $0.id == reg.eventId }) {
-                                waitlistEventRow(event: event)
+                            registrationRow(reg: reg, event: event)
+
+                            if idx < sorted.count - 1 {
+                                Divider()
+                                    .background(Color.white.opacity(0.06))
+                                    .padding(.leading, 58)
                             }
                         }
                     }
                 }
             }
         }
-        .padding(16)
         .background(Color.kartPanel)
         .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 1))
     }
-    
-    private func pendingEventRow(event: RaceEvent) -> some View {
-        Button(action: {
-            NotificationCenter.default.post(name: NSNotification.Name("OpenEventDetail"), object: nil, userInfo: ["eventId": event.id])
-        }) {
+
+    private func registrationRow(reg: EventRegistrationResponse, event: RaceEvent) -> some View {
+        Button {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("OpenEventDetail"),
+                object: nil,
+                userInfo: ["eventId": event.id]
+            )
+        } label: {
             HStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.orange)
-                .font(.system(size: 20))
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(event.title)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.white)
-                Text("In attesa di pagamento")
-                    .font(.system(size: 12))
-                    .foregroundColor(.orange)
+                // ── Icona status ─────────────────────────────────────────
+                ZStack {
+                    Circle()
+                        .fill(statusColor(reg.status).opacity(0.15))
+                        .frame(width: 38, height: 38)
+                    Image(systemName: statusIcon(reg.status))
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(statusColor(reg.status))
+                }
+
+                // ── Info evento ──────────────────────────────────────────
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(event.title)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+
+                    HStack(spacing: 6) {
+                        // Data
+                        if let date = event.dateObject {
+                            Label(date.formatted(.dateTime.day().month(.abbreviated).year()),
+                                  systemImage: "calendar")
+                                .font(.system(size: 11))
+                                .foregroundColor(.kartDim)
+                        }
+
+                        // Luogo
+                        let city = event.location.components(separatedBy: " - ").first ?? event.location
+                        Label(city, systemImage: "mappin.circle")
+                            .font(.system(size: 11))
+                            .foregroundColor(.kartDim)
+                            .lineLimit(1)
+                    }
+
+                    // Team name (se evento a squadre)
+                    if let team = reg.teamName, !team.isEmpty {
+                        Label(team, systemImage: "person.2.fill")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.kartAccent.opacity(0.8))
+                    }
+                }
+
+                Spacer()
+
+                // ── Badge status ─────────────────────────────────────────
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(statusLabel(reg.status))
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(statusColor(reg.status))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(statusColor(reg.status).opacity(0.14))
+                        .cornerRadius(5)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.kartDim)
+                }
             }
-            Spacer()
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
         }
-        .padding(12)
-        .background(Color.kartPanel)
-        .cornerRadius(10)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.3), lineWidth: 1))
-        }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
     }
-    
-    private func waitlistEventRow(event: RaceEvent) -> some View {
-        Button(action: {
-            NotificationCenter.default.post(name: NSNotification.Name("OpenEventDetail"), object: nil, userInfo: ["eventId": event.id])
-        }) {
-            HStack(spacing: 12) {
-            Image(systemName: "clock.fill")
-                .foregroundColor(.purple)
-                .font(.system(size: 20))
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(event.title)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.white)
-                Text("In Lista d'Attesa")
-                    .font(.system(size: 12))
-                    .foregroundColor(.purple)
-            }
-            Spacer()
+
+    // MARK: - Helpers status
+
+    private func statusColor(_ status: String) -> Color {
+        switch status {
+        case "confirmed":       return .green
+        case "pending_payment": return .orange
+        case "waitlist":        return .purple
+        default:                return .kartDim
         }
-        .padding(12)
-        .background(Color.kartPanel)
-        .cornerRadius(10)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.purple.opacity(0.3), lineWidth: 1))
+    }
+
+    private func statusIcon(_ status: String) -> String {
+        switch status {
+        case "confirmed":       return "checkmark.circle.fill"
+        case "pending_payment": return "exclamationmark.triangle.fill"
+        case "waitlist":        return "clock.fill"
+        default:                return "questionmark.circle"
         }
-        .buttonStyle(PlainButtonStyle())
+    }
+
+    private func statusLabel(_ status: String) -> String {
+        switch status {
+        case "confirmed":       return "CONFERMATA"
+        case "pending_payment": return "DA PAGARE"
+        case "waitlist":        return "LISTA ATTESA"
+        default:                return status.uppercased()
+        }
     }
 }
+
+
