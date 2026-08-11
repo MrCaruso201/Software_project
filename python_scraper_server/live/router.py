@@ -105,6 +105,24 @@ def update_event_status(
         )
 
     event = _get_event_or_404(event_id, db)
+    
+    # Notify users if the event is starting
+    if body.status == "started" and event.status != "started":
+        from notifications.router import notify_user
+        registrations = db.query(EventRegistration).filter(
+            EventRegistration.event_id == event_id,
+            EventRegistration.user_id.isnot(None)
+        ).all()
+        for reg in registrations:
+            notify_user(
+                db=db,
+                user_id=reg.user_id,
+                event_id=event_id,
+                notif_type="event_started",
+                title="L'evento è iniziato!",
+                message=f"L'evento {event.title} è appena iniziato! Apri l'app per seguire il live timing."
+            )
+
     event.status = body.status
     db.commit()
     db.refresh(event)

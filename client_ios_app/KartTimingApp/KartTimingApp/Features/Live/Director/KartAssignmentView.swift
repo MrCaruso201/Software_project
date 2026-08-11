@@ -66,7 +66,7 @@ struct KartAssignmentView: View {
                                 KartRow(
                                     teamName: item.name,
                                     assignment: item.assignment,
-                                    penaltyCount: item.assignment != nil ? (viewModel.penaltiesByKart[item.assignment!.kartNumber]?.count ?? 0) : 0,
+                                    penaltyCount: item.assignment != nil ? (viewModel.penaltiesByKart[item.assignment!.kartNumber]?.filter { !$0.isWarning }.count ?? 0) : 0,
                                     totalPenaltySeconds: item.assignment != nil ? viewModel.totalPenaltySeconds(for: item.assignment!.kartNumber) : 0,
                                     onTap: {
                                         teamToAssign = TeamSelection(id: item.id, name: item.name)

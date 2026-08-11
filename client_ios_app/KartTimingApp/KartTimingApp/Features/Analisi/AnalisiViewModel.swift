@@ -313,6 +313,7 @@ class AnalisiViewModel: ObservableObject {
 
         let df = DateFormatter()
         df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(abbreviation: "UTC")
         
         df.dateFormat = "yyyy-MM-dd HH:mm:ss"
         if let d = df.date(from: string) { return d }

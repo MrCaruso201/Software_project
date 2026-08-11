@@ -258,18 +258,22 @@ class UserHomeViewModel: ObservableObject {
         if let d = isoBasic.date(from: string) { return d }
 
         let df1 = DateFormatter()
+        df1.timeZone = TimeZone(abbreviation: "UTC")
         df1.dateFormat = "yyyy-MM-dd HH:mm:ss"
         if let d = df1.date(from: string) { return d }
 
         let df2 = DateFormatter()
+        df2.timeZone = TimeZone(abbreviation: "UTC")
         df2.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         if let d = df2.date(from: string) { return d }
         
         let df3 = DateFormatter()
+        df3.timeZone = TimeZone(abbreviation: "UTC")
         df3.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
         if let d = df3.date(from: string) { return d }
         
         let df4 = DateFormatter()
+        df4.timeZone = TimeZone(abbreviation: "UTC")
         df4.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
         if let d = df4.date(from: string) { return d }
 
