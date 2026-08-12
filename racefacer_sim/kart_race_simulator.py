@@ -34,7 +34,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 
 DEFAULT_DURATION_MINUTES = 15           # Durata gara
 OUTPUT_FILE              = script_dir + "/sim_data/live_timing.json"   # File unico sovrascritto ad ogni update
-BASE_URL                 = "https://live.racefacer.com/simulator"
+BASE_URL                 = "https://simulator"
 
 # Piloti: nome, numero kart, tempo base giro (secondi), sigma (varianza = consistenza)
 # team: nome della squadra (None = gara individuale)

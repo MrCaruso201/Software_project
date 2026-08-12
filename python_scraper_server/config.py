@@ -32,7 +32,7 @@ MAX_CONCURRENT_SESSIONS = 5
 # ---------------------------------------------------------------------------
 
 #DEFAULT_URL = "https://live.racefacer.com/ottobianomotorsport"
-SIMULATOR_URL = "https://live.racefacer.com/simulator"
+SIMULATOR_URL = "https://simulator"
 
 # Domini che i client possono richiedere via "set_url". Chiunque abbia il
 # token può scegliere la propria sorgente, ma solo tra questi host: evita
@@ -42,6 +42,7 @@ ALLOWED_URL_HOSTS = {
     "live.racefacer.com",
     "www.apex-timing.com",
     "apex-timing.com",
+    "simulator",
     # "timing.altrapiattaforma.com",
 }
 

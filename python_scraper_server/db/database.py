@@ -207,7 +207,7 @@ def _seed_kartodromi() -> None:
     from db.models import Kartodromo  # import locale per evitare circolarità
 
     _DEFAULT_KARTODROMI = [
-        {"nome": "Simulatore",                   "luogo": "",                    "url": "https://live.racefacer.com/simulator"},
+        {"nome": "Simulatore",                   "luogo": "",                    "url": "https://simulator"},
         {"nome": "Ottobiano Motorsport",          "luogo": "Ottobiano, PV",       "url": "https://live.racefacer.com/ottobianomotorsport"},
         {"nome": "Karting Club",                  "luogo": "Messina, ME",         "url": "https://live.racefacer.com/kartodromomessina"},
         {"nome": "Orlando Kart Center",           "luogo": "Orlando, FL",         "url": "https://live.racefacer.com/orlandokartcenter"},

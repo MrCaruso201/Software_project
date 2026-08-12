@@ -35,7 +35,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DURATION_MINUTES = 60       # Gara endurance: 1 ora
 DEFAULT_PIT_DURATION_SEC = 60       # Sosta ai box: 1 minuto fisso
 OUTPUT_FILE = script_dir + "/sim_data/live_timing.json"
-BASE_URL    = "https://live.racefacer.com/simulator"
+BASE_URL    = "https://simulator"
 
 # Squadre: ogni squadra ha una lista di piloti con i propri parametri.
 # I piloti si alternano internamente, ma il timing live mostra solo il kart.
