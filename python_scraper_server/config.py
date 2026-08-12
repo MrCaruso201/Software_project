@@ -31,7 +31,6 @@ MAX_CONCURRENT_SESSIONS = 5
 # URL
 # ---------------------------------------------------------------------------
 
-#DEFAULT_URL = "https://live.racefacer.com/ottobianomotorsport"
 SIMULATOR_URL = "https://simulator"
 
 # Domini che i client possono richiedere via "set_url". Chiunque abbia il

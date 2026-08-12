@@ -205,15 +205,10 @@ struct TimingView: View {
                     isLoadingTracks = true
                     defer { isLoadingTracks = false }
                     do {
-                        var fetched = try await KartodromoService.fetchKartodromi(
+                        kartodromi = try await KartodromoService.fetchKartodromi(
                             baseURL: base,
                             accessToken: token
                         )
-                        if let index = fetched.firstIndex(where: { $0.nome == "Simulatore" }) {
-                            let sim = fetched.remove(at: index)
-                            fetched.insert(sim, at: 0)
-                        }
-                        kartodromi = fetched
                     } catch {
                         trackLoadError = error.localizedDescription
                     }
