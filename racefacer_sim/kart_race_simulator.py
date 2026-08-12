@@ -104,9 +104,11 @@ class Driver:
 
         self.lap_count: int         = 0
         self.lap_times: List[float] = []
+        self.cross_times: List[float] = []
 
         # Track position (tempo in cui ha tagliato il traguardo l'ultima volta)
         self.last_cross_time: float = 0.0
+        self.finished: bool = False
 
         # Simula una partenza in griglia: 0.5s di scarto tra ogni posizione
         self.initial_offset: float = grid_pos * 0.5
@@ -172,12 +174,12 @@ def build_snapshot(
                 laps_behind_leader = leader.lap_count - driver.lap_count
                 if laps_behind_leader == 0:
                     gap_val = driver.last_cross_time - leader.last_cross_time
-                    gap_str = f"+{gap_val:.3f}"
+                    gap_str = f"{gap_val:+.3f}"
                 elif laps_behind_leader == 1:
                     # Stesso giro in corso, mostriamo il distacco al giro precedente completato da entrambi
-                    leader_time_at_d_lap = leader.initial_offset + sum(leader.lap_times[:driver.lap_count])
+                    leader_time_at_d_lap = leader.cross_times[driver.lap_count - 1]
                     gap_val = driver.last_cross_time - leader_time_at_d_lap
-                    gap_str = f"+{gap_val:.3f}"
+                    gap_str = f"{gap_val:+.3f}"
                 else:
                     # Se il leader è avanti di 2 o più conteggi, ha effettivamente doppiato il pilota
                     laps_down = laps_behind_leader - 1
@@ -188,11 +190,11 @@ def build_snapshot(
                 laps_behind_prev = prev_driver.lap_count - driver.lap_count
                 if laps_behind_prev == 0:
                     int_val = driver.last_cross_time - prev_driver.last_cross_time
-                    int_str = f"+{int_val:.3f}"
+                    int_str = f"{int_val:+.3f}"
                 elif laps_behind_prev == 1:
-                    prev_time_at_d_lap = prev_driver.initial_offset + sum(prev_driver.lap_times[:driver.lap_count])
+                    prev_time_at_d_lap = prev_driver.cross_times[driver.lap_count - 1]
                     int_val = driver.last_cross_time - prev_time_at_d_lap
-                    int_str = f"+{int_val:.3f}"
+                    int_str = f"{int_val:+.3f}"
                 else:
                     laps_down = laps_behind_prev - 1
                     int_str = f"+{laps_down} Laps" if laps_down > 1 else "+1 Lap"
@@ -258,7 +260,7 @@ def run_simulation(
     while True:
         # Prossimo evento: primo pilota a completare un giro entro la fine sessione
         candidates = [(d.next_event, i, d) for i, d in enumerate(drivers)
-                      if d.next_event <= session_duration]
+                      if not d.finished]
         if not candidates:
             break
         candidates.sort(key=lambda x: (x[0], x[1]))  # stabile in caso di parità
@@ -275,11 +277,15 @@ def run_simulation(
         lap_t = driver.current_lap_time
         driver.lap_times.append(lap_t)
         driver.last_cross_time = sim_time
+        driver.cross_times.append(sim_time)
         
-        # Pianifica il PROSSIMO giro
-        next_lap_t = simulate_lap(driver.base_time, driver.sigma, driver.lap_count + 1)
-        driver.current_lap_time = next_lap_t
-        driver.next_event = sim_time + next_lap_t
+        if sim_time >= session_duration:
+            driver.finished = True
+        else:
+            # Pianifica il PROSSIMO giro
+            next_lap_t = simulate_lap(driver.base_time, driver.sigma, driver.lap_count + 1)
+            driver.current_lap_time = next_lap_t
+            driver.next_event = sim_time + next_lap_t
 
         # ── Sovrascrive il singolo file JSON ─────────────────────────────────
         snapshot = build_snapshot(drivers, session_start, sim_time)

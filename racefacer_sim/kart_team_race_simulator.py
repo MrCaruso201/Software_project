@@ -151,11 +151,13 @@ class Team:
         self.current_lap_in_stint: int = 0
         self.lap_count: int          = 0
         self.lap_times: List[float]  = []     # tutti i giri del kart
+        self.cross_times: List[float]= []     # tempi assoluti al traguardo
         self.last_cross_time: float  = 0.0
         self.in_pit: bool            = False
         self.pit_end_time: float     = 0.0
         self.total_pit_time: float   = 0.0
         self.pit_count: int          = 0
+        self.finished: bool          = False
 
         # Partenza sfalsata
         self.initial_offset: float   = grid_pos * 0.5
@@ -235,11 +237,11 @@ def build_snapshot(teams: List[Team], session_start: datetime, sim_time: float) 
                 laps_behind = leader.lap_count - team.lap_count
                 if laps_behind == 0:
                     gap_val = team.last_cross_time - leader.last_cross_time
-                    gap_str = f"+{gap_val:.3f}"
+                    gap_str = f"{gap_val:+.3f}"
                 elif laps_behind == 1:
-                    leader_time = leader.initial_offset + sum(leader.lap_times[:team.lap_count])
+                    leader_time = leader.cross_times[team.lap_count - 1]
                     gap_val = team.last_cross_time - leader_time
-                    gap_str = f"+{gap_val:.3f}"
+                    gap_str = f"{gap_val:+.3f}"
                 else:
                     laps_down = laps_behind - 1
                     gap_str = f"+{laps_down} Laps" if laps_down > 1 else "+1 Lap"
@@ -248,11 +250,11 @@ def build_snapshot(teams: List[Team], session_start: datetime, sim_time: float) 
                 laps_behind_prev = prev_team.lap_count - team.lap_count
                 if laps_behind_prev == 0:
                     int_val = team.last_cross_time - prev_team.last_cross_time
-                    int_str = f"+{int_val:.3f}"
+                    int_str = f"{int_val:+.3f}"
                 elif laps_behind_prev == 1:
-                    prev_time = prev_team.initial_offset + sum(prev_team.lap_times[:team.lap_count])
+                    prev_time = prev_team.cross_times[team.lap_count - 1]
                     int_val = team.last_cross_time - prev_time
-                    int_str = f"+{int_val:.3f}"
+                    int_str = f"{int_val:+.3f}"
                 else:
                     laps_down = laps_behind_prev - 1
                     int_str = f"+{laps_down} Laps" if laps_down > 1 else "+1 Lap"
@@ -321,7 +323,7 @@ def run_simulation(
         candidates = [
             (t.next_event, i, t)
             for i, t in enumerate(teams)
-            if t.next_event <= session_duration
+            if not t.finished
         ]
         if not candidates:
             break
@@ -341,20 +343,25 @@ def run_simulation(
         team.lap_count += 1
         team.lap_times.append(lap_t)
         team.last_cross_time = sim_time
+        team.cross_times.append(sim_time)
         team.current_stint_time += lap_t
         team.current_lap_in_stint += 1
 
         # ── Decisione pit stop ────────────────────────────────────────
-        pit_this_lap = team.should_pit() and (sim_time + pit_duration < session_duration)
-        pit_flag = ""
-
-        if pit_this_lap:
-            team.do_pit_stop(sim_time, pit_duration)
-            pit_flag = " 🔧"
+        if sim_time >= session_duration:
+            team.finished = True
+            pit_flag = ""
         else:
-            next_lap_t = simulate_lap(drv.base_time, drv.sigma, team.current_lap_in_stint + 1)
-            team.current_lap_time = next_lap_t
-            team.next_event       = sim_time + next_lap_t
+            pit_this_lap = team.should_pit() and (sim_time + pit_duration < session_duration)
+            pit_flag = ""
+
+            if pit_this_lap:
+                team.do_pit_stop(sim_time, pit_duration)
+                pit_flag = " 🔧"
+            else:
+                next_lap_t = simulate_lap(drv.base_time, drv.sigma, team.current_lap_in_stint + 1)
+                team.current_lap_time = next_lap_t
+                team.next_event       = sim_time + next_lap_t
 
         # ── Sovrascrive il file JSON ──────────────────────────────────
         snapshot = build_snapshot(teams, session_start, sim_time)
