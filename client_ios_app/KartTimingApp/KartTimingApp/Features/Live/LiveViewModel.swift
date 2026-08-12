@@ -15,6 +15,9 @@ class LiveViewModel: ObservableObject {
 
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
+    
+    @Published var raceStartTime: Date? = nil
+    @Published var raceEndTime: Date? = nil
 
     // MARK: - Config
 

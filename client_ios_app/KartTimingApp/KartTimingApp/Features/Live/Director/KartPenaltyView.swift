@@ -212,8 +212,17 @@ struct KartPenaltyView: View {
                 globalMessageButton(title: "Bandiera Verde", icon: "flag.fill", color: .green) {
                     sendGlobalMessage(.greenFlag, text: "Bandiera Verde")
                 }
-                globalMessageButton(title: "Bandiera a Scacchi", icon: "flag.checkered.2.crossed", color: Color(white: 0.85)) {
-                    sendGlobalMessage(.checkeredFlag, text: "Gara terminata. Rientrate ai box.")
+                if viewModel.raceStartTime == nil || viewModel.raceEndTime != nil {
+                    globalMessageButton(title: "Inizia Gara", icon: "play.fill", color: .green) {
+                        viewModel.raceStartTime = Date()
+                        viewModel.raceEndTime = nil
+                        sendGlobalMessage(.custom, text: "Gara Iniziata")
+                    }
+                } else {
+                    globalMessageButton(title: "Bandiera a Scacchi", icon: "flag.checkered.2.crossed", color: Color(white: 0.85)) {
+                        viewModel.raceEndTime = Date()
+                        sendGlobalMessage(.checkeredFlag, text: "Gara terminata. Rientrate ai box.")
+                    }
                 }
             }
 

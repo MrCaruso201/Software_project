@@ -61,6 +61,37 @@ struct ClassificaLiveView: View {
                     .foregroundColor(.kartDim)
             }
         }
+        .overlay(
+            Group {
+                if let startTime = viewModel.raceStartTime {
+                    TimelineView(.periodic(from: startTime, by: 1.0)) { context in
+                        let targetDate = viewModel.raceEndTime ?? context.date
+                        let elapsed = targetDate.timeIntervalSince(startTime)
+                        let min = Int(elapsed) / 60
+                        let sec = Int(elapsed) % 60
+                        
+                        if viewModel.raceEndTime != nil {
+                            HStack(spacing: 4) {
+                                Image(systemName: "flag.checkered")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white)
+                                Text(String(format: "%02d:%02d", min, sec))
+                                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.white)
+                            }
+                        } else {
+                            Text(String(format: "T: %02d:%02d", min, sec))
+                                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white)
+                        }
+                    }
+                } else {
+                    Text("T: 00:00")
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .foregroundColor(.white)
+                }
+            }
+        )
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(Color.kartPanel)
