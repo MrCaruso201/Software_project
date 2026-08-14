@@ -195,7 +195,7 @@ struct TeamLiveView: View {
             }
         }()
 
-        return HStack(spacing: 12) {
+        return HStack(alignment: .top, spacing: 12) {
             if isCheckered {
                 Image(systemName: "flag.checkered.2.crossed")
                     .font(.system(size: 10))
@@ -207,6 +207,7 @@ struct TeamLiveView: View {
                 Circle()
                     .fill(color)
                     .frame(width: 8, height: 8)
+                    .padding(.top, 4)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -227,6 +228,7 @@ struct TeamLiveView: View {
                     }
                 }
             }
+            Spacer()
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

@@ -247,7 +247,7 @@ def _seed_penalty_types() -> None:
         {"code": "blue_flag",      "name": "Bandiera Blu (Doppiaggio)",     "action": "warning",       "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 90},
         # ── Personalizzati (ultimi) ───────────────────────────────────────────
         {"code": "custom",         "name": "Penalità personalizzata",       "action": "custom",        "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 100},
-        {"code": "warning_generic","name": "Avviso (Generico)",             "action": "warning",       "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 110},
+        {"code": "drop_position",  "name": "Drop 1 Position",               "action": "warning",       "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 110},
     ]
 
     # Codici obsoleti da rimuovere dal DB

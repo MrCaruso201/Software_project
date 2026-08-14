@@ -92,9 +92,9 @@ struct KartPenaltyView: View {
                 }
             }
         }
-        .alert("Messaggio Generico", isPresented: $showGenericMessageAlert) {
+        .alert("Messaggio", isPresented: $showGenericMessageAlert) {
             TextField("Scrivi il messaggio...", text: $genericMessageText)
-            Button("Invia") { sendGlobalMessage(.custom, text: genericMessageText) }
+            Button("Invia") { sendTargetedMessage(.custom, text: genericMessageText) }
             Button("Annulla", role: .cancel) { }
         }
         .alert("Errore", isPresented: .init(
@@ -349,6 +349,17 @@ struct KartPenaltyView: View {
                 .cornerRadius(14)
             }
             .disabled(isLoading || selectedType == nil)
+
+            Divider().background(Color.white.opacity(0.1))
+                .padding(.vertical, 8)
+
+            // Bottone Messaggio
+            if case .kart(let n, _) = selectedTarget {
+                globalMessageButton(title: "Invia Messaggio al Kart #\(n)", icon: "envelope.fill", color: .blue) {
+                    genericMessageText = ""
+                    showGenericMessageAlert = true
+                }
+            }
         }
     }
 
@@ -365,7 +376,7 @@ struct KartPenaltyView: View {
         // 2. Avvisi con auto-penalty (warning_track_limits, warning_aggressive_driving)
         let autoWarnings = types.filter {
             $0.isWarning && $0.warningThreshold != nil
-            && $0.code != "warning_generic"
+            && $0.code != "drop_position"
         }.sorted { $0.id < $1.id }
 
         // 3. Bandiera nera
@@ -378,7 +389,7 @@ struct KartPenaltyView: View {
         let custom = types.filter { $0.code == "custom" }
 
         // 6. Avviso generico
-        let genericWarn = types.filter { $0.code == "warning_generic" }
+        let genericWarn = types.filter { $0.code == "drop_position" }
 
         return fixedPenalties + autoWarnings + blackFlag + blueFlag + custom + genericWarn
     }
@@ -467,6 +478,22 @@ struct KartPenaltyView: View {
         Task {
             do {
                 try await viewModel.sendMessage(targetKart: nil, type: type, text: text)
+            } catch {
+                actionError = error.localizedDescription
+            }
+        }
+    }
+
+    private func sendTargetedMessage(_ type: MessagePreset, text: String) {
+        Task {
+            do {
+                let targetNum: Int?
+                if case .kart(let n, _) = selectedTarget {
+                    targetNum = n
+                } else {
+                    targetNum = nil
+                }
+                try await viewModel.sendMessage(targetKart: targetNum, type: type, text: text)
             } catch {
                 actionError = error.localizedDescription
             }

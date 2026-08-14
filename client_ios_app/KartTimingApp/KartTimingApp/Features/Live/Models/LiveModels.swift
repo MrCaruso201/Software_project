@@ -55,7 +55,7 @@ struct RacePenalty: Identifiable, Codable {
         case "weight": return seconds != nil ? "Peso (+\(seconds!)s)" : "Peso"
         case "directive": return seconds != nil ? "Direttive (+\(seconds!)s)" : "Direttive"
         case "custom": return seconds != nil ? "Penalità (+\(seconds!)s)" : "Penalità Custom"
-        case "warning_generic": return "Avviso (Generico)"
+        case "drop_position": return "Drop 1 Position"
         case "warning_track_limits": return "Avviso (Track Limits)"
         case "warning_aggressive_driving": return "Avviso (Guida Aggressiva)"
         case "track_limits_10s": return seconds != nil ? "Track Limits (+\(seconds!)s)" : "Track Limits (+10s)"
@@ -66,7 +66,7 @@ struct RacePenalty: Identifiable, Codable {
     }
 
     var isWarning: Bool {
-        return penaltyType == "warning_generic"
+        return penaltyType == "drop_position"
             || penaltyType == "warning_track_limits"
             || penaltyType == "warning_aggressive_driving"
             || penaltyType == "blue_flag"
@@ -177,7 +177,7 @@ struct PenaltyType: Identifiable, Codable, Equatable {
 
     var isWarning: Bool {
         // Basato sul codice, non sull'action (black_flag è una penalità nonostante action=drive_through)
-        return code == "warning_generic"
+        return code == "drop_position"
             || code == "warning_track_limits"
             || code == "warning_aggressive_driving"
             || code == "blue_flag"
@@ -185,7 +185,7 @@ struct PenaltyType: Identifiable, Codable, Equatable {
 
     /// Solo penalità personalizzata e avviso generico possono essere modificati (secondi/nota liberi)
     var isCustomizable: Bool {
-        return code == "custom" || code == "warning_generic"
+        return code == "custom" || code == "drop_position"
     }
 
     var requiresSeconds: Bool {

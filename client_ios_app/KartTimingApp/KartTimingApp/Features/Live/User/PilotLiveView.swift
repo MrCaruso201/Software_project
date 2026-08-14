@@ -53,6 +53,13 @@ struct PilotLiveView: View {
     @State private var showingBlueFlagScreen = false
     @State private var processedBlueFlagIds: Set<Int> = []
 
+    @State private var showingDropPositionScreen = false
+    @State private var processedDropPositionIds: Set<Int> = []
+
+    @State private var showingTextMessage = false
+    @State private var currentTextMessage: RaceMessage? = nil
+    @State private var processedTextMessageIds: Set<Int> = []
+
     private var hasBlackFlag: Bool {
         myKart.penalties.contains(where: { $0.penaltyType == "black_flag" })
     }
@@ -69,14 +76,18 @@ struct PilotLiveView: View {
         ZStack {
             Color.kartBG.ignoresSafeArea()
 
-            if hasBlackFlag {
+            if showingTextMessage {
+                textMessageState
+            } else if showingDropPositionScreen {
+                dropPositionState
+            } else if showingBlueFlagScreen {
+                blueFlagState
+            } else if hasBlackFlag {
                 blackFlagState
             } else if isGlobalRedFlag {
                 redFlagState
             } else if isGlobalYellowFlag {
                 yellowFlagState
-            } else if showingBlueFlagScreen {
-                blueFlagState
             } else {
                 if myKart.kartNumber == nil {
                     noKartState
@@ -121,13 +132,17 @@ struct PilotLiveView: View {
         }
         .onChange(of: myKart.messages.last?.id) { _, _ in
             checkForNewFlag(messages: myKart.messages)
+            checkForNewTextMessage(messages: myKart.messages)
         }
         .onChange(of: myKart.penalties.count) { _, _ in
             checkForNewBlueFlags()
+            checkForNewDropPosition()
         }
         // ── Orientation lock (identico a PilotView) ────────────────────────
         .onAppear {
             checkForNewBlueFlags()
+            checkForNewDropPosition()
+            checkForNewTextMessage(messages: myKart.messages)
             
             if let latestFlag = myKart.messages.last(where: { $0.flagFlashColor != nil }) {
                 currentFlagMessage = latestFlag
@@ -355,10 +370,31 @@ struct PilotLiveView: View {
         for penalty in myKart.penalties where penalty.penaltyType == "blue_flag" {
             if !processedBlueFlagIds.contains(penalty.id) {
                 processedBlueFlagIds.insert(penalty.id)
-                // Mostra a schermo per 5s
-                showingBlueFlagScreen = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                    showingBlueFlagScreen = false
+                
+                let age = penalty.parsedDate.map { Date().timeIntervalSince($0) } ?? 0
+                if age < 5 {
+                    showingBlueFlagScreen = true
+                    let remainingTime = 5 - age
+                    DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
+                        showingBlueFlagScreen = false
+                    }
+                }
+            }
+        }
+    }
+
+    private func checkForNewDropPosition() {
+        for penalty in myKart.penalties where penalty.penaltyType == "drop_position" {
+            if !processedDropPositionIds.contains(penalty.id) {
+                processedDropPositionIds.insert(penalty.id)
+                
+                let age = penalty.parsedDate.map { Date().timeIntervalSince($0) } ?? 0
+                if age < 10 {
+                    showingDropPositionScreen = true
+                    let remainingTime = 10 - age
+                    DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
+                        showingDropPositionScreen = false
+                    }
                 }
             }
         }
@@ -372,6 +408,32 @@ struct PilotLiveView: View {
             withAnimation(.easeOut(duration: 0.2)) { flashOpacity = 0 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                 triggerFlash(color: color, flashIndex: flashIndex + 1)
+            }
+        }
+    }
+
+    private func checkForNewTextMessage(messages: [RaceMessage]) {
+        guard let latestMsg = messages.last, 
+              (latestMsg.messageType == "info" || latestMsg.messageType == "custom") else { return }
+        
+        if !processedTextMessageIds.contains(latestMsg.id) {
+            processedTextMessageIds.insert(latestMsg.id)
+            
+            let age = latestMsg.parsedDate.map { Date().timeIntervalSince($0) } ?? 0
+            if age < 20 {
+                currentTextMessage = latestMsg
+                withAnimation {
+                    showingTextMessage = true
+                }
+                
+                let remainingTime = 20 - age
+                DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
+                    if currentTextMessage?.id == latestMsg.id {
+                        withAnimation {
+                            showingTextMessage = false
+                        }
+                    }
+                }
             }
         }
     }
@@ -493,6 +555,52 @@ struct PilotLiveView: View {
                     .foregroundColor(.white)
                     .minimumScaleFactor(0.4)
                     .lineLimit(1)
+            }
+            .padding(40)
+        }
+    }
+
+    // MARK: - Drop Position State
+
+    private var dropPositionState: some View {
+        ZStack {
+            Color.white.ignoresSafeArea()
+            VStack(spacing: 24) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 90))
+                    .foregroundColor(.black)
+                
+                Text("PENALITÀ")
+                    .font(.system(size: 30, weight: .bold, design: .monospaced))
+                    .foregroundColor(.black.opacity(0.7))
+                
+                Text("DROP 1 POSITION")
+                    .font(.system(size: 70, weight: .black, design: .monospaced))
+                    .foregroundColor(.black)
+                    .minimumScaleFactor(0.2)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
+            .padding(40)
+        }
+    }
+    
+    // MARK: - Text Message State
+
+    private var textMessageState: some View {
+        ZStack {
+            Color.white.ignoresSafeArea()
+            VStack(spacing: 24) {
+                Text(currentTextMessage?.isBroadcast == true ? "MESSAGGIO BROADCAST" : "MESSAGGIO")
+                    .font(.system(size: 30, weight: .bold, design: .monospaced))
+                    .foregroundColor(.black.opacity(0.7))
+                
+                Text(currentTextMessage?.text ?? "")
+                    .font(.system(size: 60, weight: .black, design: .monospaced))
+                    .foregroundColor(.black)
+                    .minimumScaleFactor(0.2)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
             }
             .padding(40)
         }
