@@ -15,16 +15,21 @@ struct TeamLiveView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 16) {
+                        if hasCheckeredFlag { checkeredFlagCard }
                         kartHeroCard
                         if !myKart.penalties.isEmpty { penaltiesCard }
                         if !myKart.messages.isEmpty { messagesCard }
-                        if myKart.penalties.isEmpty && myKart.messages.isEmpty { allClearCard }
+                        if myKart.penalties.isEmpty && myKart.messages.isEmpty && !hasCheckeredFlag { allClearCard }
                     }
                     .padding(16)
                     .padding(.bottom, 30)
                 }
             }
         }
+    }
+
+    private var hasCheckeredFlag: Bool {
+        myKart.messages.contains(where: { $0.messageType == "checkered_flag" })
     }
 
     // MARK: - Kart Hero Card
@@ -255,6 +260,24 @@ struct TeamLiveView: View {
         .padding(30)
         .background(Color.kartPanel)
         .cornerRadius(14)
+    }
+
+    // MARK: - Checkered Flag Card
+
+    private var checkeredFlagCard: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "flag.checkered.2.crossed")
+                .font(.system(size: 40))
+                .foregroundColor(.black)
+            Text("BANDIERA A SCACCHI")
+                .font(.system(size: 22, weight: .black, design: .monospaced))
+                .foregroundColor(.black)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(Color.white)
+        .cornerRadius(14)
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black.opacity(0.1), lineWidth: 1))
     }
 
     // MARK: - No Kart State

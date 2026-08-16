@@ -64,6 +64,10 @@ struct PilotLiveView: View {
         myKart.penalties.contains(where: { $0.penaltyType == "black_flag" })
     }
 
+    private var hasCheckeredFlag: Bool {
+        myKart.messages.contains(where: { $0.messageType == "checkered_flag" })
+    }
+
     private var isGlobalRedFlag: Bool {
         currentFlagMessage?.messageType == "red_flag"
     }
@@ -104,7 +108,12 @@ struct PilotLiveView: View {
                 // HUD badges (flag top-left, penalty top-right)
                 VStack {
                     HStack(alignment: .top) {
-                        flagBadge
+                        VStack(alignment: .leading, spacing: 12) {
+                            flagBadge
+                            if hasCheckeredFlag {
+                                checkeredFlagBadge
+                            }
+                        }
                         Spacer()
                         penaltyBadge
                     }
@@ -328,6 +337,22 @@ struct PilotLiveView: View {
             .clipShape(Capsule())
             .overlay(Capsule().stroke(color.opacity(0.8), lineWidth: 2))
         }
+    }
+
+    // MARK: - Checkered Flag Badge
+
+    @ViewBuilder
+    private var checkeredFlagBadge: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "flag.checkered.2.crossed")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.black)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.white)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.black, lineWidth: 2))
     }
 
     // MARK: - Penalty Badge (top-right HUD)
