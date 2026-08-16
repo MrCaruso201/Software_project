@@ -523,14 +523,14 @@ struct TeamFormSection: View {
 
     private var leaderEmailField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label("Email Caposquadra", systemImage: "star.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.kartDim)
-
+            Label("Email, @Username o Nome Caposquadra", systemImage: "star.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.white)
+            
             let isEmpty = leaderEmail.trimmingCharacters(in: .whitespaces).isEmpty
             let borderColor: Color = isEmpty ? Color.white.opacity(0.15) : Color.kartAccent.opacity(0.6)
-
-            TextField("Indirizzo email del caposquadra", text: $leaderEmail)
+            
+            TextField("Email, @Username o Nome", text: $leaderEmail)
                 .keyboardType(.emailAddress)
                 .autocapitalization(.none)
                 .padding(.horizontal, 14)
@@ -546,8 +546,8 @@ struct TeamFormSection: View {
 
     private var memberEmailsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Email Compagni di Squadra", systemImage: "envelope.fill")
-                .font(.system(size: 13, weight: .semibold))
+            Label("Email, @Username o Nomi Compagni", systemImage: "envelope.fill")
+                .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.kartDim)
 
             ForEach(Array(memberEmails.enumerated()), id: \.offset) { index, _ in
@@ -605,7 +605,7 @@ private struct EmailFieldRow: View {
                 .foregroundColor(.kartAccent)
                 .frame(width: 20)
 
-            TextField("email@esempio.com", text: $email)
+            TextField("Email, @Username o Nome", text: $email)
                 .keyboardType(.emailAddress)
                 .autocapitalization(.none)
                 .autocorrectionDisabled()

@@ -89,11 +89,11 @@ struct AdminAddRegistrationSheetView: View {
     
     private var individualForm: some View {
         VStack(alignment: .leading, spacing: 15) {
-            Text("Email Pilota")
+            Text("Email, @Username o Nome Pilota")
                 .font(.headline)
                 .foregroundColor(.white)
             
-            TextField("Indirizzo email", text: $email)
+            TextField("Email, @Username o Nome", text: $email)
                 .keyboardType(.emailAddress)
                 .autocapitalization(.none)
                 .padding()

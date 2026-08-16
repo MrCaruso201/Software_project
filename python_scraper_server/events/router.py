@@ -2,8 +2,18 @@ import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from datetime import datetime, timezone, timedelta
+
+def resolve_user_by_identifier(db: Session, identifier: str) -> Optional[User]:
+    identifier = identifier.strip()
+    if not identifier:
+        return None
+    if identifier.startswith("@"):
+        username = identifier[1:]
+        return db.query(User).filter(func.lower(User.username) == username.lower()).first()
+    return db.query(User).filter(func.lower(User.email) == identifier.lower()).first()
 
 from db.database import get_db
 from db.models import Event, EventRegistration, User, EventResult, KartodromoResult
@@ -177,13 +187,14 @@ def register_for_event(
         db.add(leader_reg)
         
         # Registra gli altri membri (tramite email, user_id opzionale)
-        for email in team_data.member_emails:
-            email = email.strip().lower()
-            if not email:
+        for raw_email in team_data.member_emails:
+            raw_email = raw_email.strip()
+            if not raw_email:
                 continue
             # Cerca se l'utente è nel sistema
-            member_user = db.query(User).filter(User.email == email).first()
+            member_user = resolve_user_by_identifier(db, raw_email)
             member_user_id = member_user.id if member_user else None
+            final_email = member_user.email if member_user else raw_email.lower()
             
             # Controlla se quell'utente (se registrato) è già iscritto
             if member_user_id:
@@ -194,7 +205,7 @@ def register_for_event(
                 if already:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"L'utente con email {email} è già iscritto all'evento"
+                        detail=f"L'utente {final_email} è già iscritto all'evento"
                     )
             
             member_reg = EventRegistration(
@@ -203,7 +214,7 @@ def register_for_event(
                 team_name=team_data.team_name.strip(),
                 team_id=new_team_id,
                 is_team_leader=False,
-                member_email=email,
+                member_email=final_email,
                 accepts_extra_pilots=team_data.accepts_extra_pilots,
                 status=initial_status
             )
@@ -212,9 +223,8 @@ def register_for_event(
         db.commit()
         
         # Invia notifiche ai membri (dopo aver committato il team)
-        for email in team_data.member_emails:
-            email = email.strip().lower()
-            member_user = db.query(User).filter(User.email == email).first()
+        for raw_email in team_data.member_emails:
+            member_user = resolve_user_by_identifier(db, raw_email)
             if member_user:
                 notify_user(db, member_user.id, event_id, "registration_updated", "Aggiunto alla squadra", f"Il caposquadra ti ha aggiunto alla squadra {team_data.team_name.strip()} per questo evento.")
         db.refresh(leader_reg)
@@ -393,9 +403,11 @@ def update_team_registration(
     leader_reg.accepts_extra_pilots = team_data.accepts_extra_pilots
     
     if is_admin and team_data.leader_email:
-        new_leader_email = team_data.leader_email.strip().lower()
-        if new_leader_email != leader_reg.member_email:
-            new_leader_user = db.query(User).filter(User.email == new_leader_email).first()
+        raw_leader_email = team_data.leader_email.strip()
+        new_leader_user = resolve_user_by_identifier(db, raw_leader_email)
+        final_leader_email = new_leader_user.email if new_leader_user else raw_leader_email.lower()
+        
+        if final_leader_email != leader_reg.member_email:
             if new_leader_user:
                 already = db.query(EventRegistration).filter(
                     EventRegistration.user_id == new_leader_user.id,
@@ -405,19 +417,20 @@ def update_team_registration(
                 if already:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"L'utente {new_leader_email} è già in un altro team"
+                        detail=f"L'utente {final_leader_email} è già in un altro team"
                     )
             leader_reg.user_id = new_leader_user.id if new_leader_user else None
-            leader_reg.member_email = new_leader_email
+            leader_reg.member_email = final_leader_email
     
     # Inserisci nuovi membri
-    for email in team_data.member_emails:
-        email = email.strip().lower()
-        if not email:
+    for raw_email in team_data.member_emails:
+        raw_email = raw_email.strip()
+        if not raw_email:
             continue
             
-        member_user = db.query(User).filter(User.email == email).first()
+        member_user = resolve_user_by_identifier(db, raw_email)
         member_user_id = member_user.id if member_user else None
+        final_email = member_user.email if member_user else raw_email.lower()
         
         if member_user_id:
             already = db.query(EventRegistration).filter(
@@ -428,7 +441,7 @@ def update_team_registration(
             if already:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"L'utente con email {email} è già iscritto a questo evento in un'altra squadra"
+                    detail=f"L'utente {final_email} è già iscritto a questo evento in un'altra squadra"
                 )
                 
         member_reg = EventRegistration(
@@ -437,14 +450,19 @@ def update_team_registration(
             team_name=team_data.team_name.strip(),
             team_id=team_id,
             is_team_leader=False,
-            member_email=email,
+            member_email=final_email,
             status=leader_reg.status
         )
         db.add(member_reg)
 
     db.commit()
     
-    new_emails_set = {e.strip().lower() for e in team_data.member_emails if e.strip()}
+    new_emails_set = set()
+    for raw_email in team_data.member_emails:
+        raw_email = raw_email.strip()
+        if not raw_email: continue
+        u = resolve_user_by_identifier(db, raw_email)
+        new_emails_set.add(u.email if u else raw_email.lower())
     
     # Notifica membri aggiunti
     for email in new_emails_set:
@@ -859,8 +877,9 @@ def admin_register_individual(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
         
-    email = req.email.strip().lower()
-    user = db.query(User).filter(User.email == email).first()
+    raw_email = req.email.strip()
+    user = resolve_user_by_identifier(db, raw_email)
+    final_email = user.email if user else raw_email.lower()
     
     if user:
         existing = db.query(EventRegistration).filter(
@@ -874,7 +893,7 @@ def admin_register_individual(
         user_id=user.id if user else None,
         event_id=event_id,
         status="pending_payment",
-        member_email=email
+        member_email=final_email
     )
     db.add(reg)
     db.commit()
@@ -898,8 +917,9 @@ def admin_register_team(
         raise HTTPException(status_code=404, detail="Event not found")
         
     new_team_id = str(uuid.uuid4())
-    leader_email = req.leader_email.strip().lower()
-    leader_user = db.query(User).filter(User.email == leader_email).first()
+    raw_leader = req.leader_email.strip()
+    leader_user = resolve_user_by_identifier(db, raw_leader)
+    final_leader_email = leader_user.email if leader_user else raw_leader.lower()
     
     if leader_user:
         existing = db.query(EventRegistration).filter(
@@ -907,7 +927,7 @@ def admin_register_team(
             EventRegistration.event_id == event_id
         ).first()
         if existing:
-            raise HTTPException(status_code=400, detail=f"Il caposquadra {leader_email} è già iscritto")
+            raise HTTPException(status_code=400, detail=f"Il caposquadra {final_leader_email} è già iscritto")
             
     leader_reg = EventRegistration(
         user_id=leader_user.id if leader_user else None,
@@ -915,23 +935,25 @@ def admin_register_team(
         team_name=req.team_name.strip(),
         team_id=new_team_id,
         is_team_leader=True,
-        member_email=leader_email,
+        member_email=final_leader_email,
         status="pending_payment"
     )
     db.add(leader_reg)
     
-    for email in req.member_emails:
-        email = email.strip().lower()
-        if not email: continue
+    for raw_email in req.member_emails:
+        raw_email = raw_email.strip()
+        if not raw_email: continue
         
-        member_user = db.query(User).filter(User.email == email).first()
+        member_user = resolve_user_by_identifier(db, raw_email)
+        final_email = member_user.email if member_user else raw_email.lower()
+        
         if member_user:
             already = db.query(EventRegistration).filter(
                 EventRegistration.user_id == member_user.id,
                 EventRegistration.event_id == event_id
             ).first()
             if already:
-                raise HTTPException(status_code=400, detail=f"Il membro {email} è già iscritto all'evento")
+                raise HTTPException(status_code=400, detail=f"Il membro {final_email} è già iscritto all'evento")
                 
         member_reg = EventRegistration(
             user_id=member_user.id if member_user else None,
@@ -939,7 +961,7 @@ def admin_register_team(
             team_name=req.team_name.strip(),
             team_id=new_team_id,
             is_team_leader=False,
-            member_email=email,
+            member_email=final_email,
             status="pending_payment"
         )
         db.add(member_reg)
