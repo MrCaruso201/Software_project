@@ -72,7 +72,6 @@ struct UserHomeView: View {
         .onAppear {
             viewModel.fetchData(serverURL: server.httpURL, token: authState.currentToken)
         }
-
     }
     
     // MARK: - Profile Card
@@ -146,37 +145,37 @@ struct UserHomeView: View {
             .sorted(by: { ($0.dateObject ?? .distantFuture) < ($1.dateObject ?? .distantFuture) })
             .first, let eventDate = nextEvent.dateObject {
             
+            let isRegistered = viewModel.registrations.contains { $0.eventId == nextEvent.id && $0.status == "confirmed" }
+            
             if Calendar.current.isDateInToday(eventDate) {
-                // OGGIIII
                 Button {
-                    // Vai al live timing
                     NotificationCenter.default.post(
-                        name: NSNotification.Name("OpenLiveTiming"),
+                        name: NSNotification.Name("OpenEventDetail"),
                         object: nil,
-                        userInfo: nil
+                        userInfo: ["eventId": nextEvent.id]
                     )
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("EVENTO OGGI")
                                 .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                .foregroundColor(.red)
+                                .foregroundColor(isRegistered ? .green : .red)
                             Text(nextEvent.title)
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(.white)
-                            Text("Tocca per aprire il Live Timing")
+                            Text("Tocca per i dettagli")
                                 .font(.system(size: 12))
                                 .foregroundColor(.kartDim)
                         }
                         Spacer()
                         Image(systemName: "stopwatch.fill")
                             .font(.system(size: 30))
-                            .foregroundColor(.red)
+                            .foregroundColor(isRegistered ? .green : .red)
                     }
                     .padding(16)
                     .background(Color.kartPanel)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.red.opacity(0.5), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke((isRegistered ? Color.green : Color.red).opacity(0.5), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 
@@ -191,10 +190,10 @@ struct UserHomeView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Image(systemName: "timer")
-                                .foregroundColor(.kartAccent)
+                                .foregroundColor(isRegistered ? .green : .kartAccent)
                             Text("PROSSIMO EVENTO")
                                 .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .foregroundColor(.kartAccent)
+                                .foregroundColor(isRegistered ? .green : .kartAccent)
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 12, weight: .semibold))
@@ -228,7 +227,7 @@ struct UserHomeView: View {
                     .padding(16)
                     .background(Color.kartPanel)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke((isRegistered ? Color.green : Color.white).opacity(0.06), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }

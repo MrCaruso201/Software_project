@@ -11,6 +11,7 @@ struct EventDetailView: View {
     @State private var isUpdatingStatus = false
     @State private var statusError: String? = nil
     @State private var localEvent: RaceEvent
+    @State private var isRegistered = false
 
     init(server: DiscoveredServer, event: RaceEvent) {
         self.server = server
@@ -287,8 +288,8 @@ struct EventDetailView: View {
                     }
                 }
 
-                // Pulsante Entra in Live (tutti se gara avviata)
-                if isStarted {
+                // Pulsante Entra in Live (solo iscritti e admin/director se gara avviata)
+                if isStarted && (isDirectorOrAdmin || isRegistered) {
                     Button(action: { showLive = true }) {
                         HStack(spacing: 10) {
                             ZStack {
@@ -394,8 +395,22 @@ struct EventDetailView: View {
                     localEvent = updatedEvent
                 }
             }
+            
+            // Recupera anche le iscrizioni per verificare se l'utente è iscritto
+            guard let regURL = URL(string: "\(base)/events/registrations/me") else { return }
+            var regReq = URLRequest(url: regURL)
+            regReq.httpMethod = "GET"
+            regReq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            let (regData, regResp) = try await URLSession.shared.data(for: regReq)
+            if let http = regResp as? HTTPURLResponse, http.statusCode == 200 {
+                if let regs = try? JSONDecoder().decode([EventRegistrationResponse].self, from: regData) {
+                    self.isRegistered = regs.contains { $0.eventId == localEvent.id && $0.status == "confirmed" }
+                }
+            }
+            
         } catch {
-            print("Errore aggiornamento stato evento:", error)
+            print("Errore fetch event details:", error)
         }
     }
 
