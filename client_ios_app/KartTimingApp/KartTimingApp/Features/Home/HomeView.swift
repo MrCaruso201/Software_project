@@ -44,7 +44,7 @@ struct HomeView: View {
                 }
                 .tabItem { Label("Impostazioni", systemImage: "gearshape.fill") }
                 .tag(HomeTab.settings)
-
+                
                 // Le view di amministrazione sono state spostate dentro SettingsView per evitare il tab "Altro" (>5 tabs)
             }
             .tint(Color(red: 1.0, green: 0.82, blue: 0.0))

@@ -18,6 +18,12 @@ struct UserHomeView: View {
                     VStack(spacing: 20) {
                         profileCard
                         nextEventCard
+                        
+                        if authState.currentUser?.role.canManageUsers == true {
+                            AdminUserSearchCard(server: server)
+                                .environmentObject(authState)
+                        }
+                        
                         if viewModel.profile?.role == "user" {
                             myRegistrationsCard
                         }
