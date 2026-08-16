@@ -54,6 +54,9 @@ struct HomeView: View {
                     appEnv.pendingEventIdToOpen = eventId
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenLiveTiming"))) { _ in
+                self.selectedTab = .timing
+            }
         }
     }
 

@@ -42,17 +42,29 @@ struct EventiView: View {
         }
     }
     
+    var todayEvents: [RaceEvent] {
+        return filteredEvents
+            .filter { Calendar.current.isDateInToday($0.dateObject ?? .distantPast) }
+            .sorted { ($0.dateObject ?? .distantFuture) < ($1.dateObject ?? .distantFuture) }
+    }
+
     var upcomingEvents: [RaceEvent] {
         let now = Date()
         return filteredEvents
-            .filter { ($0.dateObject ?? .distantFuture) >= now }
+            .filter { 
+                let date = $0.dateObject ?? .distantFuture
+                return date > now && !Calendar.current.isDateInToday(date)
+            }
             .sorted { ($0.dateObject ?? .distantFuture) < ($1.dateObject ?? .distantFuture) }
     }
     
     var pastEvents: [RaceEvent] {
         let now = Date()
         return filteredEvents
-            .filter { ($0.dateObject ?? .distantFuture) < now }
+            .filter { 
+                let date = $0.dateObject ?? .distantFuture
+                return date < now && !Calendar.current.isDateInToday(date)
+            }
             .sorted { ($0.dateObject ?? .distantPast) > ($1.dateObject ?? .distantPast) }
     }
     
@@ -90,9 +102,19 @@ struct EventiView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
+                            if !todayEvents.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    sectionHeader("OGGI", icon: "calendar.circle")
+                                    ForEach(todayEvents) { event in
+                                        eventRow(event)
+                                    }
+                                }
+                            }
+
                             if !upcomingEvents.isEmpty {
                                 VStack(alignment: .leading, spacing: 12) {
                                     sectionHeader("IN PROGRAMMA", icon: "calendar.badge.clock")
+                                        .padding(.top, todayEvents.isEmpty ? 0 : 10)
                                     ForEach(upcomingEvents) { event in
                                         eventRow(event)
                                     }
@@ -102,7 +124,7 @@ struct EventiView: View {
                             if !pastEvents.isEmpty {
                                 VStack(alignment: .leading, spacing: 12) {
                                     sectionHeader("PASSATI", icon: "clock.arrow.circlepath")
-                                        .padding(.top, 10)
+                                        .padding(.top, (todayEvents.isEmpty && upcomingEvents.isEmpty) ? 0 : 10)
                                     ForEach(pastEvents) { event in
                                         eventRow(event)
                                     }
@@ -111,6 +133,13 @@ struct EventiView: View {
                         }
                         .padding(.top, 16)
                         .padding(.bottom, 30) // spazio per la tab bar
+                    }
+                    .refreshable {
+                        await withCheckedContinuation { continuation in
+                            viewModel.fetchEvents(serverURL: server.httpURL) {
+                                continuation.resume()
+                            }
+                        }
                     }
                 }
             }

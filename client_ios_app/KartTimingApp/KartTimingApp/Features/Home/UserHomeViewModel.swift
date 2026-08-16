@@ -25,7 +25,7 @@ class UserHomeViewModel: ObservableObject {
 
     // MARK: - Fetch
 
-    func fetchData(serverURL: URL?, token: String?) {
+    func fetchData(serverURL: URL?, token: String?, completion: (() -> Void)? = nil) {
         guard let serverURL = serverURL, let token = token else {
             DispatchQueue.main.async { self.isLoading = false }
             return
@@ -97,6 +97,7 @@ class UserHomeViewModel: ObservableObject {
         group.notify(queue: .main) {
             self.isLoading = false
             self.buildNotifications()
+            completion?()
         }
     }
 

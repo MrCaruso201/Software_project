@@ -17,11 +17,19 @@ struct UserHomeView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         profileCard
+                        nextEventCard
                         if viewModel.profile?.role == "user" {
                             myRegistrationsCard
                         }
                     }
                     .padding(16)
+                }
+                .refreshable {
+                    await withCheckedContinuation { continuation in
+                        viewModel.fetchData(serverURL: server.httpURL, token: authState.currentToken) {
+                            continuation.resume()
+                        }
+                    }
                 }
             }
         }
@@ -117,34 +125,125 @@ struct UserHomeView: View {
                 Spacer()
             }
             
-            Divider().background(Color.white.opacity(0.2))
-            
-            HStack(spacing: 0) {
-                statView(title: "Totali", value: "\(viewModel.totalRegistrations)")
-                Divider().background(Color.white.opacity(0.2)).frame(height: 30)
-                statView(title: "Confermate", value: "\(viewModel.confirmedRegistrations)")
-                Divider().background(Color.white.opacity(0.2)).frame(height: 30)
-                statView(title: "Da Pagare", value: "\(viewModel.pendingRegistrations)")
-            }
+
         }
         .padding(16)
         .background(Color.kartPanel)
         .cornerRadius(12)
     }
     
-    private func statView(title: String, value: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.kartAccent)
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.kartDim)
+    // MARK: - Next Event Card
+    @ViewBuilder
+    private var nextEventCard: some View {
+        if let nextEvent = viewModel.events
+            .filter({ ($0.dateObject ?? .distantFuture) >= Calendar.current.startOfDay(for: Date()) })
+            .sorted(by: { ($0.dateObject ?? .distantFuture) < ($1.dateObject ?? .distantFuture) })
+            .first, let eventDate = nextEvent.dateObject {
+            
+            if Calendar.current.isDateInToday(eventDate) {
+                // OGGIIII
+                Button {
+                    // Vai al live timing
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("OpenLiveTiming"),
+                        object: nil,
+                        userInfo: nil
+                    )
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("EVENTO OGGI")
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundColor(.red)
+                            Text(nextEvent.title)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                            Text("Tocca per aprire il Live Timing")
+                                .font(.system(size: 12))
+                                .foregroundColor(.kartDim)
+                        }
+                        Spacer()
+                        Image(systemName: "stopwatch.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(.red)
+                    }
+                    .padding(16)
+                    .background(Color.kartPanel)
+                    .cornerRadius(12)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.red.opacity(0.5), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                
+            } else {
+                Button {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("OpenEventDetail"),
+                        object: nil,
+                        userInfo: ["eventId": nextEvent.id]
+                    )
+                } label: {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "timer")
+                                .foregroundColor(.kartAccent)
+                            Text("PROSSIMO EVENTO")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(.kartAccent)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.kartDim)
+                        }
+                        
+                        Text(nextEvent.title)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            
+                        let city = nextEvent.location.components(separatedBy: " - ").first ?? nextEvent.location
+                        
+                        HStack(spacing: 6) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.system(size: 13))
+                                .foregroundColor(.kartDim)
+                            Text(city)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.kartDim)
+                                .lineLimit(1)
+                        }
+                        
+                        HStack {
+                            Text("- \(countdownString(to: eventDate))")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.top, 4)
+                    }
+                    .padding(16)
+                    .background(Color.kartPanel)
+                    .cornerRadius(12)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .frame(maxWidth: .infinity)
     }
-
+    
+    private func countdownString(to date: Date) -> String {
+        let components = Calendar.current.dateComponents([.month, .day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: date))
+        let months = components.month ?? 0
+        let days = components.day ?? 0
+        
+        var text = ""
+        if months > 0 {
+            text += "\(months) mes\(months == 1 ? "e" : "i") "
+        }
+        if months > 0 && days > 0 {
+            text += "e "
+        }
+        text += "\(days) giorn\(days == 1 ? "o" : "i")"
+        return text
+    }
     // MARK: - Le mie iscrizioni Card
 
     private var myRegistrationsCard: some View {

@@ -7,7 +7,7 @@ class EventiViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
     
-    func fetchEvents(serverURL: URL?) {
+    func fetchEvents(serverURL: URL?, completion: (() -> Void)? = nil) {
         guard let serverURL = serverURL else {
             self.errorMessage = "Nessun server disponibile"
             return
@@ -23,6 +23,7 @@ class EventiViewModel: ObservableObject {
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 self.isLoading = false
+                defer { completion?() }
                 
                 if let error = error {
                     self.errorMessage = "Errore di rete: \(error.localizedDescription)"
