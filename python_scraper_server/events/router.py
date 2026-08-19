@@ -6,15 +6,6 @@ from sqlalchemy import func
 
 from datetime import datetime, timezone, timedelta
 
-def resolve_user_by_identifier(db: Session, identifier: str) -> Optional[User]:
-    identifier = identifier.strip()
-    if not identifier:
-        return None
-    if identifier.startswith("@"):
-        username = identifier[1:]
-        return db.query(User).filter(func.lower(User.username) == username.lower()).first()
-    return db.query(User).filter(func.lower(User.email) == identifier.lower()).first()
-
 from db.database import get_db
 from db.models import Event, EventRegistration, User, EventResult, KartodromoResult
 from notifications.router import notify_user
@@ -27,6 +18,16 @@ from events.schemas import (
 )
 from auth.dependencies import get_current_user
 from auth.roles import Role, has_permission
+
+def resolve_user_by_identifier(db: Session, identifier: str) -> Optional[User]:
+    identifier = identifier.strip()
+    if not identifier:
+        return None
+    if identifier.startswith("@"):
+        username = identifier[1:]
+        return db.query(User).filter(func.lower(User.username) == username.lower()).first()
+    return db.query(User).filter(func.lower(User.email) == identifier.lower()).first()
+
 
 router = APIRouter(prefix="/events", tags=["events"])
 
