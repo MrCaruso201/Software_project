@@ -846,5 +846,173 @@ class EventiViewModel: ObservableObject {
             }
         }.resume()
     }
+    
+    // MARK: - Release Forms
+    
+    func fetchReleaseFormText(serverURL: URL?, eventId: Int, completion: @escaping (String?) -> Void) {
+        guard let serverURL = serverURL else {
+            completion(nil)
+            return
+        }
+        let url = serverURL.appendingPathComponent("events/\(eventId)/release-form")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                guard let data = data, error == nil else {
+                    completion(nil)
+                    return
+                }
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let text = json["release_form_text"] as? String {
+                    completion(text)
+                } else {
+                    completion(nil)
+                }
+            }
+        }.resume()
+    }
+    
+    func signReleaseForm(serverURL: URL?, eventId: Int, token: String?, firstName: String, lastName: String, codiceFiscale: String, birthDate: String, residence: String, signatureBase64: String, completion: @escaping (Bool, String?) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false, "Parametri mancanti")
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/release-form/sign")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "first_name": firstName,
+            "last_name": lastName,
+            "codice_fiscale": codiceFiscale,
+            "birth_date": birthDate,
+            "residence": residence,
+            "signature_base64": signatureBase64
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(false, error.localizedDescription)
+                    return
+                }
+                if let httpRes = response as? HTTPURLResponse {
+                    if httpRes.statusCode == 200 {
+                        completion(true, nil)
+                    } else {
+                        var msg = "Errore durante l'invio della firma"
+                        if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let detail = json["detail"] as? String {
+                            msg = detail
+                        }
+                        completion(false, msg)
+                    }
+                } else {
+                    completion(false, "Risposta non valida")
+                }
+            }
+        }.resume()
+    }
+    
+    func fetchMyReleaseForm(serverURL: URL?, eventId: Int, token: String?, completion: @escaping (SignedReleaseResponse?) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(nil)
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/release-form/mine")
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let data = data, let decoded = try? JSONDecoder().decode(SignedReleaseResponse.self, from: data) {
+                    completion(decoded)
+                } else {
+                    completion(nil)
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Admin Release Forms
+    
+    func adminUpdateReleaseForm(serverURL: URL?, eventId: Int, token: String?, text: String, completion: @escaping (Bool) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false)
+            return
+        }
+        let url = serverURL.appendingPathComponent("admin/events/\(eventId)/release-form")
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = ["release_form_text": text]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
+    
+    func adminFetchSignedReleases(serverURL: URL?, eventId: Int, token: String?, completion: @escaping ([SignedReleaseResponse]?) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(nil)
+            return
+        }
+        let url = serverURL.appendingPathComponent("admin/events/\(eventId)/releases")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                guard let data = data, error == nil else {
+                    completion(nil)
+                    return
+                }
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
+                    let decoded = try? JSONDecoder().decode([SignedReleaseResponse].self, from: data)
+                    completion(decoded)
+                } else {
+                    completion(nil)
+                }
+            }
+        }.resume()
+    }
+    
+    func adminDeleteSignedRelease(serverURL: URL?, eventId: Int, userId: Int, token: String?, completion: @escaping (Bool) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false)
+            return
+        }
+        let url = serverURL.appendingPathComponent("admin/events/\(eventId)/releases/\(userId)")
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }.resume()
+    }
 }
 

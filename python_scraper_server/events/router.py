@@ -1,20 +1,22 @@
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from datetime import datetime, timezone, timedelta
 
 from db.database import get_db
-from db.models import Event, EventRegistration, User, EventResult, KartodromoResult
+from db.models import Event, EventRegistration, User, EventResult, KartodromoResult, SignedRelease
 from notifications.router import notify_user
 from events.schemas import (
     EventCreate, EventUpdate, EventResponse,
     EventRegistrationResponse, EventRegistrationWithUserResponse,
     TeamRegistrationRequest, TeamRegistrationResponse, TeamMemberResponse,
     AdminIndividualRegistrationRequest, AdminTeamRegistrationRequest,
-    AdminAssignTeamRequest, AdminCreateTeamFromIndividualsRequest
+    AdminAssignTeamRequest, AdminCreateTeamFromIndividualsRequest,
+    SignReleaseRequest, SignedReleaseResponse
 )
 from auth.dependencies import get_current_user
 from auth.roles import Role, has_permission
@@ -28,6 +30,13 @@ def resolve_user_by_identifier(db: Session, identifier: str) -> Optional[User]:
         return db.query(User).filter(func.lower(User.username) == username.lower()).first()
     return db.query(User).filter(func.lower(User.email) == identifier.lower()).first()
 
+def _populate_has_signed_release(regs, db: Session):
+    for r in regs:
+        if hasattr(r, 'user_id') and hasattr(r, 'event_id') and r.user_id and r.event_id:
+            signed = db.query(SignedRelease).filter_by(event_id=r.event_id, user_id=r.user_id).first()
+            r.has_signed_release = (signed is not None)
+        else:
+            r.has_signed_release = False
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -55,6 +64,7 @@ def get_events(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 def get_my_registrations(user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     user_id = int(user_payload["sub"])
     regs = db.query(EventRegistration).filter(EventRegistration.user_id == user_id).all()
+    _populate_has_signed_release(regs, db)
     return regs
 
 @router.get("/registrations/user/{target_user_id}", response_model=List[EventRegistrationResponse])
@@ -67,6 +77,7 @@ def get_user_registrations_admin(
     if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     regs = db.query(EventRegistration).filter(EventRegistration.user_id == target_user_id).all()
+    _populate_has_signed_release(regs, db)
     return regs
 
 @router.get("/{event_id}", response_model=EventResponse)
@@ -571,6 +582,7 @@ def get_event_registrations(event_id: int, user_payload: dict = Depends(get_curr
             "username": user.username if user else None,
             "email": reg.member_email or (user.email if user else None),
             "profile_picture_url": user.profile_picture_url if user else None,
+            "has_signed_release": db.query(SignedRelease).filter_by(event_id=reg.event_id, user_id=reg.user_id).first() is not None if reg.user_id else False
         })
     return result
 
@@ -609,6 +621,7 @@ def get_event_team_registrations(event_id: int, user_payload: dict = Depends(get
                 email=m.member_email or (user.email if user else None),
                 is_team_leader=m.is_team_leader,
                 status=m.status,
+                has_signed_release=db.query(SignedRelease).filter_by(event_id=m.event_id, user_id=m.user_id).first() is not None if m.user_id else False,
                 profile_picture_url=user.profile_picture_url if user else None,
             ))
         
@@ -1054,6 +1067,7 @@ def get_unassigned_individuals(event_id: int, user_payload: dict = Depends(get_c
             "username": user.username if user else None,
             "email": reg.member_email or (user.email if user else None),
             "profile_picture_url": user.profile_picture_url if user else None,
+            "has_signed_release": db.query(SignedRelease).filter_by(event_id=reg.event_id, user_id=reg.user_id).first() is not None if reg.user_id else False
         })
     return result
 
@@ -1128,3 +1142,77 @@ def create_team_from_individuals(event_id: int, req: AdminCreateTeamFromIndividu
         db.refresh(r)
         
     return regs
+
+
+# ── Utente: firma liberatoria ────────────────────────────────────────────────
+
+@router.post("/{event_id}/release-form/sign", status_code=status.HTTP_200_OK)
+def sign_release_form(
+    event_id: int,
+    req: SignReleaseRequest,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user_payload.get("sub")
+    
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento non trovato")
+        
+    if not event.release_form_text:
+        raise HTTPException(status_code=400, detail="Questo evento non prevede una liberatoria")
+        
+    is_registered = db.query(EventRegistration).filter(
+        EventRegistration.event_id == event_id,
+        EventRegistration.user_id == user_id
+    ).first()
+    
+    if not is_registered:
+        raise HTTPException(status_code=403, detail="Devi essere iscritto all'evento per firmare la liberatoria")
+        
+    existing_release = db.query(SignedRelease).filter(
+        SignedRelease.event_id == event_id,
+        SignedRelease.user_id == user_id
+    ).first()
+    
+    if existing_release:
+        existing_release.signature_base64 = req.signature_base64
+        existing_release.first_name = req.first_name
+        existing_release.last_name = req.last_name
+        existing_release.codice_fiscale = req.codice_fiscale
+        existing_release.birth_date = req.birth_date
+        existing_release.residence = req.residence
+        existing_release.signed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    else:
+        new_release = SignedRelease(
+            event_id=event_id,
+            user_id=user_id,
+            signature_base64=req.signature_base64,
+            first_name=req.first_name,
+            last_name=req.last_name,
+            codice_fiscale=req.codice_fiscale,
+            birth_date=req.birth_date,
+            residence=req.residence
+        )
+        db.add(new_release)
+        
+    db.commit()
+    return {"status": "ok"}
+
+@router.get("/{event_id}/release-form/mine", response_model=SignedReleaseResponse)
+def get_my_release_form(
+    event_id: int,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = int(user_payload["sub"])
+    release = db.query(SignedRelease).filter(
+        SignedRelease.event_id == event_id,
+        SignedRelease.user_id == user_id
+    ).first()
+    
+    if not release:
+        raise HTTPException(status_code=404, detail="Liberatoria non trovata")
+        
+    return release
+

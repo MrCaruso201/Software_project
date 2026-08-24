@@ -27,6 +27,7 @@ struct AdminEventRegistrationsView: View {
     @State private var isLoading = true
     
     @State private var showAddRegistrationSheet = false
+    @State private var showReleaseFormSheet = false
     @State private var teamToEdit: TeamRegistrationResponse? = nil
     @State private var registrationToAssign: EventRegistrationWithUserResponse? = nil
 
@@ -78,6 +79,12 @@ struct AdminEventRegistrationsView: View {
                     }
                     .foregroundColor(.kartAccent)
 
+                    // Gestione Liberatoria
+                    Button(action: { showReleaseFormSheet = true }) {
+                        Image(systemName: "signature")
+                    }
+                    .foregroundColor(.kartAccent)
+
                     // Aggiungi iscrizione
                     Button(action: { showAddRegistrationSheet = true }) {
                         Image(systemName: "plus")
@@ -117,7 +124,8 @@ struct AdminEventRegistrationsView: View {
                 teamId: team.teamId,
                 isTeamLeader: true,
                 memberEmail: nil,
-                createdAt: ""
+                createdAt: "",
+                hasSignedRelease: nil
             )
             EventTeamEditSheetView(
                 server: server,
@@ -140,6 +148,14 @@ struct AdminEventRegistrationsView: View {
                     return team.acceptsExtraPilots && team.members.count < maxMembers
                 }
             )
+        }
+        .sheet(isPresented: $showReleaseFormSheet) {
+            AdminReleaseFormSheetView(
+                server: server,
+                viewModel: viewModel,
+                event: event
+            )
+            .environmentObject(authState)
         }
         // ── CSV file picker ──────────────────────────────────────────
         .fileImporter(
@@ -327,6 +343,15 @@ struct AdminEventRegistrationsView: View {
                                 .background(Color.kartAccent.opacity(0.2))
                                 .foregroundColor(.kartAccent)
                                 .cornerRadius(3)
+                        }
+                        
+                        if member.hasSignedRelease == true {
+                            Image(systemName: "signature")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.green)
+                                .padding(4)
+                                .background(Color.green.opacity(0.2))
+                                .clipShape(Circle())
                         }
                     }
                     .padding(.horizontal, 14)
@@ -520,9 +545,20 @@ struct AdminEventRegistrationsView: View {
                 
                 // ── Nome + status ─────────────────────────────────
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(reg.username ?? reg.email ?? "Utente")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
+                    HStack {
+                        Text(reg.username ?? reg.email ?? "Utente")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                        
+                        if reg.hasSignedRelease == true {
+                            Image(systemName: "signature")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.green)
+                                .padding(4)
+                                .background(Color.green.opacity(0.2))
+                                .clipShape(Circle())
+                        }
+                    }
                     if let email = reg.email, reg.username != nil {
                         Text(email)
                             .font(.system(size: 11))

@@ -371,6 +371,12 @@ struct UserHomeView: View {
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.kartAccent.opacity(0.8))
                     }
+                    
+                    if reg.hasSignedRelease == true {
+                        Label("Liberatoria Firmata", systemImage: "signature")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.green)
+                    }
                 }
 
                 Spacer()

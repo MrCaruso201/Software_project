@@ -11,9 +11,10 @@ L'app si sviluppa attorno a un'interfaccia basata su `TabView` per gli utenti au
 1. **Autenticazione (`LoginView` / `RegisterView`)**: Solo gli utenti loggati possono accedere alle funzionalità principali.
 2. **Home (`UserHomeView`)**: Dashboard riassuntiva con i prossimi eventi a cui l'utente è iscritto e un pannello notifiche interattivo.
 3. **Eventi (`EventiView`)**: Esplorazione delle gare disponibili, registrazione (singola o a squadre), gestione del proprio team, e (per gli admin/organizzatori) strumenti di approvazione e modifica iscrizioni.
-4. **Timing (`TimingView`)**: La schermata di dettaglio per la classifica live in tempo reale, ricevuta via WebSocket.
-5. **Analisi (`AnalisiView`)**: Area placeholder per statistiche post-gara e telemetrie.
-6. **Impostazioni (`SettingsView`)**: Gestione profilo, configurazione app e accesso all'area di amministrazione utenti (`AdminUsersView`).
+4. **Liberatorie (`ReleaseFormSignView`)**: Schermata integrata con `PencilKit` per permettere ai piloti di firmare digitalmente le liberatorie, con validazione dei dati anagrafici.
+5. **Timing (`TimingView`)**: La schermata di dettaglio per la classifica live in tempo reale, ricevuta via WebSocket.
+6. **Analisi (`AnalisiView`)**: Area placeholder per statistiche post-gara e telemetrie.
+7. **Impostazioni (`SettingsView`)**: Gestione profilo, configurazione app e accesso all'area di amministrazione utenti (`AdminUsersView`).
 
 ---
 
@@ -28,7 +29,8 @@ L'app si sviluppa attorno a un'interfaccia basata su `TabView` per gli utenti au
 L'interfaccia per la gestione eventi modella due modalità di iscrizione:
 - **Iscrizioni in Team**: il team leader crea il team e può aggiungere o rimuovere compagni indicandone le email.
 - **Iscrizioni Singole**: per campionati individuali.
-- **Strumenti Race Director**: gli utenti autorizzati (es. organizzatori) possono cambiare manualmente lo stato dell'evento (es. passare un utente in lista d'attesa a confermato), ricevere o respingere iscritti, e forzare forzatamente la creazione o assegnazione di team e iscritti individuali.
+- **Liberatorie Digitali**: flussi dedicati per compilare dati anagrafici e apporre la propria firma (gestita con `PencilKit` e inviata in Base64) direttamente dall'app.
+- **Strumenti Race Director**: gli utenti autorizzati (es. organizzatori) possono cambiare manualmente lo stato dell'evento (es. passare un utente in lista d'attesa a confermato), ricevere o respingere iscritti, forzare la creazione o assegnazione di team e iscritti individuali, e scaricare/rifiutare i PDF generati delle liberatorie firmate.
 
 ### 2.3 Sistema di Notifiche PUSH/in-app (`NotificationsPanelView`)
 Un banner notifiche raggiungibile dalla Home (`UserHomeView` tramite icona a campanella) gestisce il feedback di sistema asincrono:

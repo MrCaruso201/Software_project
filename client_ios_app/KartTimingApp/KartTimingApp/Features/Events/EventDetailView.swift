@@ -12,6 +12,8 @@ struct EventDetailView: View {
     @State private var statusError: String? = nil
     @State private var localEvent: RaceEvent
     @State private var isRegistered = false
+    @State private var hasSignedRelease = false
+    @State private var showReleaseFormSign = false
 
     init(server: DiscoveredServer, event: RaceEvent) {
         self.server = server
@@ -329,6 +331,25 @@ struct EventDetailView: View {
                 }
             }
         }
+        
+        // Pulsante Firma Liberatoria (mostrato anche se la gara non è avviata)
+        if isRegistered && localEvent.releaseFormText != nil && !localEvent.releaseFormText!.isEmpty {
+            NavigationLink(destination: ReleaseFormSignView(server: server, event: localEvent, onSignComplete: {
+                Task { await fetchEventDetails() }
+            }).environmentObject(authState)) {
+                HStack(spacing: 10) {
+                    Image(systemName: hasSignedRelease ? "signature" : "signature")
+                        .font(.system(size: 18))
+                    Text(hasSignedRelease ? "Visualizza/Modifica Liberatoria" : "Firma Liberatoria")
+                        .font(.system(size: 16, weight: .bold))
+                }
+                .foregroundColor(hasSignedRelease ? .white : .black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+            }
+            .background(hasSignedRelease ? Color.green : Color.kartAccent)
+            .cornerRadius(12)
+        }
     }
 
     @MainActor
@@ -368,7 +389,8 @@ struct EventDetailView: View {
                     raceDuration: localEvent.raceDuration,
                     maxStintDuration: localEvent.maxStintDuration,
                     createdAt: localEvent.createdAt,
-                    status: newStatus
+                    status: newStatus,
+                    releaseFormText: localEvent.releaseFormText
                 )
             }
         } catch {
@@ -405,7 +427,13 @@ struct EventDetailView: View {
             let (regData, regResp) = try await URLSession.shared.data(for: regReq)
             if let http = regResp as? HTTPURLResponse, http.statusCode == 200 {
                 if let regs = try? JSONDecoder().decode([EventRegistrationResponse].self, from: regData) {
-                    self.isRegistered = regs.contains { $0.eventId == localEvent.id && $0.status == "confirmed" }
+                    if let myReg = regs.first(where: { $0.eventId == localEvent.id }) {
+                        self.isRegistered = true
+                        self.hasSignedRelease = myReg.hasSignedRelease ?? false
+                    } else {
+                        self.isRegistered = false
+                        self.hasSignedRelease = false
+                    }
                 }
             }
             

@@ -136,6 +136,20 @@ struct TeamMemberView: View {
                             .cornerRadius(4)
                     }
                 }
+                
+                if member.hasSignedRelease == true {
+                    HStack(spacing: 4) {
+                        Image(systemName: "signature")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.green)
+                            .padding(4)
+                            .background(Color.green.opacity(0.2))
+                            .clipShape(Circle())
+                        Text("Liberatoria firmata")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.green)
+                    }
+                }
                 if let email = member.email {
                     Text(email)
                         .font(.system(size: 12))

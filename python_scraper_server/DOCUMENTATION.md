@@ -10,7 +10,8 @@ Funzionalità principali:
 - **Scraping headless**: Estrazione dati live da pagine di timing karting tramite browser automatizzato (`playwright`).
 - **Live Timing (WebSocket)**: Diffusione in tempo reale dei dati estratti basata su `FastAPI`.
 - **Gestione Eventi e Iscrizioni**: Creazione gare, iscrizioni individuali e a squadre (team leader, membri), gestione stati (confermato, lista d'attesa, in attesa di pagamento).
-- **Sistema di Notifiche**: Notifiche in-app persistenti per gli utenti (aggiunta a team, conferme iscrizioni, modifiche da parte dell'admin).
+- **Liberatorie Digitali**: Sistema per la ricezione di firme digitali, storicizzazione in Base64 e generazione dinamica on-the-fly di documenti PDF firmati completi di dati anagrafici e dell'evento (tramite `fpdf2`).
+- **Sistema di Notifiche**: Notifiche in-app persistenti per gli utenti (aggiunta a team, conferme iscrizioni, modifiche da parte dell'admin, rifiuto liberatorie).
 - **Autenticazione e Autorizzazione**: Autenticazione JWT e controllo degli accessi Role-Based (RBAC) con ruoli (`user`, `race_director`, `admin`).
 - **Anagrafica Kartodromi**: Gestione centralizzata delle piste in cui si svolgono gli eventi.
 
@@ -20,8 +21,9 @@ Il progetto utilizza **FastAPI** come framework principale ed è strutturato nei
 
 - `main.py`: Entrypoint dell'applicazione, setup di FastAPI, integrazione dei router, policy CORS e script di inizializzazione DB.
 - `auth/`: Logica di autenticazione, gestione JWT, hashing password (bcrypt), definizione dei ruoli e gestione utenti.
-- `db/`: Connessione al database SQLite tramite **SQLAlchemy** e modelli ORM (`User`, `Event`, `EventRegistration`, `Notification`, `Kartodromo`).
-- `events/`: Endpoint per la gestione di eventi, iscrizioni (singole e team) e logica di amministrazione lato Race Director.
+- `db/`: Connessione al database SQLite tramite **SQLAlchemy** e modelli ORM (`User`, `Event`, `EventRegistration`, `Notification`, `Kartodromo`, `SignedRelease`).
+- `events/`: Endpoint per la gestione di eventi, iscrizioni (singole e team) e firme liberatorie.
+- `services/`: Moduli per servizi specifici, come `pdf_generator.py` che genera i PDF delle liberatorie usando `fpdf2`.
 - `notifications/`: Endpoint per il recupero, la marcatura come lette e l'eliminazione delle notifiche, con un helper interno (`notify_user`) per generare eventi.
 - `kartodromi/`: Gestione anagrafica piste.
 - `scraper/`: Logica di scraping tramite **Playwright** e gestione sessioni globali (`ScraperSession`). Ottimizzato per istanziare un solo browser per URL richiesto, con auto-shutdown in caso di inattività.
@@ -31,8 +33,9 @@ Il progetto utilizza **FastAPI** come framework principale ed è strutturato nei
 
 Il database SQLite (`data/kart_timing.db`) modella le seguenti entità principali:
 - **User**: Dati anagrafici e credenziali (username, email, password, ruolo, immagine profilo).
-- **Event**: Gare organizzate (nome, data, kartodromo, tipologia team/singolo, limiti partecipanti, regole di coda).
+- **Event**: Gare organizzate (nome, data, kartodromo, tipologia team/singolo, limiti partecipanti, regole di coda, testo liberatoria).
 - **EventRegistration**: Iscrizioni agli eventi. Supporta logicamente iscrizioni singole o di squadra (tramite `team_id`), traccia lo stato e ruoli interni al team (`is_team_leader`, `accepts_extra_pilots`).
+- **SignedRelease**: Registra la compilazione della liberatoria da parte di un utente per un determinato evento, includendo dati anagrafici (codice fiscale, residenza) e la stringa in Base64 contenente l'immagine della firma apposta dal touch-screen.
 - **Notification**: Logica di notifica utente, indicatore di lettura (`is_read`), con riferimento opzionale all'evento.
 - **Kartodromo**: Info sulla pista geografica.
 

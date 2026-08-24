@@ -62,6 +62,7 @@ class Event(Base):
     race_duration = Column(Integer, nullable=True) # durata gara in minuti
     max_stint_duration = Column(Integer, nullable=True) # durata massima stint in minuti
     status = Column(String, default="scheduled", nullable=False) # "scheduled" | "started" | "finished"
+    release_form_text = Column(Text, nullable=True) # Testo della liberatoria personalizzato per l'evento
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
@@ -136,6 +137,29 @@ class KartodromoResult(Base):
     best_lap_ms   = Column(Integer, nullable=False)   # miglior giro in millisecondi
     date          = Column(Date, nullable=False)      # data della prova libera
     created_at    = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class SignedRelease(Base):
+    """
+    Liberatoria firmata da un utente registrato per un determinato evento.
+    """
+    __tablename__ = "signed_releases"
+
+    id               = Column(Integer, primary_key=True, index=True)
+    event_id         = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    user_id          = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    first_name       = Column(String, nullable=True)
+    last_name        = Column(String, nullable=True)
+    codice_fiscale   = Column(String, nullable=True)
+    birth_date       = Column(String, nullable=True)
+    residence        = Column(String, nullable=True)
+    signature_base64 = Column(Text, nullable=False) # Immagine della firma in base64
+    signed_at        = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+    __table_args__ = (
+        # Un utente può firmare una sola volta per evento
+        UniqueConstraint('event_id', 'user_id', name='uq_event_user_release'),
+    )
 
 
 class Notification(Base):

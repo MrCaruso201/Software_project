@@ -158,6 +158,12 @@ struct AdminUserDetailView: View {
                         .foregroundColor(.kartDim)
                         .lineLimit(1)
                 }
+                
+                if reg.hasSignedRelease == true {
+                    Label("Liberatoria Firmata", systemImage: "signature")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.green)
+                }
             }
             Spacer()
             

@@ -19,6 +19,7 @@ struct RaceEvent: Identifiable, Codable {
     let createdAt: String
     /// "scheduled" | "started" | "finished"
     let status: String
+    let releaseFormText: String?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -38,6 +39,7 @@ struct RaceEvent: Identifiable, Codable {
         case maxStintDuration = "max_stint_duration"
         case createdAt = "created_at"
         case status
+        case releaseFormText = "release_form_text"
     }
 
     /// True se la gara è a squadre (max_people_per_group > 1)
@@ -138,6 +140,7 @@ struct EventRegistrationResponse: Codable {
     let isTeamLeader: Bool
     let memberEmail: String?
     let createdAt: String
+    let hasSignedRelease: Bool?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -149,6 +152,7 @@ struct EventRegistrationResponse: Codable {
         case isTeamLeader = "is_team_leader"
         case memberEmail = "member_email"
         case createdAt = "created_at"
+        case hasSignedRelease = "has_signed_release"
     }
 }
 
@@ -167,6 +171,7 @@ struct EventRegistrationWithUserResponse: Codable, Identifiable {
     let username: String?
     let email: String?
     let profilePictureUrl: String?
+    let hasSignedRelease: Bool?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -181,6 +186,7 @@ struct EventRegistrationWithUserResponse: Codable, Identifiable {
         case username
         case email
         case profilePictureUrl = "profile_picture_url"
+        case hasSignedRelease = "has_signed_release"
     }
 }
 
@@ -194,6 +200,7 @@ struct TeamMemberResponse: Codable, Identifiable {
     let isTeamLeader: Bool
     let status: String
     let profilePictureUrl: String?
+    let hasSignedRelease: Bool?
     
     var id: Int { registrationId }
     
@@ -205,6 +212,7 @@ struct TeamMemberResponse: Codable, Identifiable {
         case isTeamLeader = "is_team_leader"
         case status
         case profilePictureUrl = "profile_picture_url"
+        case hasSignedRelease = "has_signed_release"
     }
 }
 
@@ -225,5 +233,33 @@ struct TeamRegistrationResponse: Codable, Identifiable {
         case members
         case overallStatus = "overall_status"
         case acceptsExtraPilots = "accepts_extra_pilots"
+    }
+}
+
+// MARK: - Signed Release Response (per admin)
+
+struct SignedReleaseResponse: Codable, Identifiable {
+    let id: Int?
+    let userId: Int?
+    let username: String?
+    let firstName: String?
+    let lastName: String?
+    let signedAt: String?
+    let codiceFiscale: String?
+    let birthDate: String?
+    let residence: String?
+    let signatureBase64: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case username
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case signedAt = "signed_at"
+        case codiceFiscale = "codice_fiscale"
+        case birthDate = "birth_date"
+        case residence = "residence"
+        case signatureBase64 = "signature_base64"
     }
 }

@@ -82,6 +82,8 @@ def _apply_migrations() -> None:
         "ALTER TABLE events ADD COLUMN max_stint_duration INTEGER",
         # Stato gara live
         "ALTER TABLE events ADD COLUMN status TEXT NOT NULL DEFAULT 'scheduled'",
+        # Liberatoria
+        "ALTER TABLE events ADD COLUMN release_form_text TEXT",
     ]
     with engine.connect() as conn:
         for stmt in migrations:

@@ -20,6 +20,7 @@ class EventBase(BaseModel):
     description: Optional[str] = None
     race_duration: Optional[int] = None
     max_stint_duration: Optional[int] = None
+    release_form_text: Optional[str] = None
 
 class EventCreate(EventBase):
     pass  # days_before_deadline ereditato da EventBase
@@ -63,6 +64,7 @@ class EventRegistrationResponse(BaseModel):
     is_team_leader: bool = False
     member_email: Optional[str] = None
     accepts_extra_pilots: bool = False
+    has_signed_release: bool = False
     created_at: datetime
 
     class Config:
@@ -80,6 +82,7 @@ class EventRegistrationWithUserResponse(BaseModel):
     is_team_leader: bool = False
     member_email: Optional[str] = None
     accepts_extra_pilots: bool = False
+    has_signed_release: bool = False
     created_at: datetime
     username: Optional[str] = None
     email: Optional[str] = None
@@ -97,6 +100,7 @@ class TeamMemberResponse(BaseModel):
     email: Optional[str]
     is_team_leader: bool
     status: str
+    has_signed_release: bool = False
     profile_picture_url: Optional[str] = None
 
 class TeamRegistrationResponse(BaseModel):
@@ -106,6 +110,28 @@ class TeamRegistrationResponse(BaseModel):
     members: List[TeamMemberResponse]
     accepts_extra_pilots: bool = False
     overall_status: str  # "confirmed" se almeno 1 confermato, altrimenti "pending_payment"
+
+class PaginatedResponse(BaseModel):
+    items: List[Any]
+    total: int
+    page: int
+    page_size: int
+
+class SignReleaseRequest(BaseModel):
+    first_name: str
+    last_name: str
+    codice_fiscale: str
+    birth_date: str
+    residence: str
+    signature_base64: str
+
+class SignedReleaseResponse(BaseModel):
+    first_name: Optional[str]
+    last_name: Optional[str]
+    codice_fiscale: Optional[str]
+    birth_date: Optional[str]
+    residence: Optional[str]
+    signature_base64: str
 
 # ── Request body per iscrizione a squadre ────────────────────────────────────
 
