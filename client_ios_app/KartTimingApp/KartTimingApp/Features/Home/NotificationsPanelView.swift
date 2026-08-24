@@ -8,7 +8,7 @@ struct NotificationsPanelView: View {
     @State private var activePaymentEvent: RaceEvent? = nil
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color.kartBG.ignoresSafeArea()
 

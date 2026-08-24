@@ -167,7 +167,16 @@ struct AnalisiView: View {
             sectionHeader("PROSSIMI EVENTI", systemImage: "calendar.badge.clock")
 
             ForEach(viewModel.upcomingConfirmedEvents.prefix(3), id: \.event.id) { item in
-                upcomingRow(event: item.event)
+                Button {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("OpenEventDetail"),
+                        object: nil,
+                        userInfo: ["eventId": item.event.id]
+                    )
+                } label: {
+                    upcomingRow(event: item.event)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
