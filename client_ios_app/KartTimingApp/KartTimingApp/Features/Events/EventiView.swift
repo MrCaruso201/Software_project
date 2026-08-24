@@ -18,6 +18,7 @@ struct EventiView: View {
         case manageRegistrations(RaceEvent)
         case payment(RaceEvent)
         case editTeamRegistration(RaceEvent, EventRegistrationResponse)
+        case viewTeam(RaceEvent, EventRegistrationResponse)  // non-leader: read-only + abbandona
         var id: String {
             switch self {
             case .new: return "new"
@@ -27,6 +28,7 @@ struct EventiView: View {
             case .manageRegistrations(let e): return "manage-\(e.id)"
             case .payment(let e): return "payment-\(e.id)"
             case .editTeamRegistration(let e, _): return "editTeam-\(e.id)"
+            case .viewTeam(let e, _): return "viewTeam-\(e.id)"
             }
         }
     }
@@ -235,6 +237,15 @@ struct EventiView: View {
             case .editTeamRegistration(let event, let reg):
                 // Solo le iscrizioni cambiano → aggiorna solo i bottoni di stato
                 EventTeamEditSheetView(server: server, viewModel: viewModel, event: event, registration: reg)
+                    .environmentObject(authState)
+                    .onDisappear {
+                        if let token = authState.currentToken {
+                            viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
+                        }
+                    }
+            case .viewTeam(let event, let reg):
+                // Non-leader: vista read-only del team + pulsante abbandona
+                TeamMemberView(server: server, viewModel: viewModel, event: event, registration: reg)
                     .environmentObject(authState)
                     .onDisappear {
                         if let token = authState.currentToken {
@@ -489,6 +500,19 @@ struct EventiView: View {
                                                 .foregroundColor(.white)
                                                 .cornerRadius(8)
                                         }
+                                    } else if event.isTeamEvent && !reg.isTeamLeader {
+                                        // Non-leader: pulsante per vedere il team e poter rifiutare
+                                        Button {
+                                            activeSheet = .viewTeam(event, reg)
+                                        } label: {
+                                            Text("Vedi Team")
+                                                .font(.system(size: 14, weight: .bold))
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 10)
+                                                .background(Color.blue.opacity(0.8))
+                                                .foregroundColor(.white)
+                                                .cornerRadius(8)
+                                        }
                                     } else {
                                         Button {
                                             if let token = authState.currentToken {
@@ -517,6 +541,18 @@ struct EventiView: View {
                                                 .foregroundColor(.white)
                                                 .cornerRadius(8)
                                         }
+                                    } else if let registration = reg, event.isTeamEvent, !registration.isTeamLeader {
+                                        Button {
+                                            activeSheet = .viewTeam(event, registration)
+                                        } label: {
+                                            Text("Confermata / Vedi Team")
+                                                .font(.system(size: 11, weight: .bold))
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 10)
+                                                .background(Color.green)
+                                                .foregroundColor(.white)
+                                                .cornerRadius(8)
+                                        }
                                     } else {
                                         Text("Confermata")
                                             .font(.system(size: 14, weight: .bold))
@@ -532,6 +568,18 @@ struct EventiView: View {
                                             activeSheet = .editTeamRegistration(event, registration)
                                         } label: {
                                             Text("In Attesa / Modifica")
+                                                .font(.system(size: 11, weight: .bold))
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 10)
+                                                .background(Color.purple)
+                                                .foregroundColor(.white)
+                                                .cornerRadius(8)
+                                        }
+                                    } else if let registration = reg, event.isTeamEvent, !registration.isTeamLeader {
+                                        Button {
+                                            activeSheet = .viewTeam(event, registration)
+                                        } label: {
+                                            Text("In Attesa / Vedi Team")
                                                 .font(.system(size: 11, weight: .bold))
                                                 .frame(maxWidth: .infinity)
                                                 .padding(.vertical, 10)

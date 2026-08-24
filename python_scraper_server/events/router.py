@@ -293,6 +293,60 @@ def unregister_from_event(event_id: int, user_payload: dict = Depends(get_curren
     return None
 
 
+@router.delete("/{event_id}/registrations/me/leave", status_code=status.HTTP_204_NO_CONTENT)
+def leave_team_as_member(
+    event_id: int,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Permette a un membro NON-leader di abbandonare il proprio team.
+    Rimuove solo la propria iscrizione; il resto del team rimane invariato.
+    Funziona anche se lo status è 'confirmed'.
+    """
+    user_id = int(user_payload["sub"])
+
+    reg = db.query(EventRegistration).filter(
+        EventRegistration.user_id == user_id,
+        EventRegistration.event_id == event_id,
+        EventRegistration.is_team_leader == False
+    ).first()
+
+    if not reg:
+        raise HTTPException(
+            status_code=404,
+            detail="Iscrizione non trovata o sei il capogruppo del team"
+        )
+
+    team_id = reg.team_id
+
+    # Salva info utente prima di eliminare
+    leaving_user = db.query(User).filter(User.id == user_id).first()
+    leaving_name = (leaving_user.username or leaving_user.email) if leaving_user else "Un membro"
+
+    db.delete(reg)
+    db.commit()
+
+    # Notifica il leader
+    if team_id:
+        leader = db.query(EventRegistration).filter(
+            EventRegistration.team_id == team_id,
+            EventRegistration.event_id == event_id,
+            EventRegistration.is_team_leader == True
+        ).first()
+        if leader and leader.user_id:
+            notify_user(
+                db, leader.user_id, event_id,
+                "registration_deleted",
+                "Membro ha abbandonato il team",
+                f"{leaving_name} ha rifiutato l'iscrizione e ha abbandonato la squadra."
+            )
+
+    return None
+
+
+
+
 @router.get("/{event_id}/registrations/team/{team_id}", response_model=TeamRegistrationResponse)
 def get_my_team_registration(
     event_id: int,

@@ -209,6 +209,7 @@ struct EventRegistrationSheetView: View {
 struct RegistrationHeaderSection: View {
     let event: RaceEvent
     let isTeamEvent: Bool
+    var showDeadlineBanner: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -233,8 +234,8 @@ struct RegistrationHeaderSection: View {
                 IndividualEventBadge()
             }
 
-            // Banner deadline visibile a tutti
-            if event.isDeadlinePassed {
+            // Banner deadline visibile solo in fase di nuova iscrizione
+            if showDeadlineBanner && event.isDeadlinePassed {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "clock.badge.exclamationmark.fill")
                         .font(.system(size: 18, weight: .bold))
@@ -265,7 +266,7 @@ struct RegistrationHeaderSection: View {
                         .stroke(Color.red.opacity(0.4), lineWidth: 1)
                 )
                 .padding(.top, 4)
-            } else if event.isDeadlineApproaching, let dl = event.deadlineObject {
+            } else if showDeadlineBanner && event.isDeadlineApproaching, let dl = event.deadlineObject {
                 let daysLeft = max(0, Int(dl.timeIntervalSince(Date()) / 86400))
                 let hoursLeft = max(0, Int(dl.timeIntervalSince(Date()) / 3600))
                 let timeLabel = daysLeft > 0 ? "\(daysLeft) giorn\(daysLeft == 1 ? "o" : "i")" : "\(hoursLeft) or\(hoursLeft == 1 ? "a" : "e")"

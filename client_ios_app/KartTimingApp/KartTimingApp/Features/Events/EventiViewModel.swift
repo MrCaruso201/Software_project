@@ -802,4 +802,49 @@ class EventiViewModel: ObservableObject {
             }
         }.resume()
     }
+
+    // MARK: - Leave Team (non-leader)
+
+    /// Permette a un membro NON-leader di abbandonare il team.
+    /// Rimuove solo la propria iscrizione; il resto del team rimane invariato.
+    /// Funziona anche con status "confirmed".
+    func leaveTeam(
+        serverURL: URL?,
+        eventId: Int,
+        token: String?,
+        completion: @escaping (Bool, String?) -> Void
+    ) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(false, "Parametri mancanti")
+            return
+        }
+
+        let url = serverURL.appendingPathComponent("events/\(eventId)/registrations/me/leave")
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(false, error.localizedDescription)
+                    return
+                }
+                if let httpRes = response as? HTTPURLResponse,
+                   httpRes.statusCode == 204 || httpRes.statusCode == 200 {
+                    self.userRegistrations.removeValue(forKey: eventId)
+                    completion(true, nil)
+                } else {
+                    var msg = "Errore durante l'abbandono del team"
+                    if let data = data,
+                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let detail = json["detail"] as? String {
+                        msg = detail
+                    }
+                    completion(false, msg)
+                }
+            }
+        }.resume()
+    }
 }
+

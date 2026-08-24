@@ -35,7 +35,7 @@ struct EventTeamEditSheetView: View {
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
-                            RegistrationHeaderSection(event: event, isTeamEvent: true)
+                            RegistrationHeaderSection(event: event, isTeamEvent: true, showDeadlineBanner: false)
                             Divider().background(Color.white.opacity(0.1))
                             
                             TeamFormSection(
@@ -143,11 +143,11 @@ struct EventTeamEditSheetView: View {
                     if let teamResponse = try? JSONDecoder().decode(TeamRegistrationResponse.self, from: data) {
                         self.teamName = teamResponse.teamName
                         if let leader = teamResponse.members.first(where: { $0.isTeamLeader }) {
-                            self.leaderEmail = leader.email ?? ""
+                            self.leaderEmail = leader.username.map { "@\($0)" } ?? leader.email ?? ""
                         }
                         // Escludiamo il leader
                         let otherMembers = teamResponse.members.filter { !$0.isTeamLeader }
-                        self.memberEmails = otherMembers.compactMap { $0.email }
+                        self.memberEmails = otherMembers.compactMap { $0.username.map { "@\($0)" } ?? $0.email }
                         self.acceptsExtraPilots = teamResponse.acceptsExtraPilots
                         
                         // Non forziamo alcun campo vuoto
