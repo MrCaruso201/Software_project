@@ -5,7 +5,8 @@ struct AdminEventRegistrationsView: View {
     let server: DiscoveredServer
     @ObservedObject var viewModel: EventiViewModel
     let event: RaceEvent
-    
+    var showAsSheet: Bool = false
+
     @EnvironmentObject var authState: AuthState
     @Environment(\.dismiss) var dismiss
     
@@ -38,120 +39,130 @@ struct AdminEventRegistrationsView: View {
     private var isTeamEvent: Bool { event.isTeamEvent }
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                Color.kartBG.ignoresSafeArea()
-                
-                if isLoading {
-                    ProgressView().tint(.kartAccent).scaleEffect(1.3)
-                } else if isTeamEvent {
-                    teamContent
-                } else {
-                    individualContent
+        if showAsSheet {
+            NavigationStack { navigationContent }
+        } else {
+            navigationContent
+        }
+    }
+
+    @ViewBuilder
+    private var navigationContent: some View {
+        ZStack {
+            Color.kartBG.ignoresSafeArea()
+
+            if isLoading {
+                ProgressView().tint(.kartAccent).scaleEffect(1.3)
+            } else if isTeamEvent {
+                teamContent
+            } else {
+                individualContent
+            }
+        }
+        .navigationTitle("Iscrizioni: \(event.title)")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 4) {
+                    // CSV import
+                    Button {
+                        showCSVImporter = true
+                    } label: {
+                        if isUploadingCSV {
+                            ProgressView().tint(.kartAccent).scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "chart.bar.doc.horizontal")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                    }
+                    .foregroundColor(.kartAccent)
+
+                    // Aggiungi iscrizione
+                    Button(action: { showAddRegistrationSheet = true }) {
+                        Image(systemName: "plus")
+                    }
+                    .foregroundColor(.kartAccent)
                 }
             }
-            .navigationTitle("Iscrizioni: \(event.title)")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 4) {
-                        // CSV import
-                        Button {
-                            showCSVImporter = true
-                        } label: {
-                            if isUploadingCSV {
-                                ProgressView().tint(.kartAccent).scaleEffect(0.8)
-                            } else {
-                                Image(systemName: "chart.bar.doc.horizontal")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                        }
-                        .foregroundColor(.kartAccent)
-
-                        // Aggiungi iscrizione
-                        Button(action: { showAddRegistrationSheet = true }) {
-                            Image(systemName: "plus")
-                        }
-                        .foregroundColor(.kartAccent)
-                    }
-                }
+            if showAsSheet {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
                         .foregroundColor(.kartAccent)
                 }
             }
-            .onAppear {
-                loadRegistrations()
-            }
-            .sheet(isPresented: $showAddRegistrationSheet, onDismiss: {
-                loadRegistrations()
-            }) {
-                AdminAddRegistrationSheetView(
-                    server: server,
-                    viewModel: viewModel,
-                    event: event,
-                    isTeamEvent: isTeamEvent
-                )
-            }
-            .sheet(item: $teamToEdit, onDismiss: {
-                loadRegistrations()
-            }) { team in
-                let mockReg = EventRegistrationResponse(
-                    id: 0,
-                    userId: nil,
-                    eventId: event.id,
-                    status: team.overallStatus,
-                    teamName: team.teamName,
-                    teamId: team.teamId,
-                    isTeamLeader: true,
-                    memberEmail: nil,
-                    createdAt: ""
-                )
-                EventTeamEditSheetView(
-                    server: server,
-                    viewModel: viewModel,
-                    event: event,
-                    registration: mockReg,
-                    isAdmin: true
-                )
-            }
-            .sheet(item: $registrationToAssign, onDismiss: {
-                loadRegistrations()
-            }) { reg in
-                AdminTeamSelectionSheet(
-                    server: server,
-                    viewModel: viewModel,
-                    event: event,
-                    registration: reg,
-                    availableTeams: teams.filter { team in
-                        let maxMembers = event.maxPeoplePerGroup ?? 1
-                        return team.acceptsExtraPilots && team.members.count < maxMembers
-                    }
-                )
-            }
-            // ── CSV file picker ──────────────────────────────────────────
-            .fileImporter(
-                isPresented: $showCSVImporter,
-                allowedContentTypes: [UTType.commaSeparatedText, UTType.plainText],
-                allowsMultipleSelection: false
-            ) { result in
-                switch result {
-                case .success(let urls):
-                    guard let url = urls.first else { return }
-                    uploadCSV(url: url)
-                case .failure:
-                    csvImportMessage = "Impossibile aprire il file. Riprova."
-                    csvImportAlert = true
+        }
+        .onAppear {
+            loadRegistrations()
+        }
+        .sheet(isPresented: $showAddRegistrationSheet, onDismiss: {
+            loadRegistrations()
+        }) {
+            AdminAddRegistrationSheetView(
+                server: server,
+                viewModel: viewModel,
+                event: event,
+                isTeamEvent: isTeamEvent
+            )
+        }
+        .sheet(item: $teamToEdit, onDismiss: {
+            loadRegistrations()
+        }) { team in
+            let mockReg = EventRegistrationResponse(
+                id: 0,
+                userId: nil,
+                eventId: event.id,
+                status: team.overallStatus,
+                teamName: team.teamName,
+                teamId: team.teamId,
+                isTeamLeader: true,
+                memberEmail: nil,
+                createdAt: ""
+            )
+            EventTeamEditSheetView(
+                server: server,
+                viewModel: viewModel,
+                event: event,
+                registration: mockReg,
+                isAdmin: true
+            )
+        }
+        .sheet(item: $registrationToAssign, onDismiss: {
+            loadRegistrations()
+        }) { reg in
+            AdminTeamSelectionSheet(
+                server: server,
+                viewModel: viewModel,
+                event: event,
+                registration: reg,
+                availableTeams: teams.filter { team in
+                    let maxMembers = event.maxPeoplePerGroup ?? 1
+                    return team.acceptsExtraPilots && team.members.count < maxMembers
                 }
-            }
-            .alert("Importazione classifica", isPresented: $csvImportAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(csvImportMessage)
+            )
+        }
+        // ── CSV file picker ──────────────────────────────────────────
+        .fileImporter(
+            isPresented: $showCSVImporter,
+            allowedContentTypes: [UTType.commaSeparatedText, UTType.plainText],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                uploadCSV(url: url)
+            case .failure:
+                csvImportMessage = "Impossibile aprire il file. Riprova."
+                csvImportAlert = true
             }
         }
+        .alert("Importazione classifica", isPresented: $csvImportAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(csvImportMessage)
+        }
     }
+
     
     // MARK: - Individual View
     

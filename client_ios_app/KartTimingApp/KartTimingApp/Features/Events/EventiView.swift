@@ -221,7 +221,7 @@ struct EventiView: View {
                     }
             case .manageRegistrations(let event):
                 // Solo le iscrizioni cambiano → aggiorna solo i bottoni di stato
-                AdminEventRegistrationsView(server: server, viewModel: viewModel, event: event)
+                AdminEventRegistrationsView(server: server, viewModel: viewModel, event: event, showAsSheet: true)
                     .environmentObject(authState)
                     .onDisappear {
                         if let token = authState.currentToken {
