@@ -11,20 +11,10 @@ struct EventDetailContentView: View {
     @EnvironmentObject var authState: AuthState
     @StateObject private var kartodromoVM = KartodromoViewModel()
 
-    @State private var showLive = false
     @State private var isRegistered = false
     @State private var hasSignedRelease = false
 
     // MARK: - Computed
-
-    private var isAdmin: Bool {
-        authState.currentUser?.role.canManageUsers == true
-    }
-
-    private var isDirectorOrAdmin: Bool {
-        let role = authState.currentUser?.role
-        return role == .raceDirector || role == .admin
-    }
 
     private var hasPartecipantiContent: Bool {
         event.maxParticipants != nil
@@ -48,9 +38,6 @@ struct EventDetailContentView: View {
 
                     // -- Hero
                     heroCard
-
-                    // -- Entra in Live / badge terminata
-                    liveEntrySection
 
                     // -- Immagine circuito
                     circuitImageSection
@@ -157,51 +144,6 @@ struct EventDetailContentView: View {
         .onAppear {
             kartodromoVM.fetchActive(serverURL: server.httpURL, token: authState.currentToken)
             Task { await fetchEventDetails() }
-        }
-        .fullScreenCover(isPresented: $showLive) {
-            LiveRootView(server: server, event: event)
-                .environmentObject(authState)
-        }
-    }
-
-    // MARK: - Live Entry Section
-
-    @ViewBuilder
-    private var liveEntrySection: some View {
-        let isStarted = event.status == "started"
-        let isFinished = event.status == "finished"
-
-        if isStarted && (isDirectorOrAdmin || isRegistered) {
-            Button(action: { showLive = true }) {
-                HStack(spacing: 10) {
-                    ZStack {
-                        Circle().fill(Color.red).frame(width: 8, height: 8)
-                    }
-                    Text("Entra in Live")
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    LinearGradient(
-                        colors: [Color.red.opacity(0.8), Color.orange.opacity(0.6)],
-                        startPoint: .leading, endPoint: .trailing
-                    )
-                )
-                .cornerRadius(12)
-            }
-        } else if isFinished {
-            HStack(spacing: 6) {
-                Image(systemName: "checkered.flag")
-                Text("Gara terminata")
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            .foregroundColor(.kartDim)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(Color.kartPanel)
-            .cornerRadius(10)
         }
     }
 

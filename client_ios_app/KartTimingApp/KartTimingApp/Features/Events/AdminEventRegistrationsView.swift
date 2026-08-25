@@ -59,6 +59,27 @@ struct AdminEventRegistrationsView: View {
             } else {
                 individualContent
             }
+
+            // ── FAB (+) quando usato come tab (la toolbar non è affidabile in TabView) ──
+            if !showAsSheet && !isLoading {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: { showAddRegistrationSheet = true }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.black)
+                                .frame(width: 54, height: 54)
+                                .background(Color.kartAccent)
+                                .clipShape(Circle())
+                                .shadow(color: Color.kartAccent.opacity(0.4), radius: 10, x: 0, y: 4)
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 24)
+                    }
+                }
+            }
         }
         .navigationTitle("Iscrizioni: \(event.title)")
         .navigationBarTitleDisplayMode(.inline)

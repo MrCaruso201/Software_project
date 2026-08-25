@@ -15,6 +15,7 @@ struct AdminEventGestioneView: View {
     @State private var statusError: String? = nil
     @State private var showStatusConfirm = false
     @State private var pendingStatus: String? = nil
+    @State private var showLive = false
 
     private var isStarted: Bool { localEvent.status == "started" }
     private var isFinished: Bool { localEvent.status == "finished" }
@@ -104,6 +105,32 @@ struct AdminEventGestioneView: View {
                                     )
                                 }
                                 .disabled(isUpdatingStatus)
+
+                                // Entra in Live
+                                if isStarted {
+                                    Button(action: { showLive = true }) {
+                                        HStack(spacing: 10) {
+                                            ZStack {
+                                                Circle().fill(Color.red).frame(width: 8, height: 8)
+                                            }
+                                            Text("Entra in Live")
+                                                .font(.system(size: 15, weight: .bold))
+                                            Spacer()
+                                        }
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 18)
+                                        .padding(.vertical, 16)
+                                        .frame(maxWidth: .infinity)
+                                        .background(
+                                            LinearGradient(
+                                                colors: [Color.red.opacity(0.8), Color.orange.opacity(0.6)],
+                                                startPoint: .leading, endPoint: .trailing
+                                            )
+                                        )
+                                        .cornerRadius(14)
+                                        .shadow(color: Color.red.opacity(0.3), radius: 8, x: 0, y: 4)
+                                    }
+                                }
                             }
 
                             if isFinished && isAdmin {
@@ -185,6 +212,10 @@ struct AdminEventGestioneView: View {
                 Task { await toggleEventStatus(to: s) }
             }
             Button("Annulla", role: .cancel) { }
+        }
+        .fullScreenCover(isPresented: $showLive) {
+            LiveRootView(server: server, event: localEvent)
+                .environmentObject(authState)
         }
     }
 
