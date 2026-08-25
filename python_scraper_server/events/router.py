@@ -679,17 +679,24 @@ def confirm_registration(event_id: int, registration_id: int, user_payload: dict
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
     
-    # Per i team: conferma tutto il team quando si conferma il leader
+    # Per i team: conferma tutto il team
     if reg.team_id and reg.is_team_leader:
         db.query(EventRegistration).filter(
             EventRegistration.team_id == reg.team_id,
             EventRegistration.event_id == event_id
         ).update({"status": "confirmed"})
+        
+        team_regs = db.query(EventRegistration).filter(
+            EventRegistration.team_id == reg.team_id,
+            EventRegistration.event_id == event_id
+        ).all()
+        for r in team_regs:
+            if r.user_id:
+                notify_user(db, r.user_id, event_id, "registration_confirmed", "Iscrizione confermata", "L'organizzatore ha confermato la tua iscrizione.")
     else:
         reg.status = "confirmed"
-    
-    if reg.user_id:
-        notify_user(db, reg.user_id, event_id, "registration_confirmed", "Iscrizione confermata", "L'organizzatore ha confermato la tua iscrizione.")
+        if reg.user_id:
+            notify_user(db, reg.user_id, event_id, "registration_confirmed", "Iscrizione confermata", "L'organizzatore ha confermato la tua iscrizione.")
     
     db.commit()
     db.refresh(reg)
@@ -710,16 +717,24 @@ def unconfirm_registration(event_id: int, registration_id: int, user_payload: di
     if reg.status != "confirmed":
         raise HTTPException(status_code=400, detail="Only confirmed registrations can be unconfirmed")
     
+    # Per i team: rimuove conferma a tutto il team
     if reg.team_id and reg.is_team_leader:
         db.query(EventRegistration).filter(
             EventRegistration.team_id == reg.team_id,
             EventRegistration.event_id == event_id
         ).update({"status": "pending_payment"})
+        
+        team_regs = db.query(EventRegistration).filter(
+            EventRegistration.team_id == reg.team_id,
+            EventRegistration.event_id == event_id
+        ).all()
+        for r in team_regs:
+            if r.user_id:
+                notify_user(db, r.user_id, event_id, "registration_unconfirmed", "Iscrizione in attesa", "L'organizzatore ha riportato la tua iscrizione in attesa di conferma/pagamento.")
     else:
         reg.status = "pending_payment"
-    
-    if reg.user_id:
-        notify_user(db, reg.user_id, event_id, "registration_unconfirmed", "Iscrizione in attesa", "L'organizzatore ha riportato la tua iscrizione in attesa di conferma/pagamento.")
+        if reg.user_id:
+            notify_user(db, reg.user_id, event_id, "registration_unconfirmed", "Iscrizione in attesa", "L'organizzatore ha riportato la tua iscrizione in attesa di conferma/pagamento.")
     
     db.commit()
     db.refresh(reg)
