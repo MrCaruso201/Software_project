@@ -65,6 +65,11 @@ struct AdminUserDetailView: View {
     
     private var registrationsCard: some View {
         VStack(alignment: .leading, spacing: 0) {
+            let upcomingRegs = viewModel.userRegistrations.filter { reg in
+                let eventDate = viewModel.allEvents.first(where: { $0.id == reg.eventId })?.dateObject ?? .distantFuture
+                return eventDate >= Calendar.current.startOfDay(for: Date())
+            }
+
             // Header
             HStack(spacing: 8) {
                 Image(systemName: "list.bullet.clipboard.fill")
@@ -74,7 +79,7 @@ struct AdminUserDetailView: View {
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(.kartAccent)
                 Spacer()
-                Text("\(viewModel.userRegistrations.count)")
+                Text("\(upcomingRegs.count)")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(.kartDim)
             }
@@ -82,22 +87,22 @@ struct AdminUserDetailView: View {
             .padding(.vertical, 12)
             .background(Color.kartAccent.opacity(0.08))
 
-            if viewModel.userRegistrations.isEmpty {
+            if upcomingRegs.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "flag.slash")
                         .font(.system(size: 36))
                         .foregroundColor(.kartDim.opacity(0.4))
-                    Text("Nessuna iscrizione")
+                    Text("Nessuna iscrizione futura")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.kartDim)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 28)
             } else {
-                let sorted = viewModel.userRegistrations.sorted { r0, r1 in
+                let sorted = upcomingRegs.sorted { r0, r1 in
                     let d0 = viewModel.allEvents.first(where: { $0.id == r0.eventId })?.dateObject ?? .distantFuture
                     let d1 = viewModel.allEvents.first(where: { $0.id == r1.eventId })?.dateObject ?? .distantFuture
-                    return d0 > d1 // Ordine decrescente (più recenti prima)
+                    return d0 < d1 // Ordine crescente (prossimi eventi prima)
                 }
 
                 VStack(spacing: 0) {

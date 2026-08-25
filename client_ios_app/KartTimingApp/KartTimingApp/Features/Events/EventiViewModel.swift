@@ -941,6 +941,52 @@ class EventiViewModel: ObservableObject {
         }.resume()
     }
     
+    func previewUserReleaseForm(serverURL: URL?, eventId: Int, token: String?, firstName: String, lastName: String, codiceFiscale: String, birthDate: String, residence: String, signatureBase64: String, completion: @escaping (Data?, String?) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(nil, "Parametri mancanti")
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("events/\(eventId)/release-form/preview")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "first_name": firstName,
+            "last_name": lastName,
+            "codice_fiscale": codiceFiscale,
+            "birth_date": birthDate,
+            "residence": residence,
+            "signature_base64": signatureBase64
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(nil, error.localizedDescription)
+                    return
+                }
+                
+                if let httpRes = response as? HTTPURLResponse {
+                    if httpRes.statusCode == 200, let data = data {
+                        completion(data, nil)
+                    } else {
+                        var msg = "Errore durante l'anteprima"
+                        if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let detail = json["detail"] as? String {
+                            msg = detail
+                        }
+                        completion(nil, msg)
+                    }
+                } else {
+                    completion(nil, "Risposta non valida")
+                }
+            }
+        }.resume()
+    }
+    
     // MARK: - Admin Release Forms
     
     func adminUpdateReleaseForm(serverURL: URL?, eventId: Int, token: String?, text: String, completion: @escaping (Bool) -> Void) {
@@ -963,6 +1009,47 @@ class EventiViewModel: ObservableObject {
                     completion(true)
                 } else {
                     completion(false)
+                }
+            }
+        }.resume()
+    }
+    
+    func previewAdminReleaseForm(serverURL: URL?, eventId: Int, token: String?, text: String, completion: @escaping (Data?, String?) -> Void) {
+        guard let serverURL = serverURL, let token = token else {
+            completion(nil, "Parametri mancanti")
+            return
+        }
+        
+        let url = serverURL.appendingPathComponent("admin/events/\(eventId)/release-form/preview")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "release_form_text": text
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(nil, error.localizedDescription)
+                    return
+                }
+                
+                if let httpRes = response as? HTTPURLResponse {
+                    if httpRes.statusCode == 200, let data = data {
+                        completion(data, nil)
+                    } else {
+                        var msg = "Errore durante l'anteprima"
+                        if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let detail = json["detail"] as? String {
+                            msg = detail
+                        }
+                        completion(nil, msg)
+                    }
+                } else {
+                    completion(nil, "Risposta non valida")
                 }
             }
         }.resume()
