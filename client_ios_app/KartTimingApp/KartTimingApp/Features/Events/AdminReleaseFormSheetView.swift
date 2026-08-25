@@ -12,6 +12,9 @@ struct AdminReleaseFormSheetView: View {
     @State private var isSaving = false
     @State private var saveMessage: String? = nil
     
+    @State private var previewPDFData: Data? = nil
+    @State private var showPreviewSheet: Bool = false
+    @State private var isPreviewing = false
     @State private var signedReleases: [SignedReleaseResponse] = []
     @State private var isLoadingReleases = true
     
@@ -44,20 +47,37 @@ struct AdminReleaseFormSheetView: View {
                                         .foregroundColor(msg.contains("Errore") ? .kartRed : .green)
                                 }
                                 Spacer()
-                                Button(action: saveReleaseForm) {
-                                    if isSaving {
-                                        ProgressView().tint(.black)
-                                    } else {
-                                        Text("Salva Testo")
-                                            .font(.system(size: 13, weight: .bold))
+                                HStack(spacing: 12) {
+                                    Button(action: previewAdminRelease) {
+                                        if isPreviewing {
+                                            ProgressView().tint(.white)
+                                        } else {
+                                            Text("Anteprima")
+                                                .font(.system(size: 13, weight: .bold))
+                                        }
                                     }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.white.opacity(0.1))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(8)
+                                    .disabled(isPreviewing)
+                                    
+                                    Button(action: saveReleaseForm) {
+                                        if isSaving {
+                                            ProgressView().tint(.black)
+                                        } else {
+                                            Text("Salva Testo")
+                                                .font(.system(size: 13, weight: .bold))
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.kartAccent)
+                                    .foregroundColor(.black)
+                                    .cornerRadius(8)
+                                    .disabled(isSaving)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.kartAccent)
-                                .foregroundColor(.black)
-                                .cornerRadius(8)
-                                .disabled(isSaving)
                             }
                         }
                         .padding()
@@ -147,6 +167,22 @@ struct AdminReleaseFormSheetView: View {
             releaseText = event.releaseFormText ?? ""
             loadSignedReleases()
         }
+        .sheet(isPresented: $showPreviewSheet) {
+            if let data = previewPDFData {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button("Chiudi") {
+                            showPreviewSheet = false
+                        }
+                        .padding()
+                        .foregroundColor(.kartAccent)
+                        .font(.system(size: 16, weight: .bold))
+                    }
+                    PDFViewer(pdfData: data)
+                }
+            }
+        }
     }
     
     private func saveReleaseForm() {
@@ -161,6 +197,23 @@ struct AdminReleaseFormSheetView: View {
                 loadSignedReleases() // Aggiorna la vista delle firme
             } else {
                 saveMessage = "Errore durante il salvataggio."
+            }
+        }
+    }
+    
+    private func previewAdminRelease() {
+        guard let serverURL = server.httpURL, let token = authState.currentToken else { return }
+        
+        isPreviewing = true
+        saveMessage = nil
+        
+        viewModel.previewAdminReleaseForm(serverURL: serverURL, eventId: event.id, token: token, text: releaseText) { data, errorMsg in
+            isPreviewing = false
+            if let data = data {
+                self.previewPDFData = data
+                self.showPreviewSheet = true
+            } else {
+                self.saveMessage = errorMsg ?? "Errore durante l'anteprima"
             }
         }
     }

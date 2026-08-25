@@ -177,6 +177,37 @@ def update_release_form(
             
     return {"message": "Testo liberatoria aggiornato"}
 
+class ReleasePreviewRequest(BaseModel):
+    release_form_text: str
+
+@router.post("/events/{event_id}/release-form/preview")
+def preview_admin_release_form(
+    event_id: int,
+    req: ReleasePreviewRequest,
+    db: Session = Depends(get_db),
+    _caller = Depends(require_role(Role.ADMIN)),
+):
+    """Genera e restituisce il PDF della liberatoria con campi vuoti per preview."""
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(404, "Evento non trovato")
+        
+    from services.pdf_generator import generate_release_pdf
+    pdf_bytes = generate_release_pdf(
+        event_title=event.title,
+        event_date=event.event_date.strftime("%d/%m/%Y") if event.event_date else "",
+        event_location=event.location or "",
+        release_text=req.release_form_text,
+        first_name="[Nome]",
+        last_name="[Cognome]",
+        codice_fiscale="[Codice Fiscale]",
+        birth_date="[Data Nascita]",
+        residence="[Residenza]",
+        signature_base64=""
+    )
+    
+    return Response(content=bytes(pdf_bytes), media_type="application/pdf")
+
 
 @router.get("/events/{event_id}/releases")
 def list_signed_releases(

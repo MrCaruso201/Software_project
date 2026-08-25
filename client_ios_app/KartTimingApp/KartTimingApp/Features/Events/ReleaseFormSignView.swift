@@ -21,6 +21,9 @@ struct ReleaseFormSignView: View {
     @State private var errorMessage: String? = nil
     @State private var previousSignatureImage: UIImage? = nil
     
+    @State private var previewPDFData: Data? = nil
+    @State private var showPreviewSheet: Bool = false
+    
     var body: some View {
             VStack(spacing: 16) {
                 Text("Liberatoria Evento")
@@ -134,25 +137,58 @@ struct ReleaseFormSignView: View {
             
             Spacer()
                 
-                Button(action: submitSignature) {
-                    if isSigning {
-                        ProgressView().tint(.black)
-                    } else {
-                        Text("Conferma e Invia")
-                            .font(.system(size: 16, weight: .bold))
-                            .frame(maxWidth: .infinity)
+                HStack(spacing: 12) {
+                    Button(action: previewRelease) {
+                        if isSigning {
+                            ProgressView().tint(.kartAccent)
+                        } else {
+                            Text("Visualizza Liberatoria")
+                                .font(.system(size: 14, weight: .bold))
+                                .frame(maxWidth: .infinity)
+                        }
                     }
+                    .padding(.vertical, 14)
+                    .background(Color.white.opacity(0.1))
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    .disabled(isSigning)
+                    
+                    Button(action: submitSignature) {
+                        if isSigning {
+                            ProgressView().tint(.black)
+                        } else {
+                            Text("Conferma e Invia")
+                                .font(.system(size: 14, weight: .bold))
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.vertical, 14)
+                    .background(Color.kartAccent)
+                    .foregroundColor(.black)
+                    .cornerRadius(12)
+                    .disabled(isSigning)
                 }
-                .padding(.vertical, 14)
-                .background(Color.kartAccent)
-                .foregroundColor(.black)
-                .cornerRadius(12)
                 .padding(.horizontal)
                 .padding(.bottom, 16)
-                .disabled(isSigning)
             }
             .background(Color.kartBG.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showPreviewSheet) {
+                if let data = previewPDFData {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button("Chiudi") {
+                                showPreviewSheet = false
+                            }
+                            .padding()
+                            .foregroundColor(.kartAccent)
+                            .font(.system(size: 16, weight: .bold))
+                        }
+                        PDFViewer(pdfData: data)
+                    }
+                }
+            }
         .onAppear {
             loadReleaseText()
             loadMyReleaseForm()
@@ -189,6 +225,46 @@ struct ReleaseFormSignView: View {
                 } else {
                     self.releaseText = "Nessun testo disponibile per questa liberatoria."
                 }
+            }
+        }
+    }
+    
+    private func previewRelease() {
+        if firstName.trimmingCharacters(in: .whitespaces).isEmpty || 
+           lastName.trimmingCharacters(in: .whitespaces).isEmpty ||
+           codiceFiscale.trimmingCharacters(in: .whitespaces).isEmpty ||
+           birthDate.trimmingCharacters(in: .whitespaces).isEmpty ||
+           residence.trimmingCharacters(in: .whitespaces).isEmpty {
+            self.errorMessage = "Compila tutti i campi richiesti per vedere l'anteprima."
+            return
+        }
+        
+        let base64String: String
+        
+        if let oldImage = previousSignatureImage, let data = oldImage.pngData() {
+            base64String = data.base64EncodedString()
+        } else {
+            let drawing = canvasView.drawing
+            let uiRect = canvasView.bounds.isEmpty ? CGRect(x: 0, y: 0, width: 300, height: 150) : canvasView.bounds
+            
+            let image = drawing.image(from: uiRect, scale: 1.0)
+            guard let imageData = image.pngData() else {
+                base64String = ""
+                return
+            }
+            base64String = imageData.base64EncodedString()
+        }
+        
+        self.isSigning = true
+        self.errorMessage = nil
+        
+        viewModel.previewUserReleaseForm(serverURL: server.httpURL, eventId: event.id, token: authState.currentToken, firstName: firstName, lastName: lastName, codiceFiscale: codiceFiscale, birthDate: birthDate, residence: residence, signatureBase64: base64String) { data, msg in
+            self.isSigning = false
+            if let data = data {
+                self.previewPDFData = data
+                self.showPreviewSheet = true
+            } else {
+                self.errorMessage = msg ?? "Errore sconosciuto"
             }
         }
     }

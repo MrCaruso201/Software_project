@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -1169,6 +1169,37 @@ def create_team_from_individuals(event_id: int, req: AdminCreateTeamFromIndividu
 
 
 # ── Utente: firma liberatoria ────────────────────────────────────────────────
+
+@router.post("/{event_id}/release-form/preview", status_code=status.HTTP_200_OK)
+def preview_release_form(
+    event_id: int,
+    req: SignReleaseRequest,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento non trovato")
+        
+    if not event.release_form_text:
+        raise HTTPException(status_code=400, detail="Questo evento non prevede una liberatoria")
+
+    from services.pdf_generator import generate_release_pdf
+    pdf_bytes = generate_release_pdf(
+        event_title=event.title,
+        event_date=event.event_date.strftime("%d/%m/%Y") if event.event_date else "",
+        event_location=event.location or "",
+        release_text=event.release_form_text,
+        first_name=req.first_name,
+        last_name=req.last_name,
+        codice_fiscale=req.codice_fiscale or "",
+        birth_date=req.birth_date or "",
+        residence=req.residence or "",
+        signature_base64=req.signature_base64
+    )
+    
+    return Response(content=bytes(pdf_bytes), media_type="application/pdf")
+
 
 @router.post("/{event_id}/release-form/sign", status_code=status.HTTP_200_OK)
 def sign_release_form(
