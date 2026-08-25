@@ -9,30 +9,15 @@ struct EventiView: View {
     @State private var expandedEventId: Int? = nil
     @EnvironmentObject var appEnv: AppEnvironment
     
-    // Gestione Form e Modifica
+    // Gestione Form (nuovo evento)
     enum ActiveSheet: Identifiable {
         case new
-        case edit(RaceEvent)
-        case detail(RaceEvent)
-        case register(RaceEvent)
-        case manageRegistrations(RaceEvent)
-        case payment(RaceEvent)
-        case editTeamRegistration(RaceEvent, EventRegistrationResponse)
-        case viewTeam(RaceEvent, EventRegistrationResponse)  // non-leader: read-only + abbandona
-        var id: String {
-            switch self {
-            case .new: return "new"
-            case .edit(let e): return "edit-\(e.id)"
-            case .detail(let e): return "detail-\(e.id)"
-            case .register(let e): return "register-\(e.id)"
-            case .manageRegistrations(let e): return "manage-\(e.id)"
-            case .payment(let e): return "payment-\(e.id)"
-            case .editTeamRegistration(let e, _): return "editTeam-\(e.id)"
-            case .viewTeam(let e, _): return "viewTeam-\(e.id)"
-            }
-        }
+        var id: String { "new" }
     }
     @State private var activeSheet: ActiveSheet? = nil
+
+    // Vista dedicata evento (fullScreenCover — non chiudibile con swipe)
+    @State private var selectedEventToOpen: RaceEvent? = nil
     
     var filteredEvents: [RaceEvent] {
         let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
@@ -189,7 +174,7 @@ struct EventiView: View {
                 }
             }
         }
-        .sheet(item: $activeSheet, onDismiss: nil) { sheetType in
+        .sheet(item: $activeSheet) { sheetType in
             switch sheetType {
             case .new:
                 // Evento creato → ricarica la lista eventi
@@ -200,64 +185,24 @@ struct EventiView: View {
                     editingEvent: nil,
                     onSaved: { viewModel.fetchEvents(serverURL: server.httpURL) }
                 )
-            case .edit(let event):
-                // Evento modificato/eliminato → ricarica la lista eventi
-                EventiFormView(
-                    server: server,
-                    authState: authState,
-                    viewModel: viewModel,
-                    editingEvent: event,
-                    onSaved: { viewModel.fetchEvents(serverURL: server.httpURL) }
-                )
-            case .detail(let event):
-                // Sola lettura: nessun reload
-                EventDetailView(server: server, event: event)
-            case .register(let event):
-                // Solo le iscrizioni cambiano → aggiorna solo i bottoni di stato
-                EventRegistrationSheetView(server: server, viewModel: viewModel, event: event)
-                    .environmentObject(authState)
-                    .onDisappear {
-                        if let token = authState.currentToken {
-                            viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
-                        }
-                    }
-            case .manageRegistrations(let event):
-                // Solo le iscrizioni cambiano → aggiorna solo i bottoni di stato
-                AdminEventRegistrationsView(server: server, viewModel: viewModel, event: event, showAsSheet: true)
-                    .environmentObject(authState)
-                    .onDisappear {
-                        if let token = authState.currentToken {
-                            viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
-                        }
-                    }
-            case .payment(let event):
-                // Sola lettura/informativa: nessun reload
-                PaymentInfoSheetView(event: event)
-                    .environmentObject(authState)
-            case .editTeamRegistration(let event, let reg):
-                // Solo le iscrizioni cambiano → aggiorna solo i bottoni di stato
-                EventTeamEditSheetView(server: server, viewModel: viewModel, event: event, registration: reg)
-                    .environmentObject(authState)
-                    .onDisappear {
-                        if let token = authState.currentToken {
-                            viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
-                        }
-                    }
-            case .viewTeam(let event, let reg):
-                // Non-leader: vista read-only del team + pulsante abbandona
-                TeamMemberView(server: server, viewModel: viewModel, event: event, registration: reg)
-                    .environmentObject(authState)
-                    .onDisappear {
-                        if let token = authState.currentToken {
-                            viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
-                        }
-                    }
             }
+        }
+        .fullScreenCover(item: $selectedEventToOpen) { event in
+            // Vista dedicata all'evento — non chiudibile con swipe verso il basso
+            EventRootView(server: server, event: event)
+                .environmentObject(authState)
+                .onDisappear {
+                    // Riaggiorna iscrizioni e lista al ritorno
+                    if let token = authState.currentToken {
+                        viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: token)
+                    }
+                    viewModel.fetchEvents(serverURL: server.httpURL)
+                }
         }
         .onChange(of: appEnv.pendingEventIdToOpen) {
             if let pendingId = appEnv.pendingEventIdToOpen {
                 if let event = viewModel.events.first(where: { $0.id == pendingId }) {
-                    self.activeSheet = .detail(event)
+                    selectedEventToOpen = event
                     appEnv.pendingEventIdToOpen = nil
                 } else if viewModel.events.isEmpty {
                     // Se gli eventi non sono ancora caricati, aspettiamo che lo siano
@@ -267,7 +212,7 @@ struct EventiView: View {
         }
         .onChange(of: viewModel.events.count) {
             if let pendingId = appEnv.pendingEventIdToOpen, let event = viewModel.events.first(where: { $0.id == pendingId }) {
-                self.activeSheet = .detail(event)
+                selectedEventToOpen = event
                 appEnv.pendingEventIdToOpen = nil
             }
         }
@@ -281,7 +226,7 @@ struct EventiView: View {
             
             // Se c'è un evento in sospeso e gli eventi sono già caricati, aprilo
             if let pendingId = appEnv.pendingEventIdToOpen, let event = viewModel.events.first(where: { $0.id == pendingId }) {
-                self.activeSheet = .detail(event)
+                selectedEventToOpen = event
                 appEnv.pendingEventIdToOpen = nil
             }
         }
@@ -338,292 +283,53 @@ struct EventiView: View {
             // Corpo espanso
             if isExpanded {
                 Divider().background(Color.white.opacity(0.1))
-                
-                VStack(spacing: 12) {
-                    // Dettagli Evento
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(event.isTeamEvent ? "GARA A SQUADRE" : "GARA INDIVIDUALE")
-                                .font(.caption.bold())
-                                .foregroundColor(event.isTeamEvent ? .yellow : .blue)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 4) {
-                            let priceLabel = event.isTeamEvent ? "Prezzo per squadra" : "Prezzo"
-                            if let cost = event.registrationCost {
-                                detailText(label: priceLabel, value: "€ \(String(format: "%.2f", cost))")
-                            } else {
-                                detailText(label: priceLabel, value: "N/D")
-                            }
-                        }
-                    }
-                    .padding(.bottom, 4)
-                    
-                    let reg = viewModel.userRegistrations[event.id]
-                    let status = reg?.status
-                    let isPending = status == "pending_payment"
-                    let isConfirmed = status == "confirmed"
-                    let isWaitlist = status == "waitlist"
-                    let isRegistered = status != nil
-                    let isAdmin = authState.currentUser?.role.canManageUsers == true
-                    let deadlinePassed = event.isDeadlinePassed
-                    let deadlineApproaching = event.isDeadlineApproaching
 
-                    // Banner deadline (solo per utenti non admin e non ancora iscritti)
-                    if !isAdmin && !isRegistered {
-                        if deadlinePassed {
-                            HStack(spacing: 8) {
-                                Image(systemName: "clock.badge.exclamationmark.fill")
-                                    .font(.system(size: 13, weight: .bold))
-                                Text("Iscrizioni chiuse — verrai messo in lista d'attesa")
-                                    .font(.system(size: 12, weight: .semibold))
-                                Spacer()
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 9)
-                            .background(Color.red.opacity(0.25))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.red.opacity(0.5), lineWidth: 1)
-                            )
-                            .cornerRadius(8)
-                        } else if deadlineApproaching, let dl = event.deadlineObject {
-                            let daysLeft = max(0, Int(dl.timeIntervalSince(Date()) / 86400))
-                            let hoursLeft = max(0, Int(dl.timeIntervalSince(Date()) / 3600))
-                            let timeLabel = daysLeft > 0 ? "\(daysLeft) giorn\(daysLeft == 1 ? "o" : "i")" : "\(hoursLeft) or\(hoursLeft == 1 ? "a" : "e")"
-                            HStack(spacing: 8) {
-                                Image(systemName: "clock.badge.exclamationmark")
-                                    .font(.system(size: 13, weight: .bold))
-                                Text("Iscrizioni in scadenza: \(timeLabel) rimast\(daysLeft == 1 || hoursLeft == 1 ? "o" : "i")")
-                                    .font(.system(size: 12, weight: .semibold))
-                                Spacer()
-                            }
-                            .foregroundColor(.black)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 9)
-                            .background(Color.yellow.opacity(0.85))
-                            .cornerRadius(8)
+                VStack(spacing: 12) {
+                    // Informazioni rapide: tipo gara e prezzo
+                    HStack {
+                        Text(event.isTeamEvent ? "GARA A SQUADRE" : "GARA INDIVIDUALE")
+                            .font(.caption.bold())
+                            .foregroundColor(event.isTeamEvent ? .yellow : .blue)
+                        Spacer()
+                        if let cost = event.registrationCost {
+                            let priceLabel = event.isTeamEvent ? "Squadra" : "Prezzo"
+                            detailText(label: priceLabel, value: "€ \(String(format: "%.2f", cost))")
                         }
                     }
-                    
-                    // Pulsanti
-                    VStack(spacing: 12) {
-                        HStack(spacing: 12) {
-                            Button {
-                                activeSheet = .detail(event)
-                            } label: {
-                                Text("Maggiori info")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
-                                    .background(Color.white.opacity(0.1))
-                                    .foregroundColor(.white)
-                                    .cornerRadius(8)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                    )
+
+                    // Badge stato iscrizione (solo utenti non admin)
+                    let reg = viewModel.userRegistrations[event.id]
+                    let isAdmin = authState.currentUser?.role.canManageUsers == true
+                    if !isAdmin, let regStatus = reg?.status {
+                        let (badgeLabel, badgeColor): (String, Color) = {
+                            switch regStatus {
+                            case "confirmed":       return ("✓ Iscrizione Confermata", .green)
+                            case "waitlist":        return ("⏳ In Lista d'Attesa", .purple)
+                            case "pending_payment": return ("⚠ In Attesa Pagamento", .yellow)
+                            default:                return ("Iscritto", .gray)
                             }
-                            
-                            if isAdmin {
-                                // Admin: pulsante Modifica
-                                Button {
-                                    activeSheet = .edit(event)
-                                } label: {
-                                    Text("Modifica")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 10)
-                                        .background(Color.kartAccent)
-                                        .foregroundColor(.black)
-                                        .cornerRadius(8)
-                                }
-                                
-                                // Admin: pulsante Gestisci Iscrizioni
-                                Button {
-                                    activeSheet = .manageRegistrations(event)
-                                } label: {
-                                    Text("Iscrizioni")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 10)
-                                        .background(Color.white.opacity(0.1))
-                                        .foregroundColor(.white)
-                                        .cornerRadius(8)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                        )
-                                }
-                            } else {
-                                if !isRegistered {
-                                    // Non iscritto
-                                    if authState.currentUser?.role == .raceDirector {
-                                        Button {
-                                            // TODO: Add manager action later
-                                        } label: {
-                                            Text("MANAGER")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 10)
-                                                .background(Color.gray)
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                    } else {
-                                        Button {
-                                            activeSheet = .register(event)
-                                        } label: {
-                                            HStack(spacing: 6) {
-                                                Image(systemName: deadlinePassed ? "clock.badge.exclamationmark" : "pencil.and.list.clipboard")
-                                                Text(deadlinePassed ? "Lista d'Attesa" : "Iscriviti")
-                                                    .font(.system(size: 14, weight: .bold))
-                                            }
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 10)
-                                            .background(deadlinePassed ? Color.purple : Color.kartAccent)
-                                            .foregroundColor(deadlinePassed ? .white : .black)
-                                            .cornerRadius(8)
-                                        }
-                                    }
-                                } else if !isConfirmed, let reg = reg {
-                                    if event.isTeamEvent && reg.isTeamLeader {
-                                        Button {
-                                            activeSheet = .editTeamRegistration(event, reg)
-                                        } label: {
-                                            Text("Modifica")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 10)
-                                                .background(Color.orange)
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                    } else if event.isTeamEvent && !reg.isTeamLeader {
-                                        // Non-leader: pulsante per vedere il team e poter rifiutare
-                                        Button {
-                                            activeSheet = .viewTeam(event, reg)
-                                        } label: {
-                                            Text("Vedi Team")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 10)
-                                                .background(Color.blue.opacity(0.8))
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                    } else {
-                                        Button {
-                                            if let token = authState.currentToken {
-                                                viewModel.unregisterFromEvent(serverURL: server.httpURL, eventId: event.id, token: token) { _, _ in }
-                                            }
-                                        } label: {
-                                            Text("Annulla")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 10)
-                                                .background(Color.kartRed)
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                    }
-                                } else if isConfirmed {
-                                    if let registration = reg, event.isTeamEvent, registration.isTeamLeader {
-                                        Button {
-                                            activeSheet = .editTeamRegistration(event, registration)
-                                        } label: {
-                                            Text("Confermata / Modifica")
-                                                .font(.system(size: 11, weight: .bold))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 10)
-                                                .background(Color.green)
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                    } else if let registration = reg, event.isTeamEvent, !registration.isTeamLeader {
-                                        Button {
-                                            activeSheet = .viewTeam(event, registration)
-                                        } label: {
-                                            Text("Confermata / Vedi Team")
-                                                .font(.system(size: 11, weight: .bold))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 10)
-                                                .background(Color.green)
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                    } else {
-                                        Text("Confermata")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 10)
-                                            .background(Color.green)
-                                            .foregroundColor(.white)
-                                            .cornerRadius(8)
-                                    }
-                                } else if isWaitlist {
-                                    if let registration = reg, event.isTeamEvent, registration.isTeamLeader {
-                                        Button {
-                                            activeSheet = .editTeamRegistration(event, registration)
-                                        } label: {
-                                            Text("In Attesa / Modifica")
-                                                .font(.system(size: 11, weight: .bold))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 10)
-                                                .background(Color.purple)
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                    } else if let registration = reg, event.isTeamEvent, !registration.isTeamLeader {
-                                        Button {
-                                            activeSheet = .viewTeam(event, registration)
-                                        } label: {
-                                            Text("In Attesa / Vedi Team")
-                                                .font(.system(size: 11, weight: .bold))
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 10)
-                                                .background(Color.purple)
-                                                .foregroundColor(.white)
-                                                .cornerRadius(8)
-                                        }
-                                    } else {
-                                        Text("In Lista d'Attesa")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 10)
-                                            .background(Color.purple)
-                                            .foregroundColor(.white)
-                                            .cornerRadius(8)
-                                    }
-                                }
-                            }
+                        }()
+                        Text(badgeLabel)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(badgeColor)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    // Unico pulsante → apre la vista dedicata (fullscreen)
+                    Button {
+                        selectedEventToOpen = event
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("Apri Evento")
+                                .font(.system(size: 13, weight: .bold))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .bold))
                         }
-                        
-                        // Riga intera sottostante
-                        if !isAdmin && isRegistered {
-                            if isPending {
-                                Button {
-                                    activeSheet = .payment(event)
-                                } label: {
-                                    Text("In attesa di pagamento: procedi")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 10)
-                                        .background(Color.yellow)
-                                        .foregroundColor(.black)
-                                        .cornerRadius(8)
-                                }
-                            } else if isWaitlist {
-                                Text("Posti attualmente esauriti. Sei in lista d'attesa.")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
-                                    .background(Color.purple.opacity(0.3))
-                                    .foregroundColor(.purple)
-                                    .cornerRadius(8)
-                            }
-                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(Color.kartAccent)
+                        .foregroundColor(.black)
+                        .cornerRadius(8)
                     }
                 }
                 .padding(.horizontal, 16)
