@@ -20,149 +20,22 @@ struct UploadResultsView: View {
     @State private var importedCount: Int? = nil
     @State private var importErrors: [String] = []
 
+    // Cancellazione classifica
+    @State private var isDeleting = false
+    @State private var showDeleteConfirm = false
+    @State private var deleteSuccess = false
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.kartBG.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 20) {
-
-                        // ── Info formato CSV ──────────────────────────────────
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "info.circle.fill")
-                                    .foregroundColor(.kartAccent)
-                                    .font(.system(size: 12, weight: .bold))
-                                Text("FORMATO CSV ATTESO")
-                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.kartAccent)
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.top, 12)
-
-                            if event.isTeamEvent {
-                                csvFormatRow("Posizione, Pilota, Squadra, Miglior Giro, Gap, Giri, username")
-                                csvFormatRow("1, Mario Rossi, Team Alpha, 1:05.234, +0.0, 12, mario_r")
-                                csvFormatRow("1, Luca Bianchi, Team Alpha, 1:05.234, +0.0, 12, luca_b")
-                                csvFormatRow("2, Anna Verdi, Team Beta, 1:06.100, +0.8, 12,")
-                            } else {
-                                csvFormatRow("Posizione, Pilota, Miglior Giro, Gap, Giri, username")
-                                csvFormatRow("1, Mario Rossi, 1:05.234, +0.0, 12, mario_r")
-                                csvFormatRow("2, Luca Bianchi, 1:06.100, +0.8, 12,")
-                            }
-
-                            Text("La colonna \"username\" è opzionale: se presente associa il risultato all'account dell'utente.")
-                                .font(.system(size: 11))
-                                .foregroundColor(.kartDim)
-                                .padding(.horizontal, 14)
-                                .padding(.bottom, 12)
-                        }
-                        .background(Color.kartPanel)
-                        .cornerRadius(12)
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
-
-                        // ── Seleziona file ────────────────────────────────────
-                        VStack(spacing: 12) {
-                            Button {
-                                showFilePicker = true
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: "folder.fill")
-                                        .font(.system(size: 16))
-                                    Text(selectedFileName ?? "Seleziona CSV dal Files")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                }
-                                .foregroundColor(selectedFileURL != nil ? .black : .white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(selectedFileURL != nil ? Color.kartAccent : Color.white.opacity(0.1))
-                                .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(selectedFileURL != nil ? Color.clear : Color.white.opacity(0.2), lineWidth: 1)
-                                )
-                            }
-
-                            // Pulsante upload
-                            Button {
-                                Task { await uploadCSV() }
-                            } label: {
-                                HStack(spacing: 10) {
-                                    if isUploading {
-                                        ProgressView().tint(.black).scaleEffect(0.85)
-                                    } else {
-                                        Image(systemName: "arrow.up.doc.fill")
-                                            .font(.system(size: 16))
-                                        Text("Carica Classifica")
-                                            .font(.system(size: 15, weight: .bold))
-                                    }
-                                }
-                                .foregroundColor(.black)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(selectedFileURL != nil && !isUploading
-                                            ? Color.green
-                                            : Color.gray.opacity(0.4))
-                                .cornerRadius(12)
-                            }
-                            .disabled(selectedFileURL == nil || isUploading)
-                        }
-
-                        // ── Risultato import ──────────────────────────────────
-                        if let count = importedCount {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                        .font(.system(size: 18))
-                                    Text("\(count) risultat\(count == 1 ? "o" : "i") importat\(count == 1 ? "o" : "i") con successo")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.green)
-                                }
-                                .padding(.horizontal, 14)
-                                .padding(.top, 12)
-
-                                if !importErrors.isEmpty {
-                                    Divider().background(Color.white.opacity(0.08)).padding(.horizontal, 14)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("\(importErrors.count) avvertiment\(importErrors.count == 1 ? "o" : "i"):")
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundColor(.yellow)
-                                            .padding(.horizontal, 14)
-                                        ForEach(importErrors, id: \.self) { err in
-                                            Text("• \(err)")
-                                                .font(.system(size: 11))
-                                                .foregroundColor(.yellow.opacity(0.85))
-                                                .padding(.horizontal, 14)
-                                        }
-                                    }
-                                    .padding(.bottom, 12)
-                                } else {
-                                    Spacer().frame(height: 8)
-                                }
-                            }
-                            .background(Color.green.opacity(0.1))
-                            .cornerRadius(12)
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.green.opacity(0.3), lineWidth: 1))
-                        }
-
-                        // ── Errore ────────────────────────────────────────────
-                        if let err = errorMessage {
-                            HStack(spacing: 8) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.red)
-                                Text(err)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.red)
-                            }
-                            .padding(14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(12)
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.red.opacity(0.3), lineWidth: 1))
-                        }
+                        csvInfoSection
+                        uploadSection
+                        if deleteSuccess { deleteFeedbackSection }
+                        if let count = importedCount { importSuccessSection(count) }
+                        if let err = errorMessage { errorSection(err) }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
@@ -179,6 +52,12 @@ struct UploadResultsView: View {
                         .font(.system(size: 14, weight: .semibold))
                 }
             }
+            .alert("Cancella Classifica", isPresented: $showDeleteConfirm) {
+                Button("Cancella", role: .destructive) { Task { await deleteResults() } }
+                Button("Annulla", role: .cancel) {}
+            } message: {
+                Text("Stai per eliminare tutti i risultati ufficiali di \"\(event.title)\". Questa operazione non è reversibile.")
+            }
         }
         .fileImporter(
             isPresented: $showFilePicker,
@@ -188,6 +67,7 @@ struct UploadResultsView: View {
             importErrors = []
             importedCount = nil
             errorMessage = nil
+            deleteSuccess = false
             switch result {
             case .success(let urls):
                 if let url = urls.first {
@@ -198,6 +78,179 @@ struct UploadResultsView: View {
                 errorMessage = err.localizedDescription
             }
         }
+    }
+
+    // MARK: - Sub-views
+
+    @ViewBuilder
+    private var csvInfoSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.kartAccent)
+                    .font(.system(size: 12, weight: .bold))
+                Text("FORMATO CSV ATTESO")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(.kartAccent)
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+
+            if event.isTeamEvent {
+                csvFormatRow("Posizione, Squadra, Miglior Giro, Gap, Giri")
+                csvFormatRow("1, Team Alpha, 1:05.234, Leader, 46")
+                csvFormatRow("2, Team Beta, 1:06.100, +1 giro, 45")
+                csvFormatRow("3, Team Gamma, 1:06.810, +1 giro, 45")
+            } else {
+                csvFormatRow("Posizione, Pilota, Miglior Giro, Gap, Giri, username")
+                csvFormatRow("1, Mario Rossi, 1:05.234, Leader, 12, mario_r")
+                csvFormatRow("2, Luca Bianchi, 1:06.100, +0.8, 12,")
+            }
+
+            let hint = event.isTeamEvent
+                ? "Il nome squadra deve corrispondere a quello usato in fase di iscrizione. L'utente viene associato automaticamente."
+                : "La colonna \"username\" è opzionale: se presente associa il risultato all'account dell'utente."
+            Text(hint)
+                .font(.system(size: 11))
+                .foregroundColor(.kartDim)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 12)
+        }
+        .background(Color.kartPanel)
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+    }
+
+    @ViewBuilder
+    private var uploadSection: some View {
+        VStack(spacing: 12) {
+            // Seleziona file
+            Button { showFilePicker = true } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "folder.fill").font(.system(size: 16))
+                    Text(selectedFileName ?? "Seleziona CSV dal Files")
+                        .font(.system(size: 14, weight: .bold))
+                        .lineLimit(1).truncationMode(.middle)
+                }
+                .foregroundColor(selectedFileURL != nil ? .black : .white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(selectedFileURL != nil ? Color.kartAccent : Color.white.opacity(0.1))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(selectedFileURL != nil ? Color.clear : Color.white.opacity(0.2), lineWidth: 1)
+                )
+            }
+
+            // Upload
+            Button { Task { await uploadCSV() } } label: {
+                HStack(spacing: 10) {
+                    if isUploading {
+                        ProgressView().tint(.black).scaleEffect(0.85)
+                    } else {
+                        Image(systemName: "arrow.up.doc.fill").font(.system(size: 16))
+                        Text("Carica Classifica").font(.system(size: 15, weight: .bold))
+                    }
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(selectedFileURL != nil && !isUploading ? Color.green : Color.gray.opacity(0.4))
+                .cornerRadius(12)
+            }
+            .disabled(selectedFileURL == nil || isUploading)
+
+            // Divisore
+            HStack {
+                Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
+                Text("oppure")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.kartDim)
+                    .padding(.horizontal, 8)
+                Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
+            }
+
+            // Cancella
+            Button { showDeleteConfirm = true } label: {
+                HStack(spacing: 8) {
+                    if isDeleting {
+                        ProgressView().tint(.red).scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "trash.fill").font(.system(size: 14))
+                        Text("Cancella Classifica").font(.system(size: 15, weight: .bold))
+                    }
+                }
+                .foregroundColor(isDeleting ? .kartDim : .red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.red.opacity(0.1))
+                .cornerRadius(12)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.red.opacity(0.3), lineWidth: 1))
+            }
+            .disabled(isDeleting || isUploading)
+        }
+    }
+
+    @ViewBuilder
+    private var deleteFeedbackSection: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill").foregroundColor(.kartDim)
+            Text("Classifica cancellata con successo")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.kartDim)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+    }
+
+    @ViewBuilder
+    private func importSuccessSection(_ count: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green).font(.system(size: 18))
+                Text("\(count) risultat\(count == 1 ? "o" : "i") importat\(count == 1 ? "o" : "i") con successo")
+                    .font(.system(size: 14, weight: .bold)).foregroundColor(.green)
+            }
+            .padding(.horizontal, 14).padding(.top, 12)
+
+            if !importErrors.isEmpty {
+                Divider().background(Color.white.opacity(0.08)).padding(.horizontal, 14)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(importErrors.count) avvertiment\(importErrors.count == 1 ? "o" : "i"):")
+                        .font(.system(size: 11, weight: .bold)).foregroundColor(.yellow)
+                        .padding(.horizontal, 14)
+                    ForEach(importErrors, id: \.self) { err in
+                        Text("• \(err)")
+                            .font(.system(size: 11)).foregroundColor(.yellow.opacity(0.85))
+                            .padding(.horizontal, 14)
+                    }
+                }
+                .padding(.bottom, 12)
+            } else {
+                Spacer().frame(height: 8)
+            }
+        }
+        .background(Color.green.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.green.opacity(0.3), lineWidth: 1))
+    }
+
+    @ViewBuilder
+    private func errorSection(_ err: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.red)
+            Text(err).font(.system(size: 13)).foregroundColor(.red)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.red.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.red.opacity(0.3), lineWidth: 1))
     }
 
     // MARK: - Upload
@@ -212,6 +265,7 @@ struct UploadResultsView: View {
         errorMessage = nil
         importedCount = nil
         importErrors = []
+        deleteSuccess = false
 
         // Accesso sicuro al file (security scoped resource per Files app)
         let didStart = fileURL.startAccessingSecurityScopedResource()
@@ -259,6 +313,49 @@ struct UploadResultsView: View {
         }
 
         isUploading = false
+    }
+
+    // MARK: - Delete
+
+    @MainActor
+    private func deleteResults() async {
+        guard let httpURL = server.httpURL,
+              let token = authState.currentToken else { return }
+
+        isDeleting = true
+        errorMessage = nil
+        importedCount = nil
+        importErrors = []
+        deleteSuccess = false
+
+        let base = httpURL.absoluteString.replacingOccurrences(of: "/api", with: "")
+        guard let deleteURL = URL(string: "\(base)/events/\(event.id)/results") else {
+            isDeleting = false
+            return
+        }
+
+        var request = URLRequest(url: deleteURL)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse {
+                if http.statusCode == 204 {
+                    deleteSuccess = true
+                    selectedFileURL = nil
+                    selectedFileName = nil
+                } else {
+                    let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"]
+                        ?? "Errore \(http.statusCode)"
+                    errorMessage = msg
+                }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isDeleting = false
     }
 
     // MARK: - Helpers
