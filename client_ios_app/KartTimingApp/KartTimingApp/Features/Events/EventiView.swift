@@ -19,6 +19,10 @@ struct EventiView: View {
     // Vista dedicata evento (fullScreenCover — non chiudibile con swipe)
     @State private var selectedEventToOpen: RaceEvent? = nil
     
+    // Per i risultati (eventi passati)
+    @StateObject private var analisiViewModel = AnalisiViewModel()
+    @State private var eventForClassification: RaceEvent? = nil
+    
     var filteredEvents: [RaceEvent] {
         let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         if q.isEmpty { return viewModel.events }
@@ -93,7 +97,7 @@ struct EventiView: View {
                                 VStack(alignment: .leading, spacing: 12) {
                                     sectionHeader("OGGI", icon: "calendar.circle")
                                     ForEach(todayEvents) { event in
-                                        eventRow(event)
+                                        eventRow(event, isPast: false)
                                     }
                                 }
                             }
@@ -103,7 +107,7 @@ struct EventiView: View {
                                     sectionHeader("IN PROGRAMMA", icon: "calendar.badge.clock")
                                         .padding(.top, todayEvents.isEmpty ? 0 : 10)
                                     ForEach(upcomingEvents) { event in
-                                        eventRow(event)
+                                        eventRow(event, isPast: false)
                                     }
                                 }
                             }
@@ -113,7 +117,7 @@ struct EventiView: View {
                                     sectionHeader("PASSATI", icon: "clock.arrow.circlepath")
                                         .padding(.top, (todayEvents.isEmpty && upcomingEvents.isEmpty) ? 0 : 10)
                                     ForEach(pastEvents) { event in
-                                        eventRow(event)
+                                        eventRow(event, isPast: true)
                                     }
                                 }
                             }
@@ -230,6 +234,10 @@ struct EventiView: View {
                 appEnv.pendingEventIdToOpen = nil
             }
         }
+        .sheet(item: $eventForClassification) { event in
+            ClassificationSheet(event: event, viewModel: analisiViewModel, server: server)
+                .environmentObject(authState)
+        }
     }
     
     private func sectionHeader(_ title: String, icon: String) -> some View {
@@ -245,7 +253,7 @@ struct EventiView: View {
     }
     
     // ── Event Row ─────────────────────────────────────────────────────────────
-    private func eventRow(_ event: RaceEvent) -> some View {
+    private func eventRow(_ event: RaceEvent, isPast: Bool) -> some View {
         let isExpanded = expandedEventId == event.id
         
         return VStack(spacing: 0) {
@@ -315,21 +323,40 @@ struct EventiView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    // Unico pulsante → apre la vista dedicata (fullscreen)
-                    Button {
-                        selectedEventToOpen = event
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text("Apri Evento")
-                                .font(.system(size: 13, weight: .bold))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .bold))
+                    // Se passato, mostra Risultati, altrimenti Apri Evento
+                    if isPast {
+                        Button {
+                            analisiViewModel.fetchClassification(serverURL: server.httpURL, eventId: event.id, token: authState.currentToken)
+                            eventForClassification = event
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text("Risultati")
+                                    .font(.system(size: 13, weight: .bold))
+                                Image(systemName: "list.number")
+                                    .font(.system(size: 11, weight: .bold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 11)
+                            .background(Color.kartAccent)
+                            .foregroundColor(.black)
+                            .cornerRadius(8)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                        .background(Color.kartAccent)
-                        .foregroundColor(.black)
-                        .cornerRadius(8)
+                    } else {
+                        Button {
+                            selectedEventToOpen = event
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text("Apri Evento")
+                                    .font(.system(size: 13, weight: .bold))
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 11, weight: .bold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 11)
+                            .background(Color.kartAccent)
+                            .foregroundColor(.black)
+                            .cornerRadius(8)
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
