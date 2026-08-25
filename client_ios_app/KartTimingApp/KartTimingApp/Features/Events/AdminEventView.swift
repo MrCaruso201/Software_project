@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Vista dedicata all'evento per utenti Admin.
-/// NavigationStack + TabView con 3 tab: Info, Iscrizioni, Modifica.
+/// NavigationStack + TabView con 5 tab: Info, Iscrizioni, Liberatorie, Modifica e Gestione.
 struct AdminEventView: View {
     let server: DiscoveredServer
     let event: RaceEvent
@@ -12,10 +12,7 @@ struct AdminEventView: View {
 
     // Stato locale dell'evento (aggiornato da toggleStatus)
     @State private var localEvent: RaceEvent
-    @State private var showStatusConfirm = false
-    @State private var pendingStatus: String? = nil
-    @State private var isUpdatingStatus = false
-    @State private var statusError: String? = nil
+    @State private var showUploadResults = false
 
     // Refresh del form dopo salvataggio
     @State private var editFormId = UUID()
@@ -57,16 +54,33 @@ struct AdminEventView: View {
                     .environmentObject(authState)
                     .tabItem { Label("Liberatorie", systemImage: "doc.text.fill") }
 
-                // ── Tab 4: Modifica ───────────────────────────────────────
+                // ── Tab 4: Gestione ───────────────────────────────────────
+                AdminEventGestioneView(
+                    server: server,
+                    localEvent: $localEvent,
+                    isAdmin: isAdmin,
+                    showUploadResults: $showUploadResults
+                )
+                .environmentObject(authState)
+                .tabItem { Label("Gestione", systemImage: "gearshape.2.fill") }
+
+                // ── Tab 5: Modifica ───────────────────────────────────────
                 EventiFormView(
                     server: server,
                     authState: authState,
                     viewModel: viewModel,
                     editingEvent: localEvent,
                     onSaved: {
-                        // Aggiorna evento locale dopo il salvataggio
-                        viewModel.fetchEvents(serverURL: server.httpURL)
-                    }
+                        // Ricarica la lista e aggiorna localEvent con i dati aggiornati dal server
+                        viewModel.fetchEvents(serverURL: server.httpURL) {
+                            if let updated = viewModel.events.first(where: { $0.id == localEvent.id }) {
+                                localEvent = updated
+                                // Forza il re-render del form con i dati aggiornati
+                                editFormId = UUID()
+                            }
+                        }
+                    },
+                    suppressDismissOnSave: true
                 )
                 .id(editFormId)
                 .tabItem { Label("Modifica", systemImage: "pencil.circle.fill") }
@@ -96,108 +110,12 @@ struct AdminEventView: View {
                             .foregroundColor(isStarted ? .red : .gray)
                     }
                 }
-
-                // ── Avvia / Termina / Ripristina ──────────────────────────
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Group {
-                        if isFinished && isAdmin {
-                            Button("Ripristina") {
-                                pendingStatus = "scheduled"
-                                showStatusConfirm = true
-                            }
-                            .foregroundColor(.orange)
-                            .font(.system(size: 13, weight: .bold))
-                        } else if !isFinished {
-                            Button(isStarted ? "Termina" : "Avvia") {
-                                pendingStatus = isStarted ? "finished" : "started"
-                                showStatusConfirm = true
-                            }
-                            .foregroundColor(isStarted ? .red : .green)
-                            .font(.system(size: 13, weight: .bold))
-                            .disabled(isUpdatingStatus)
-                        }
-                    }
-                }
             }
         }
-        .confirmationDialog(confirmTitle, isPresented: $showStatusConfirm, titleVisibility: .visible) {
-            Button(confirmButtonLabel, role: pendingStatus == "finished" ? .destructive : nil) {
-                guard let s = pendingStatus else { return }
-                Task { await toggleEventStatus(to: s) }
-            }
-            Button("Annulla", role: .cancel) { }
-        }
-        .alert("Errore", isPresented: .constant(statusError != nil), actions: {
-            Button("OK") { statusError = nil }
-        }, message: {
-            Text(statusError ?? "")
-        })
-    }
-
-    // MARK: - Status update
-
-    @MainActor
-    private func toggleEventStatus(to newStatus: String) async {
-        guard let httpURL = server.httpURL,
-              let token = authState.currentToken else { return }
-        isUpdatingStatus = true
-        statusError = nil
-        do {
-            let base = httpURL.absoluteString.replacingOccurrences(of: "/api", with: "")
-            guard let fullURL = URL(string: "\(base)/events/\(localEvent.id)/status") else { return }
-            var req = URLRequest(url: fullURL)
-            req.httpMethod = "PATCH"
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.httpBody = try JSONSerialization.data(withJSONObject: ["status": newStatus])
-            let (data, resp) = try await URLSession.shared.data(for: req)
-            if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
-                let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
-                statusError = msg
-            } else {
-                localEvent = RaceEvent(
-                    id: localEvent.id, title: localEvent.title,
-                    eventDate: localEvent.eventDate,
-                    registrationDeadline: localEvent.registrationDeadline,
-                    daysBeforeDeadline: localEvent.daysBeforeDeadline,
-                    location: localEvent.location,
-                    maxParticipants: localEvent.maxParticipants,
-                    minPeoplePerGroup: localEvent.minPeoplePerGroup,
-                    maxPeoplePerGroup: localEvent.maxPeoplePerGroup,
-                    registrationCost: localEvent.registrationCost,
-                    weightLimit: localEvent.weightLimit,
-                    kart: localEvent.kart,
-                    description: localEvent.description,
-                    raceDuration: localEvent.raceDuration,
-                    maxStintDuration: localEvent.maxStintDuration,
-                    createdAt: localEvent.createdAt,
-                    status: newStatus,
-                    releaseFormText: localEvent.releaseFormText
-                )
-            }
-        } catch {
-            statusError = error.localizedDescription
-        }
-        isUpdatingStatus = false
-    }
-
-    // MARK: - Helpers
-
-    private var confirmTitle: String {
-        switch pendingStatus {
-        case "started":   return "Avviare la gara?"
-        case "finished":  return "Terminare la gara?"
-        case "scheduled": return "Ripristinare lo stato a 'Programmata'?"
-        default:          return "Conferma"
+        .sheet(isPresented: $showUploadResults) {
+            UploadResultsView(server: server, event: localEvent)
+                .environmentObject(authState)
         }
     }
 
-    private var confirmButtonLabel: String {
-        switch pendingStatus {
-        case "started":   return "Avvia Gara"
-        case "finished":  return "Termina Gara"
-        case "scheduled": return "Ripristina"
-        default:          return "Conferma"
-        }
-    }
 }

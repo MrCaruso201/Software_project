@@ -11,34 +11,18 @@ struct EventDetailContentView: View {
     @EnvironmentObject var authState: AuthState
     @StateObject private var kartodromoVM = KartodromoViewModel()
 
-    @State private var showLive = false
-    @State private var isUpdatingStatus = false
-    @State private var statusError: String? = nil
     @State private var isRegistered = false
     @State private var hasSignedRelease = false
-    @State private var showReleaseFormSign = false
-    @State private var showUploadResults = false
 
     // MARK: - Computed
 
-    private var isAdmin: Bool {
-        authState.currentUser?.role.canManageUsers == true
-    }
-
-    private var isDirectorOrAdmin: Bool {
-        let role = authState.currentUser?.role
-        return role == .raceDirector || role == .admin
-    }
-
     private var hasPartecipantiContent: Bool {
-        isAdmin
-            || event.maxParticipants != nil
+        event.maxParticipants != nil
             || (event.isTeamEvent && (event.minPeoplePerGroup != nil || event.maxPeoplePerGroup != nil))
     }
 
     private var hasRegolamentoContent: Bool {
-        isAdmin
-            || event.weightLimit != nil
+        event.weightLimit != nil
             || event.raceDuration != nil
             || event.maxStintDuration != nil
     }
@@ -52,18 +36,15 @@ struct EventDetailContentView: View {
             ScrollView {
                 VStack(spacing: 20) {
 
-                    // ── Hero ─────────────────────────────────────────────
+                    // -- Hero
                     heroCard
 
-                    // ── Pulsanti Live ─────────────────────────────────────
-                    liveActionsSection
-
-                    // ── Immagine circuito ─────────────────────────────────
+                    // -- Immagine circuito
                     circuitImageSection
 
-                    // ── Descrizione ───────────────────────────────────────
+                    // -- Descrizione
                     let descText = event.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                    if isAdmin || !descText.isEmpty {
+                    if !descText.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 6) {
                                 Image(systemName: "text.alignleft")
@@ -77,42 +58,23 @@ struct EventDetailContentView: View {
                             .padding(.horizontal, 14)
                             .padding(.top, 12)
 
-                            if descText.isEmpty {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "pencil")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.kartDim)
-                                    Text("Nessuna descrizione — modifica l'evento per aggiungerne una.")
-                                        .font(.system(size: 13, weight: .regular))
-                                        .foregroundColor(.kartDim)
-                                        .italic()
-                                }
+                            Text(descText)
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundColor(.white.opacity(0.88))
+                                .lineSpacing(5)
                                 .padding(.horizontal, 14)
                                 .padding(.bottom, 14)
-                            } else {
-                                Text(descText)
-                                    .font(.system(size: 14, weight: .regular))
-                                    .foregroundColor(.white.opacity(0.88))
-                                    .lineSpacing(5)
-                                    .padding(.horizontal, 14)
-                                    .padding(.bottom, 14)
-                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Color.kartPanel)
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(
-                                    descText.isEmpty
-                                        ? Color.kartAccent.opacity(0.2)
-                                        : Color.white.opacity(0.05),
-                                    lineWidth: 1
-                                )
+                                .stroke(Color.white.opacity(0.05), lineWidth: 1)
                         )
                     }
 
-                    // ── Dettagli principali ───────────────────────────────
+                    // -- Dettagli principali
                     infoSection(title: "Dettagli Evento", icon: "calendar") {
                         infoRow(label: "Data e Ora", value: event.formattedDate, icon: "calendar")
                         let locParts = event.location.components(separatedBy: " - ")
@@ -133,25 +95,19 @@ struct EventDetailContentView: View {
                         let priceLabel = event.isTeamEvent ? "Prezzo per squadra" : "Prezzo"
                         if let cost = event.registrationCost {
                             infoRow(label: priceLabel, value: "€ \(String(format: "%.2f", cost))", icon: "eurosign")
-                        } else if isAdmin {
-                            infoRow(label: priceLabel, value: "Non definito", icon: "eurosign", dimmed: true)
                         }
                         if let kartType = event.kart, !kartType.isEmpty {
                             infoRow(label: "Kart", value: kartType, icon: "steeringwheel")
-                        } else if isAdmin {
-                            infoRow(label: "Kart", value: "Non definito", icon: "steeringwheel", dimmed: true)
                         }
                     }
 
-                    // ── Partecipanti ──────────────────────────────────────
+                    // -- Partecipanti
                     if hasPartecipantiContent {
                         infoSection(title: "Partecipanti & Gruppi", icon: "person.3") {
                             let partLabel = event.isTeamEvent ? "Max Squadre" : "Max Partecipanti"
                             let partIcon = event.isTeamEvent ? "person.3.fill" : "person.fill"
                             if let max = event.maxParticipants {
                                 infoRow(label: partLabel, value: "\(max)", icon: partIcon)
-                            } else if isAdmin {
-                                infoRow(label: partLabel, value: "Non definito", icon: partIcon, dimmed: true)
                             }
                             if event.isTeamEvent {
                                 if let minP = event.minPeoplePerGroup {
@@ -164,13 +120,11 @@ struct EventDetailContentView: View {
                         }
                     }
 
-                    // ── Regolamento & Requisiti ───────────────────────────
+                    // -- Regolamento & Requisiti
                     if hasRegolamentoContent {
                         infoSection(title: "Regolamento & Requisiti", icon: "list.clipboard") {
                             if let weight = event.weightLimit {
                                 infoRow(label: "Peso Minimo", value: "\(String(format: "%.1f", weight)) kg", icon: "scalemass")
-                            } else if isAdmin {
-                                infoRow(label: "Peso Minimo", value: "Non definito", icon: "scalemass", dimmed: true)
                             }
                             if let dur = event.raceDuration {
                                 infoRow(label: "Durata Gara", value: "\(dur) min", icon: "clock")
@@ -191,184 +145,6 @@ struct EventDetailContentView: View {
             kartodromoVM.fetchActive(serverURL: server.httpURL, token: authState.currentToken)
             Task { await fetchEventDetails() }
         }
-        .fullScreenCover(isPresented: $showLive) {
-            LiveRootView(server: server, event: event)
-                .environmentObject(authState)
-        }
-        .sheet(isPresented: $showUploadResults) {
-            UploadResultsView(server: server, event: event)
-                .environmentObject(authState)
-        }
-    }
-
-    // MARK: - Live Actions Section
-
-    @ViewBuilder
-    private var liveActionsSection: some View {
-        let canControl = isDirectorOrAdmin
-        let isStarted = event.status == "started"
-        let isFinished = event.status == "finished"
-
-        if canControl || isStarted {
-            VStack(spacing: 10) {
-                if canControl {
-                    if !isFinished {
-                        Button(action: {
-                            let newStatus = isStarted ? "finished" : "started"
-                            Task { await toggleEventStatus(to: newStatus) }
-                        }) {
-                            HStack(spacing: 10) {
-                                if isUpdatingStatus {
-                                    ProgressView().tint(isStarted ? .red : .black).scaleEffect(0.85)
-                                } else {
-                                    Image(systemName: isStarted ? "stop.circle.fill" : "play.circle.fill")
-                                        .font(.system(size: 18))
-                                    Text(isStarted ? "Termina Gara" : "Avvia Gara")
-                                        .font(.system(size: 15, weight: .bold))
-                                }
-                            }
-                            .foregroundColor(isStarted ? .red : .black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(isStarted ? Color.red.opacity(0.15) : Color.kartAccent)
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(isStarted ? Color.red.opacity(0.4) : Color.clear, lineWidth: 1)
-                            )
-                        }
-                        .disabled(isUpdatingStatus)
-                    } else if isAdmin {
-                        // Carica Risultati
-                        Button(action: { showUploadResults = true }) {
-                            HStack(spacing: 10) {
-                                Image(systemName: "arrow.up.doc.fill")
-                                    .font(.system(size: 18))
-                                Text("Carica Risultati")
-                                    .font(.system(size: 15, weight: .bold))
-                            }
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.kartAccent)
-                            .cornerRadius(12)
-                        }
-
-                        // Ripristina a 'Programmata'
-                        Button(action: {
-                            Task { await toggleEventStatus(to: "scheduled") }
-                        }) {
-                            HStack(spacing: 10) {
-                                if isUpdatingStatus {
-                                    ProgressView().tint(.orange).scaleEffect(0.85)
-                                } else {
-                                    Image(systemName: "arrow.counterclockwise.circle.fill")
-                                        .font(.system(size: 18))
-                                    Text("Ripristina a 'Programmata'")
-                                        .font(.system(size: 15, weight: .bold))
-                                }
-                            }
-                            .foregroundColor(.orange)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.orange.opacity(0.15))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.orange.opacity(0.4), lineWidth: 1)
-                            )
-                        }
-                        .disabled(isUpdatingStatus)
-                    }
-                }
-
-                if isStarted && (isDirectorOrAdmin || isRegistered) {
-                    Button(action: { showLive = true }) {
-                        HStack(spacing: 10) {
-                            ZStack {
-                                Circle().fill(Color.red).frame(width: 8, height: 8)
-                            }
-                            Text("Entra in Live")
-                                .font(.system(size: 15, weight: .bold))
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.red.opacity(0.8), Color.orange.opacity(0.6)],
-                                startPoint: .leading, endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(12)
-                    }
-                }
-
-                if let err = statusError {
-                    Text(err).font(.system(size: 12)).foregroundColor(.red)
-                }
-
-                if isFinished {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkered.flag")
-                        Text("Gara terminata")
-                            .font(.system(size: 13, weight: .semibold))
-                    }
-                    .foregroundColor(.kartDim)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.kartPanel)
-                    .cornerRadius(10)
-                }
-            }
-        }
-    }
-
-    // MARK: - Status Toggle
-
-    @MainActor
-    private func toggleEventStatus(to newStatus: String) async {
-        guard let httpURL = server.httpURL,
-              let token = authState.currentToken else { return }
-        isUpdatingStatus = true
-        statusError = nil
-        do {
-            let base = httpURL.absoluteString.replacingOccurrences(of: "/api", with: "")
-            guard let fullURL = URL(string: "\(base)/events/\(event.id)/status") else { return }
-            var req = URLRequest(url: fullURL)
-            req.httpMethod = "PATCH"
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.httpBody = try JSONSerialization.data(withJSONObject: ["status": newStatus])
-            let (data, resp) = try await URLSession.shared.data(for: req)
-            if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
-                let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
-                statusError = msg
-            } else {
-                event = RaceEvent(
-                    id: event.id, title: event.title,
-                    eventDate: event.eventDate,
-                    registrationDeadline: event.registrationDeadline,
-                    daysBeforeDeadline: event.daysBeforeDeadline,
-                    location: event.location,
-                    maxParticipants: event.maxParticipants,
-                    minPeoplePerGroup: event.minPeoplePerGroup,
-                    maxPeoplePerGroup: event.maxPeoplePerGroup,
-                    registrationCost: event.registrationCost,
-                    weightLimit: event.weightLimit,
-                    kart: event.kart,
-                    description: event.description,
-                    raceDuration: event.raceDuration,
-                    maxStintDuration: event.maxStintDuration,
-                    createdAt: event.createdAt,
-                    status: newStatus,
-                    releaseFormText: event.releaseFormText
-                )
-            }
-        } catch {
-            statusError = error.localizedDescription
-        }
-        isUpdatingStatus = false
     }
 
     // MARK: - Fetch Details
@@ -502,11 +278,6 @@ struct EventDetailContentView: View {
                     Divider().frame(height: 36).background(Color.white.opacity(0.1))
                     Spacer()
                     heroStat(value: "€ \(String(format: "%.0f", cost))", icon: "eurosign.circle.fill")
-                } else if isAdmin {
-                    Spacer()
-                    Divider().frame(height: 36).background(Color.white.opacity(0.1))
-                    Spacer()
-                    heroStat(value: "—", icon: "eurosign.circle.fill")
                 }
 
                 Spacer()

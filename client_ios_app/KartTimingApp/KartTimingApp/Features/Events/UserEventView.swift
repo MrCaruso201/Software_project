@@ -31,6 +31,7 @@ struct UserEventView: View {
 
     // Liberatoria
     @State private var hasSignedRelease = false
+    @State private var showLive = false
 
     init(server: DiscoveredServer, event: RaceEvent, viewModel: EventiViewModel) {
         self.server = server
@@ -112,6 +113,10 @@ struct UserEventView: View {
                     .environmentObject(authState)
             }
         }
+        .fullScreenCover(isPresented: $showLive) {
+            LiveRootView(server: server, event: localEvent)
+                .environmentObject(authState)
+        }
         .onAppear {
             refreshRegistrations()
             Task { await fetchReleaseStatus() }
@@ -126,6 +131,32 @@ struct UserEventView: View {
             Color.kartBG.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 16) {
+
+                    // ── Entra in Live (gara avviata) ───────────────────────
+                    if localEvent.status == "started" && isRegistered {
+                        Button(action: { showLive = true }) {
+                            HStack(spacing: 10) {
+                                ZStack {
+                                    Circle().fill(Color.red).frame(width: 8, height: 8)
+                                }
+                                Text("Entra in Live")
+                                    .font(.system(size: 15, weight: .bold))
+                                Spacer()
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 16)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.red.opacity(0.8), Color.orange.opacity(0.6)],
+                                    startPoint: .leading, endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(14)
+                            .shadow(color: Color.red.opacity(0.3), radius: 8, x: 0, y: 4)
+                        }
+                    }
 
                     // ── Banner deadline ────────────────────────────────
                     if !isRegistered {
