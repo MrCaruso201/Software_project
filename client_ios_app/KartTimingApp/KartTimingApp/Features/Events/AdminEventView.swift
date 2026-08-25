@@ -13,6 +13,8 @@ struct AdminEventView: View {
     // Stato locale dell'evento (aggiornato da toggleStatus)
     @State private var localEvent: RaceEvent
     @State private var showUploadResults = false
+    @State private var selectedTab = 0
+    @State private var showAddRegistrationSheet = false
 
     // Refresh del form dopo salvataggio
     @State private var editFormId = UUID()
@@ -30,7 +32,7 @@ struct AdminEventView: View {
 
     var body: some View {
         NavigationStack {
-            TabView {
+            TabView(selection: $selectedTab) {
                 // ── Tab 1: Info ───────────────────────────────────────────
                 EventDetailContentView(
                     server: server,
@@ -38,6 +40,7 @@ struct AdminEventView: View {
                     viewModel: viewModel
                 )
                 .tabItem { Label("Info", systemImage: "info.circle.fill") }
+                .tag(0)
 
                 // ── Tab 2: Iscrizioni ─────────────────────────────────────
                 AdminEventRegistrationsView(
@@ -48,11 +51,13 @@ struct AdminEventView: View {
                 )
                 .environmentObject(authState)
                 .tabItem { Label("Iscrizioni", systemImage: "person.3.fill") }
+                .tag(1)
 
                 // ── Tab 3: Liberatorie ────────────────────────────────────
                 AdminReleaseFormSheetView(server: server, viewModel: viewModel, event: localEvent)
                     .environmentObject(authState)
                     .tabItem { Label("Liberatorie", systemImage: "doc.text.fill") }
+                    .tag(2)
 
                 // ── Tab 4: Gestione ───────────────────────────────────────
                 AdminEventGestioneView(
@@ -63,6 +68,7 @@ struct AdminEventView: View {
                 )
                 .environmentObject(authState)
                 .tabItem { Label("Gestione", systemImage: "gearshape.2.fill") }
+                .tag(3)
 
                 // ── Tab 5: Modifica ───────────────────────────────────────
                 EventiFormView(
@@ -84,6 +90,7 @@ struct AdminEventView: View {
                 )
                 .id(editFormId)
                 .tabItem { Label("Modifica", systemImage: "pencil.circle.fill") }
+                .tag(4)
             }
             .tint(.kartAccent)
             .navigationTitle(localEvent.title)
@@ -110,12 +117,35 @@ struct AdminEventView: View {
                             .foregroundColor(isStarted ? .red : .gray)
                     }
                 }
+
+                // ── Aggiungi Iscrizione ───────────────────────────────────
+                if selectedTab == 1 {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showAddRegistrationSheet = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.kartAccent)
+                        }
+                    }
+                }
             }
         }
         .sheet(isPresented: $showUploadResults) {
             UploadResultsView(server: server, event: localEvent)
                 .environmentObject(authState)
         }
+        .sheet(isPresented: $showAddRegistrationSheet, onDismiss: {
+            NotificationCenter.default.post(name: NSNotification.Name("RefreshRegistrations"), object: nil)
+        }) {
+            AdminAddRegistrationSheetView(
+                server: server,
+                viewModel: viewModel,
+                event: localEvent,
+                isTeamEvent: localEvent.isTeamEvent
+            )
+            .environmentObject(authState)
+        }
     }
-
 }
