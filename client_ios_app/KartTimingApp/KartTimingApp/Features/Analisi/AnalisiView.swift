@@ -102,7 +102,6 @@ struct AnalisiView: View {
         ScrollView {
             VStack(spacing: 16) {
                 summaryCard
-                if !viewModel.upcomingConfirmedEvents.isEmpty { upcomingSection }
                 Spacer(minLength: 30)
             }
             .padding(16)
@@ -162,53 +161,6 @@ struct AnalisiView: View {
         .background(Color.kartPanel)
     }
 
-    private var upcomingSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("PROSSIMI EVENTI", systemImage: "calendar.badge.clock")
-
-            ForEach(viewModel.upcomingConfirmedEvents.prefix(3), id: \.event.id) { item in
-                Button {
-                    NotificationCenter.default.post(
-                        name: NSNotification.Name("OpenEventDetail"),
-                        object: nil,
-                        userInfo: ["eventId": item.event.id]
-                    )
-                } label: {
-                    upcomingRow(event: item.event)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private func upcomingRow(event: RaceEvent) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(event.title)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(.white)
-                HStack(spacing: 8) {
-                    Label(event.location.components(separatedBy: " - ").first ?? event.location,
-                          systemImage: "mappin.circle")
-                        .font(.system(size: 11))
-                        .foregroundColor(.kartDim)
-                    if let date = viewModel.parseDate(from: event.eventDate) {
-                        Text(date, style: .date)
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.kartDim.opacity(0.7))
-                    }
-                }
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.kartDim)
-        }
-        .padding(12)
-        .background(Color.kartPanel)
-        .cornerRadius(10)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.05), lineWidth: 1))
-    }
 
     // MARK: ─── Storico ────────────────────────────────────────────────────────
 

@@ -380,7 +380,6 @@ struct UserAnalisiDetailView: View {
         ScrollView {
             VStack(spacing: 16) {
                 summaryCard
-                if !viewModel.upcomingConfirmedEvents.isEmpty { upcomingSection }
                 Spacer(minLength: 30)
             }
             .padding(16)
@@ -449,47 +448,6 @@ struct UserAnalisiDetailView: View {
         .background(Color.kartPanel)
     }
 
-    private var upcomingSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: "calendar.badge.clock")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.kartAccent)
-                Text("PROSSIMI EVENTI")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.kartAccent)
-            }
-            ForEach(viewModel.upcomingConfirmedEvents.prefix(3), id: \.event.id) { item in
-                upcomingRow(event: item.event)
-            }
-        }
-    }
-
-    private func upcomingRow(event: RaceEvent) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(event.title)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(.white)
-                HStack(spacing: 8) {
-                    Label(event.location.components(separatedBy: " - ").first ?? event.location,
-                          systemImage: "mappin.circle")
-                        .font(.system(size: 11))
-                        .foregroundColor(.kartDim)
-                    if let date = viewModel.parseDate(from: event.eventDate) {
-                        Text(date, style: .date)
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.kartDim.opacity(0.7))
-                    }
-                }
-            }
-            Spacer()
-        }
-        .padding(12)
-        .background(Color.kartPanel)
-        .cornerRadius(10)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.05), lineWidth: 1))
-    }
 
     // MARK: - Storico
 
