@@ -322,25 +322,6 @@ struct EventDetailContentView: View {
                 }
             }
         }
-
-        // Firma Liberatoria
-        if isRegistered && event.releaseFormText != nil && !event.releaseFormText!.isEmpty {
-            NavigationLink(destination: ReleaseFormSignView(server: server, event: event, onSignComplete: {
-                Task { await fetchEventDetails() }
-            }).environmentObject(authState)) {
-                HStack(spacing: 10) {
-                    Image(systemName: "signature")
-                        .font(.system(size: 18))
-                    Text(hasSignedRelease ? "Visualizza/Modifica Liberatoria" : "Firma Liberatoria")
-                        .font(.system(size: 16, weight: .bold))
-                }
-                .foregroundColor(hasSignedRelease ? .white : .black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-            }
-            .background(hasSignedRelease ? Color.green : Color.kartAccent)
-            .cornerRadius(12)
-        }
     }
 
     // MARK: - Status Toggle

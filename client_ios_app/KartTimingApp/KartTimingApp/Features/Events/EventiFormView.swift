@@ -232,63 +232,68 @@ struct EventiFormView: View {
                     }
 
                     // ── Azioni ────────────────────────────────────────────
-                    formSection(title: "Azioni", icon: "gearshape.fill") {
+                    VStack(spacing: 12) {
 
-                        // Salva
+                        // Salva Modifiche
                         Button(action: saveEvent) {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 10) {
                                 if isSaving {
-                                    ProgressView().tint(isFormValid ? .black : .kartDim).scaleEffect(0.8)
+                                    ProgressView()
+                                        .tint(isFormValid ? .black : .kartDim)
+                                        .scaleEffect(0.85)
                                 } else {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 17, weight: .semibold))
                                     Text("Salva Modifiche")
-                                        .font(.system(size: 14, weight: .bold))
+                                        .font(.system(size: 15, weight: .bold))
                                 }
                                 Spacer()
-                                if !isSaving {
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .opacity(0.6)
-                                }
                             }
                             .foregroundColor(isFormValid ? .black : .kartDim)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 14)
-                            .background(isFormValid ? Color.kartAccent : Color.white.opacity(0.06))
-                            .cornerRadius(0)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 16)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                isFormValid
+                                    ? Color.kartAccent
+                                    : Color.white.opacity(0.08)
+                            )
+                            .cornerRadius(14)
+                            .shadow(color: isFormValid ? Color.kartAccent.opacity(0.35) : .clear,
+                                    radius: 10, x: 0, y: 4)
                         }
                         .disabled(!isFormValid || isSaving)
 
-                        // Elimina (solo in modifica)
+                        // Elimina Evento (solo in modifica)
                         if editingEvent != nil {
-                            Divider().background(Color.white.opacity(0.06)).padding(.horizontal, 14)
-
                             Button(action: { showDeleteConfirm = true }) {
-                                HStack(spacing: 8) {
+                                HStack(spacing: 10) {
                                     if isDeleting {
-                                        ProgressView().tint(.red).scaleEffect(0.8)
+                                        ProgressView()
+                                            .tint(.red)
+                                            .scaleEffect(0.85)
                                     } else {
                                         Image(systemName: "trash.fill")
-                                            .font(.system(size: 14))
+                                            .font(.system(size: 15, weight: .semibold))
                                         Text("Elimina Evento")
-                                            .font(.system(size: 14, weight: .bold))
+                                            .font(.system(size: 15, weight: .bold))
                                     }
                                     Spacer()
-                                    if !isDeleting {
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 11, weight: .semibold))
-                                            .opacity(0.6)
-                                    }
                                 }
                                 .foregroundColor(.red)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 14)
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 16)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.red.opacity(0.12))
+                                .cornerRadius(14)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.red.opacity(0.4), lineWidth: 1)
+                                )
                             }
                             .disabled(isDeleting)
                         }
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
