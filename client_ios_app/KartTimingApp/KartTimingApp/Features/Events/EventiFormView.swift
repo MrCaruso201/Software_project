@@ -6,8 +6,12 @@ struct EventiFormView: View {
     let authState: AuthState
     let viewModel: EventiViewModel
 
-    var editingEvent: RaceEvent?
+    var editingEvent: RaceEvent? = nil
     var onSaved: (() -> Void)? = nil
+
+    /// Se true (es. quando usato come tab), non chiude la view dopo il salvataggio
+    /// ma mostra un banner "Modifiche salvate" e chiama comunque onSaved.
+    var suppressDismissOnSave: Bool = false
 
     @StateObject private var kartodromoVM = KartodromoViewModel()
 
@@ -30,6 +34,7 @@ struct EventiFormView: View {
     @State private var isDeleting = false
     @State private var showDeleteConfirm = false
     @State private var saveError: String? = nil
+    @State private var showSavedBanner = false
 
     var isFormValid: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -39,7 +44,7 @@ struct EventiFormView: View {
     // MARK: - Body
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             Color.kartBG.ignoresSafeArea()
 
             ScrollView {
@@ -299,6 +304,31 @@ struct EventiFormView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 40)
             }
+
+            // ── Banner "Modifiche salvate" ─────────────────────────────────
+            if showSavedBanner {
+                VStack {
+                    HStack(spacing: 10) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Modifiche salvate")
+                            .font(.system(size: 14, weight: .semibold))
+                        Spacer()
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.green.opacity(0.85))
+                            .shadow(color: Color.green.opacity(0.4), radius: 10, x: 0, y: 4)
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    Spacer()
+                }
+            }
         }
         .alert("Elimina Evento", isPresented: $showDeleteConfirm) {
             Button("Elimina", role: .destructive) { deleteEvent() }
@@ -416,18 +446,70 @@ struct EventiFormView: View {
             "event_date": fmt.string(from: eventDate)
         ]
 
-        if let v = Double(registrationCost)    { data["registration_cost"]    = v }
-        if let v = Int(maxParticipants)        { data["max_participants"]      = v }
-        if let v = Int(minPeoplePerGroup)      { data["min_people_per_group"]  = v }
-        if let v = Int(maxPeoplePerGroup)      { data["max_people_per_group"]  = v }
-        if let v = Double(weightLimit)         { data["weight_limit"]          = v }
+        // Campi opzionali: se compilati invia il valore, se svuotati invia null (solo in modifica)
+        let isEditing = editingEvent != nil
+
+        if let v = Double(registrationCost) {
+            data["registration_cost"] = v
+        } else if isEditing {
+            data["registration_cost"] = NSNull()
+        }
+
+        if let v = Int(maxParticipants) {
+            data["max_participants"] = v
+        } else if isEditing {
+            data["max_participants"] = NSNull()
+        }
+
+        if let v = Int(minPeoplePerGroup) {
+            data["min_people_per_group"] = v
+        } else if isEditing {
+            data["min_people_per_group"] = NSNull()
+        }
+
+        if let v = Int(maxPeoplePerGroup) {
+            data["max_people_per_group"] = v
+        } else if isEditing {
+            data["max_people_per_group"] = NSNull()
+        }
+
+        if let v = Double(weightLimit) {
+            data["weight_limit"] = v
+        } else if isEditing {
+            data["weight_limit"] = NSNull()
+        }
+
         let tk = kart.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !tk.isEmpty                         { data["kart"]                  = tk }
+        if !tk.isEmpty {
+            data["kart"] = tk
+        } else if isEditing {
+            data["kart"] = NSNull()
+        }
+
         let td = description.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !td.isEmpty                         { data["description"]           = td }
-        if let v = Int(raceDuration)           { data["race_duration"]         = v }
-        if let v = Int(maxStintDuration)       { data["max_stint_duration"]    = v }
-        if let v = Int(daysBeforeDeadline)     { data["days_before_deadline"]  = v }
+        if !td.isEmpty {
+            data["description"] = td
+        } else if isEditing {
+            data["description"] = NSNull()
+        }
+
+        if let v = Int(raceDuration) {
+            data["race_duration"] = v
+        } else if isEditing {
+            data["race_duration"] = NSNull()
+        }
+
+        if let v = Int(maxStintDuration) {
+            data["max_stint_duration"] = v
+        } else if isEditing {
+            data["max_stint_duration"] = NSNull()
+        }
+
+        if let v = Int(daysBeforeDeadline) {
+            data["days_before_deadline"] = v
+        } else if isEditing {
+            data["days_before_deadline"] = NSNull()
+        }
 
         if let ev = editingEvent {
             viewModel.updateEvent(
@@ -435,8 +517,21 @@ struct EventiFormView: View {
                 eventData: data, token: authState.currentToken
             ) { success in
                 isSaving = false
-                if success { onSaved?(); dismiss() }
-                else       { saveError = "Salvataggio fallito. Riprova." }
+                if success {
+                    if suppressDismissOnSave {
+                        withAnimation(.spring(response: 0.4)) { showSavedBanner = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                            withAnimation { showSavedBanner = false }
+                            // Aggiorna i dati dopo che il banner è scomparso
+                            onSaved?()
+                        }
+                    } else {
+                        onSaved?()
+                        dismiss()
+                    }
+                } else {
+                    saveError = "Salvataggio fallito. Riprova."
+                }
             }
         } else {
             viewModel.createEvent(

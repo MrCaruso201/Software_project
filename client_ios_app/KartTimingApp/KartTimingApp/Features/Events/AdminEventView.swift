@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Vista dedicata all'evento per utenti Admin.
-/// NavigationStack + TabView con 3 tab: Info, Iscrizioni, Modifica.
+/// NavigationStack + TabView con 5 tab: Info, Iscrizioni, Liberatorie, Modifica e Gestione.
 struct AdminEventView: View {
     let server: DiscoveredServer
     let event: RaceEvent
@@ -16,6 +16,8 @@ struct AdminEventView: View {
     @State private var pendingStatus: String? = nil
     @State private var isUpdatingStatus = false
     @State private var statusError: String? = nil
+
+    @State private var showUploadResults = false
 
     // Refresh del form dopo salvataggio
     @State private var editFormId = UUID()
@@ -57,16 +59,33 @@ struct AdminEventView: View {
                     .environmentObject(authState)
                     .tabItem { Label("Liberatorie", systemImage: "doc.text.fill") }
 
-                // ── Tab 4: Modifica ───────────────────────────────────────
+                // ── Tab 4: Gestione ───────────────────────────────────────
+                AdminEventGestioneView(
+                    server: server,
+                    localEvent: $localEvent,
+                    isAdmin: isAdmin,
+                    showUploadResults: $showUploadResults
+                )
+                .environmentObject(authState)
+                .tabItem { Label("Gestione", systemImage: "gearshape.2.fill") }
+
+                // ── Tab 5: Modifica ───────────────────────────────────────
                 EventiFormView(
                     server: server,
                     authState: authState,
                     viewModel: viewModel,
                     editingEvent: localEvent,
                     onSaved: {
-                        // Aggiorna evento locale dopo il salvataggio
-                        viewModel.fetchEvents(serverURL: server.httpURL)
-                    }
+                        // Ricarica la lista e aggiorna localEvent con i dati aggiornati dal server
+                        viewModel.fetchEvents(serverURL: server.httpURL) {
+                            if let updated = viewModel.events.first(where: { $0.id == localEvent.id }) {
+                                localEvent = updated
+                                // Forza il re-render del form con i dati aggiornati
+                                editFormId = UUID()
+                            }
+                        }
+                    },
+                    suppressDismissOnSave: true
                 )
                 .id(editFormId)
                 .tabItem { Label("Modifica", systemImage: "pencil.circle.fill") }
@@ -132,6 +151,10 @@ struct AdminEventView: View {
         }, message: {
             Text(statusError ?? "")
         })
+        .sheet(isPresented: $showUploadResults) {
+            UploadResultsView(server: server, event: localEvent)
+                .environmentObject(authState)
+        }
     }
 
     // MARK: - Status update
