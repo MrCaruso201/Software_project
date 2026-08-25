@@ -59,8 +59,11 @@ class AnalisiViewModel: ObservableObject {
     var circuitStats: [CircuitStat] {
         var map: [String: CircuitStat] = [:]
 
-        // 1. Inserisci gli eventi passati
-        for (event, _) in pastConfirmedEvents {
+        // 1. Inserisci gli eventi passati (escluse gare a squadre)
+        for (event, reg) in pastConfirmedEvents {
+            // Salta le gare a squadre: il tempo non è individuale
+            guard reg.teamName == nil else { continue }
+
             let circuit = event.location.components(separatedBy: " - ").first ?? event.location
             let date    = parseDate(from: event.eventDate) ?? Date()
             let res     = myResults.first { $0.eventId == event.id }
