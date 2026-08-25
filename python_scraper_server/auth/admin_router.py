@@ -151,8 +151,30 @@ def update_release_form(
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(404, "Evento non trovato")
+        
+    text_changed = False
+    if event.release_form_text != body.release_form_text:
+        text_changed = True
+        
     event.release_form_text = body.release_form_text
     db.commit()
+    
+    # Se il testo della liberatoria è cambiato, cancella tutte le firme esistenti e notifica
+    if text_changed:
+        signatures = db.query(SignedRelease).filter(SignedRelease.event_id == event_id).all()
+        for sig in signatures:
+            notify_user(
+                db, 
+                sig.user_id, 
+                event_id, 
+                "release_rejected", 
+                "Liberatoria Aggiornata", 
+                "L'admin ha modificato il testo della liberatoria. La tua firma precedente è stata annullata, per favore firmala nuovamente."
+            )
+            db.delete(sig)
+        if signatures:
+            db.commit()
+            
     return {"message": "Testo liberatoria aggiornato"}
 
 

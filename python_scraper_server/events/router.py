@@ -95,6 +95,13 @@ def update_event(event_id: int, event_update: EventUpdate, db: Session = Depends
     
     update_data = event_update.model_dump(exclude_unset=True)
 
+    # Verifica se il testo della liberatoria sta cambiando
+    text_changed = False
+    if "release_form_text" in update_data:
+        new_text = update_data["release_form_text"]
+        if new_text != db_event.release_form_text:
+            text_changed = True
+
     # Se fornito days_before_deadline, calcola e aggiorna anche registration_deadline
     if "days_before_deadline" in update_data:
         days = update_data["days_before_deadline"]
@@ -110,6 +117,23 @@ def update_event(event_id: int, event_update: EventUpdate, db: Session = Depends
         setattr(db_event, key, value)
         
     db.commit()
+    
+    # Se il testo della liberatoria è cambiato, cancella tutte le firme esistenti e notifica
+    if text_changed:
+        signatures = db.query(SignedRelease).filter(SignedRelease.event_id == event_id).all()
+        for sig in signatures:
+            notify_user(
+                db, 
+                sig.user_id, 
+                event_id, 
+                "release_rejected", 
+                "Liberatoria Aggiornata", 
+                "Il testo della liberatoria è cambiato. La tua firma precedente è stata annullata, per favore firmala nuovamente."
+            )
+            db.delete(sig)
+        if signatures:
+            db.commit()
+            
     db.refresh(db_event)
     return db_event
 

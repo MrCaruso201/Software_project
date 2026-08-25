@@ -149,7 +149,9 @@ struct AdminEventRegistrationsView: View {
                 }
             )
         }
-        .sheet(isPresented: $showReleaseFormSheet) {
+        .sheet(isPresented: $showReleaseFormSheet, onDismiss: {
+            loadRegistrations()
+        }) {
             AdminReleaseFormSheetView(
                 server: server,
                 viewModel: viewModel,

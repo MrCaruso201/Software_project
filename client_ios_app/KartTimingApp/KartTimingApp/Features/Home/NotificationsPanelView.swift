@@ -101,7 +101,7 @@ struct NotificationRowView: View {
             case "registration_accepted", "registration_confirmed": return .green
             case "registration_unconfirmed": return .orange
             case "moved_to_waitlist": return .purple
-            case "registration_deleted": return .red
+            case "registration_deleted", "release_rejected": return .red
             default: return .blue
             }
         }

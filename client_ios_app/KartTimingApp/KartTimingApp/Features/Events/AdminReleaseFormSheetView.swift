@@ -158,6 +158,7 @@ struct AdminReleaseFormSheetView: View {
             isSaving = false
             if success {
                 saveMessage = "Salvato con successo!"
+                loadSignedReleases() // Aggiorna la vista delle firme
             } else {
                 saveMessage = "Errore durante il salvataggio."
             }

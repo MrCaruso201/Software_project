@@ -64,7 +64,7 @@ struct AppNotification: Identifiable {
             case "registration_accepted", "registration_confirmed": return "checkmark.seal.fill"
             case "registration_unconfirmed": return "exclamationmark.triangle.fill"
             case "moved_to_waitlist": return "clock.fill"
-            case "registration_deleted": return "xmark.octagon.fill"
+            case "registration_deleted", "release_rejected": return "xmark.octagon.fill"
             default: return "bell.fill"
             }
         }
@@ -81,7 +81,7 @@ struct AppNotification: Identifiable {
             case "registration_accepted", "registration_confirmed": return "green"
             case "registration_unconfirmed": return "orange"
             case "moved_to_waitlist": return "purple"
-            case "registration_deleted": return "red"
+            case "registration_deleted", "release_rejected": return "red"
             default: return "blue"
             }
         }
