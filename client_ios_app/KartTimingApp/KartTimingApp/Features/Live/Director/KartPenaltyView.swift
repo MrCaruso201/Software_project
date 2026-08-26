@@ -10,8 +10,32 @@ struct KartPenaltyView: View {
     @EnvironmentObject var authState: AuthState
 
     // Race control
-    @State private var showStatusConfirm = false
-    @State private var pendingStatus: String? = nil
+    private var raceStatusColor: Color {
+        guard event.status == "started" || event.status == "finished" else {
+            return .gray
+        }
+        
+        let flagMessages = viewModel.messages.filter {
+            $0.messageType == "yellow_flag" ||
+            $0.messageType == "red_flag" ||
+            $0.messageType == "green_flag" ||
+            $0.messageType == "checkered_flag" ||
+            ($0.messageType == "custom" && $0.text.lowercased() == "gara iniziata")
+        }
+        
+        let lastFlag = flagMessages.sorted(by: {
+            guard let d1 = $0.parsedDate, let d2 = $1.parsedDate else { return false }
+            return d1 < d2
+        }).last?.messageType
+        
+        switch lastFlag {
+        case "yellow_flag": return .yellow
+        case "red_flag": return .red
+        case "checkered_flag": return .white
+        case "green_flag", "custom": return .kartGreen
+        default: return .kartGreen
+        }
+    }
 
     // Selezione destinatario
     enum Target: Equatable {
@@ -116,13 +140,7 @@ struct KartPenaltyView: View {
         } message: {
             Text(actionError ?? "")
         }
-        .confirmationDialog(confirmTitle, isPresented: $showStatusConfirm, titleVisibility: .visible) {
-            Button(confirmButtonLabel, role: pendingStatus == "finished" ? .destructive : nil) {
-                guard let s = pendingStatus else { return }
-                Task { try? await viewModel.updateEventStatus(s) }
-            }
-            Button("Annulla", role: .cancel) { }
-        }
+
         .onAppear {
             if selectedType == nil, let first = viewModel.penaltyTypes.first {
                 selectedType = first
@@ -146,53 +164,15 @@ struct KartPenaltyView: View {
             }
             Spacer()
 
-            if isFinished && isAdmin {
-                Button("Ripristina") {
-                    pendingStatus = "scheduled"
-                    showStatusConfirm = true
-                }
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(Color.orange)
-                .cornerRadius(8)
-            } else if !isFinished {
-                Button(isStarted ? "Termina Gara" : "Avvia Gara") {
-                    pendingStatus = isStarted ? "finished" : "started"
-                    showStatusConfirm = true
-                }
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(isStarted ? Color.kartRed : Color.kartGreen)
-                .cornerRadius(8)
-            }
+            RoundedRectangle(cornerRadius: 6)
+                .fill(raceStatusColor)
+                .frame(width: 44, height: 28)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.kartPanel)
-
     }
 
-    private var confirmTitle: String {
-        switch pendingStatus {
-        case "started":   return "Avviare la gara?"
-        case "finished":  return "Terminare la gara?"
-        case "scheduled": return "Ripristinare lo stato a 'Programmata'?"
-        default:          return "Conferma"
-        }
-    }
-
-    private var confirmButtonLabel: String {
-        switch pendingStatus {
-        case "started":   return "Avvia Gara"
-        case "finished":  return "Termina Gara"
-        case "scheduled": return "Ripristina"
-        default:          return "Conferma"
-        }
-    }
 
     // MARK: - Target Picker (Menu a tendina)
 

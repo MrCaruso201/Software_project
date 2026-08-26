@@ -14,25 +14,31 @@ struct DirectorLiveView: View {
     /// Trigger per l'export CSV: viene settato a true dalla toolbar,
     /// ClassificaLiveView lo osserva con onChange e avvia il download.
     @State private var csvExportRequested = false
+    
+    @State private var selectedTab = 0
 
     var body: some View {
         NavigationStack {
-            TabView {
+            TabView(selection: $selectedTab) {
                 // ── Tab 1: Classifica ─────────────────────────────────
                 ClassificaLiveView(viewModel: viewModel, exportRequested: $csvExportRequested)
                     .tabItem { Label("Classifica", systemImage: "list.number") }
+                    .tag(0)
 
                 // ── Tab 2: Kart (Assegnazione) ────────────────────────
                 KartAssignmentView(event: event, viewModel: viewModel)
                     .tabItem { Label("Kart", systemImage: "flag.2.crossed.fill") }
+                    .tag(1)
                     
                 // ── Tab 3: Gestione LIVE (Penalità + Controllo Gara) ─────────────
                 KartPenaltyView(event: event, viewModel: viewModel)
                     .tabItem { Label("Gestione LIVE", systemImage: "exclamationmark.triangle.fill") }
+                    .tag(2)
 
                 // ── Tab 4: Messaggi ───────────────────────────────────
                 MessaggiView(viewModel: viewModel)
                     .tabItem { Label("Messaggi", systemImage: "bubble.left.and.bubble.right.fill") }
+                    .tag(3)
             }
             .tint(.kartAccent)
             .navigationTitle(event.title)
@@ -61,13 +67,15 @@ struct DirectorLiveView: View {
 
                 // ── Esporta classifica CSV (solo admin/director) ───────
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        csvExportRequested = true
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 16, weight: .semibold))
+                    if selectedTab == 0 {
+                        Button {
+                            csvExportRequested = true
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundColor(.kartAccent)
                     }
-                    .foregroundColor(.kartAccent)
                 }
             }
         }

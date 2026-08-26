@@ -16,6 +16,19 @@ struct ClassificaLiveView: View {
     // CSV export
     @State private var showShareSheet = false
     @State private var csvExportURL: URL? = nil
+    
+    private var lastFlagMessage: RaceMessage? {
+        viewModel.messages.filter {
+            $0.messageType == "yellow_flag" ||
+            $0.messageType == "red_flag" ||
+            $0.messageType == "green_flag" ||
+            $0.messageType == "checkered_flag" ||
+            ($0.messageType == "custom" && $0.text.lowercased() == "gara iniziata")
+        }.sorted(by: {
+            guard let d1 = $0.parsedDate, let d2 = $1.parsedDate else { return false }
+            return d1 < d2
+        }).last
+    }
 
     var body: some View {
         ZStack {
@@ -84,22 +97,34 @@ struct ClassificaLiveView: View {
             Group {
                 if let startTime = viewModel.raceStartTime {
                     TimelineView(.periodic(from: startTime, by: 1.0)) { context in
-                        let targetDate = viewModel.raceEndTime ?? context.date
-                        let elapsed = targetDate.timeIntervalSince(startTime)
+                        let flag = lastFlagMessage
+                        let isRedFlag = flag?.messageType == "red_flag"
+                        
+                        let targetDate = viewModel.raceEndTime ?? (isRedFlag ? (flag?.parsedDate ?? context.date) : context.date)
+                        
+                        let elapsed = max(0, targetDate.timeIntervalSince(startTime))
                         let min = Int(elapsed) / 60
                         let sec = Int(elapsed) % 60
                         
-                        if viewModel.raceEndTime != nil {
-                            HStack(spacing: 4) {
+                        HStack(spacing: 6) {
+                            if viewModel.raceEndTime != nil || flag?.messageType == "checkered_flag" {
                                 Image(systemName: "flag.checkered")
                                     .font(.system(size: 14))
                                     .foregroundColor(.white)
-                                Text(String(format: "%02d:%02d", min, sec))
-                                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.white)
+                            } else if let type = flag?.messageType {
+                                switch type {
+                                case "yellow_flag":
+                                    RoundedRectangle(cornerRadius: 3).fill(Color.yellow).frame(width: 14, height: 14)
+                                case "red_flag":
+                                    RoundedRectangle(cornerRadius: 3).fill(Color.red).frame(width: 14, height: 14)
+                                case "green_flag", "custom":
+                                    RoundedRectangle(cornerRadius: 3).fill(Color.kartGreen).frame(width: 14, height: 14)
+                                default:
+                                    EmptyView()
+                                }
                             }
-                        } else {
-                            Text(String(format: "T: %02d:%02d", min, sec))
+                            
+                            Text(String(format: (viewModel.raceEndTime != nil || flag?.messageType == "checkered_flag") ? "%02d:%02d" : "T: %02d:%02d", min, sec))
                                 .font(.system(size: 16, weight: .bold, design: .monospaced))
                                 .foregroundColor(.white)
                         }
