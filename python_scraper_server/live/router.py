@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from db.database import get_db
 from db.models import (
-    Event, EventRegistration,
+    Event, EventRegistration, SignedRelease,
     LiveKartAssignment, RacePenalty, RaceMessage, PenaltyType
 )
 from auth.dependencies import get_current_user
@@ -109,11 +109,39 @@ def update_event_status(
     # Notify users if the event is starting
     if body.status == "started" and event.status != "started":
         from notifications.router import notify_user
-        registrations = db.query(EventRegistration).filter(
+        
+        # 1. Rifiuta (elimina) tutte le iscrizioni non confermate
+        unconfirmed_regs = db.query(EventRegistration).filter(
             EventRegistration.event_id == event_id,
+            ~EventRegistration.status.in_(["confirmed"])
+        ).all()
+        
+        for reg in unconfirmed_regs:
+            if reg.user_id:
+                # 1.1 Elimina l'eventuale liberatoria associata a questa iscrizione rifiutata
+                db.query(SignedRelease).filter(
+                    SignedRelease.event_id == event_id,
+                    SignedRelease.user_id == reg.user_id
+                ).delete(synchronize_session=False)
+                
+                notify_user(
+                    db=db,
+                    user_id=reg.user_id,
+                    event_id=event_id,
+                    notif_type="registration_deleted",
+                    title="Iscrizione annullata",
+                    message="L'evento è iniziato e la tua iscrizione non è stata confermata in tempo."
+                )
+            db.delete(reg)
+            
+        # 2. Notifica solo gli iscritti confermati
+        confirmed_registrations = db.query(EventRegistration).filter(
+            EventRegistration.event_id == event_id,
+            EventRegistration.status == "confirmed",
             EventRegistration.user_id.isnot(None)
         ).all()
-        for reg in registrations:
+        
+        for reg in confirmed_registrations:
             notify_user(
                 db=db,
                 user_id=reg.user_id,
