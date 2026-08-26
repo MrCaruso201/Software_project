@@ -32,6 +32,7 @@ struct UserEventView: View {
     // Liberatoria
     @State private var hasSignedRelease = false
     @State private var showLive = false
+    @State private var showLiveAsSpectator = false
 
     init(server: DiscoveredServer, event: RaceEvent, viewModel: EventiViewModel) {
         self.server = server
@@ -114,7 +115,11 @@ struct UserEventView: View {
             }
         }
         .fullScreenCover(isPresented: $showLive) {
-            LiveRootView(server: server, event: localEvent)
+            LiveRootView(server: server, event: localEvent, isUserRegistered: true)
+                .environmentObject(authState)
+        }
+        .fullScreenCover(isPresented: $showLiveAsSpectator) {
+            LiveRootView(server: server, event: localEvent, isUserRegistered: false)
                 .environmentObject(authState)
         }
         .onAppear {
@@ -133,8 +138,11 @@ struct UserEventView: View {
                 VStack(spacing: 16) {
 
                     // ── Entra in Live (gara avviata) ───────────────────────
-                    if localEvent.status == "started" && isRegistered {
-                        Button(action: { showLive = true }) {
+                    if localEvent.status == "started" {
+                        Button(action: {
+                            if isRegistered { showLive = true }
+                            else { showLiveAsSpectator = true }
+                        }) {
                             HStack(spacing: 10) {
                                 ZStack {
                                     Circle().fill(Color.red).frame(width: 8, height: 8)
@@ -296,20 +304,38 @@ struct UserEventView: View {
             // raceDirector: nessuna azione iscrizione
             EmptyView()
         } else if !isRegistered {
-            // Non iscritto
-            Button {
-                activeSheet = .register
-            } label: {
+            if localEvent.status == "started" {
+                // Evento già in corso: non si può più iscrivere
                 HStack(spacing: 8) {
-                    Image(systemName: deadlinePassed ? "clock.badge.exclamationmark" : "pencil.and.list.clipboard")
-                    Text(deadlinePassed ? "Mettiti in Lista d'Attesa" : "Iscriviti")
+                    Image(systemName: "flag.checkered")
+                    Text("Evento Iniziato")
                         .font(.system(size: 15, weight: .bold))
                 }
-                .foregroundColor(deadlinePassed ? .white : .black)
+                .foregroundColor(.kartDim)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(deadlinePassed ? Color.purple : Color.kartAccent)
+                .background(Color.kartPanel)
                 .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+            } else {
+                // Evento non ancora iniziato: mostra il pulsante Iscriviti
+                Button {
+                    activeSheet = .register
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: deadlinePassed ? "clock.badge.exclamationmark" : "pencil.and.list.clipboard")
+                        Text(deadlinePassed ? "Mettiti in Lista d'Attesa" : "Iscriviti")
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    .foregroundColor(deadlinePassed ? .white : .black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(deadlinePassed ? Color.purple : Color.kartAccent)
+                    .cornerRadius(12)
+                }
             }
         } else if let registration = reg, !isConfirmed {
             if event.isTeamEvent && registration.isTeamLeader {

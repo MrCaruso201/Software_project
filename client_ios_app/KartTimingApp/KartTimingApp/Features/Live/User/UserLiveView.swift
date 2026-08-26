@@ -4,13 +4,15 @@ import SwiftUI
 struct UserLiveView: View {
     let event: RaceEvent
     @ObservedObject var viewModel: LiveViewModel
+    /// Se false (utente non iscritto all'evento), mostra solo la Classifica
+    /// e nasconde sia il tab "Team View" sia il pulsante Pilot View.
+    var isUserRegistered: Bool = true
 
     @Environment(\.dismiss) private var dismiss
 
     @State private var navigateToPilot: Bool = false
 
     private var isStarted: Bool { event.status == "started" }
-    private var kartNumber: Int? { viewModel.myKart.kartNumber }
 
     var body: some View {
         NavigationStack {
@@ -18,10 +20,12 @@ struct UserLiveView: View {
                 // ── Tab 1: Classifica ─────────────────────────────────
                 ClassificaLiveView(viewModel: viewModel, exportRequested: .constant(false))
                     .tabItem { Label("Classifica", systemImage: "list.number") }
-                
-                // ── Tab 2: Team View ──────────────────────────────────
-                TeamLiveView(viewModel: viewModel)
-                    .tabItem { Label("Team View", systemImage: "person.3.fill") }
+
+                // ── Tab 2: Team View (solo utenti registrati) ──────────
+                if isUserRegistered {
+                    TeamLiveView(viewModel: viewModel)
+                        .tabItem { Label("Team View", systemImage: "person.3.fill") }
+                }
             }
             .tint(.kartAccent)
             .navigationTitle(event.title)
@@ -47,14 +51,17 @@ struct UserLiveView: View {
                             .foregroundColor(isStarted ? .red : .gray)
                     }
                 }
-                // ── Pulsante Pilot View ────────────────────────────────
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        navigateToPilot = true
-                    } label: {
-                        Image(systemName: "car.fill")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.red)
+
+                // ── Pulsante Pilot View (solo utenti registrati) ───────
+                if isUserRegistered {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            navigateToPilot = true
+                        } label: {
+                            Image(systemName: "car.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.red)
+                        }
                     }
                 }
             }

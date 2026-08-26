@@ -5,6 +5,9 @@ import SwiftUI
 struct LiveRootView: View {
     let server: DiscoveredServer
     let event: RaceEvent
+    /// Indica se l'utente ha una registrazione confermata all'evento.
+    /// Se false, la vista utente mostra solo la classifica (no Team View, no Pilot button).
+    var isUserRegistered: Bool = true
 
     @EnvironmentObject var authState: AuthState
     @Environment(\.dismiss) private var dismiss
@@ -24,7 +27,7 @@ struct LiveRootView: View {
                 DirectorLiveView(event: event, viewModel: viewModel)
                     .environmentObject(timingManager)
             } else {
-                UserLiveView(event: event, viewModel: viewModel)
+                UserLiveView(event: event, viewModel: viewModel, isUserRegistered: isUserRegistered)
                     .environmentObject(timingManager)
             }
         }

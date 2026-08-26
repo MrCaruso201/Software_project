@@ -33,11 +33,13 @@ struct HomeView: View {
                 .tabItem { Label("Timing", systemImage: "stopwatch.fill") }
                 .tag(HomeTab.timing)
 
-                NavigationStack {
-                    AnalisiView(server: appEnv.server(token: authState.currentToken ?? ""))
+                if authState.currentUser?.role != .raceDirector {
+                    NavigationStack {
+                        AnalisiView(server: appEnv.server(token: authState.currentToken ?? ""))
+                    }
+                    .tabItem { Label("Analisi", systemImage: "trophy.fill") }
+                    .tag(HomeTab.analisi)
                 }
-                .tabItem { Label("Analisi", systemImage: "trophy.fill") }
-                .tag(HomeTab.analisi)
 
                 NavigationStack {
                     SettingsView()

@@ -200,7 +200,7 @@ class UserHomeViewModel: ObservableObject {
         // Local status notifications (pending_payment, waitlist) have been removed from the Bell menu
         // so that the Bell menu acts purely as an inbox for admin notifications.
         
-        // 1. Promemoria eventi imminenti (confermati, entro 7 giorni)i)
+        // 1. Promemoria eventi imminenti (confermati, entro 7 giorni)
         let confirmedEventIds = Set(registrations.filter { $0.status == "confirmed" }.map { $0.eventId })
         for eventId in confirmedEventIds {
             if let event = events.first(where: { $0.id == eventId }),

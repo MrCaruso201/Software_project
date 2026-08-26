@@ -7,6 +7,7 @@ struct UserHomeView: View {
     
     @State private var showNotifications = false
     @State private var liveEvent: RaceEvent? = nil
+    @State private var liveEventUserIsRegistered: Bool = false
     
     var body: some View {
         ZStack {
@@ -74,7 +75,7 @@ struct UserHomeView: View {
             viewModel.fetchData(serverURL: server.httpURL, token: authState.currentToken)
         }
         .fullScreenCover(item: $liveEvent) { ev in
-            LiveRootView(server: server, event: ev)
+            LiveRootView(server: server, event: ev, isUserRegistered: liveEventUserIsRegistered)
                 .environmentObject(authState)
         }
     }
@@ -155,14 +156,15 @@ struct UserHomeView: View {
             if Calendar.current.isDateInToday(eventDate) {
                 let isLive = nextEvent.status == "started"
 
-                Button {
-                    NotificationCenter.default.post(
-                        name: NSNotification.Name("OpenEventDetail"),
-                        object: nil,
-                        userInfo: ["eventId": nextEvent.id]
-                    )
-                } label: {
-                    VStack(alignment: .leading, spacing: isLive ? 12 : 0) {
+                VStack(spacing: 8) {
+                    // ── Riquadro info evento (tap → dettaglio) ────────────
+                    Button {
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("OpenEventDetail"),
+                            object: nil,
+                            userInfo: ["eventId": nextEvent.id]
+                        )
+                    } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack(spacing: 6) {
@@ -178,71 +180,70 @@ struct UserHomeView: View {
                                 Text(nextEvent.title)
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(.white)
-                                if !isLive {
-                                    Text("Tocca per i dettagli")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.kartDim)
-                                }
+                                Text(isLive ? "Tocca per i dettagli" : "Tocca per i dettagli")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.kartDim)
                             }
                             Spacer()
                             Image(systemName: isLive ? "flag.checkered" : "stopwatch.fill")
                                 .font(.system(size: 30))
                                 .foregroundColor(isLive ? .red : (isRegistered ? .green : .red))
                         }
-
-                        // Pulsante Entra in Live (solo se gara avviata)
-                        if isLive {
-                            Button {
-                                liveEvent = nextEvent
-                            } label: {
-                                HStack(spacing: 10) {
-                                    ZStack {
-                                        Circle().fill(Color.red).frame(width: 8, height: 8)
-                                    }
-                                    Text("Entra in Live")
-                                        .font(.system(size: 15, weight: .bold))
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 13, weight: .semibold))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 13)
-                                .frame(maxWidth: .infinity)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color.red.opacity(0.85), Color.orange.opacity(0.65)],
-                                        startPoint: .leading, endPoint: .trailing
-                                    )
+                        .padding(16)
+                        .background(
+                            isLive
+                                ? Color.red.opacity(0.08)
+                                : Color.kartPanel
+                        )
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(
+                                    isLive
+                                        ? Color.red.opacity(0.4)
+                                        : (isRegistered ? Color.green : Color.red).opacity(0.5),
+                                    lineWidth: isLive ? 1.5 : 1
                                 )
-                                .cornerRadius(10)
-                            }
-                            .buttonStyle(.plain)
-                        }
+                        )
+                        .shadow(
+                            color: isLive ? Color.red.opacity(0.15) : .clear,
+                            radius: 10, x: 0, y: 4
+                        )
                     }
-                    .padding(16)
-                    .background(
-                        isLive
-                            ? Color.red.opacity(0.08)
-                            : Color.kartPanel
-                    )
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(
-                                isLive
-                                    ? Color.red.opacity(0.4)
-                                    : (isRegistered ? Color.green : Color.red).opacity(0.5),
-                                lineWidth: isLive ? 1.5 : 1
+                    .buttonStyle(.plain)
+
+                    // ── Pulsante Entra in Live (solo se gara avviata) ─────
+                    if isLive {
+                        Button {
+                            liveEventUserIsRegistered = isRegistered
+                            liveEvent = nextEvent
+                        } label: {
+                            HStack(spacing: 10) {
+                                ZStack {
+                                    Circle().fill(Color.red).frame(width: 8, height: 8)
+                                }
+                                Text("Entra in Live")
+                                    .font(.system(size: 15, weight: .bold))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 13)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.red.opacity(0.85), Color.orange.opacity(0.65)],
+                                    startPoint: .leading, endPoint: .trailing
+                                )
                             )
-                    )
-                    .shadow(
-                        color: isLive ? Color.red.opacity(0.15) : .clear,
-                        radius: 10, x: 0, y: 4
-                    )
+                            .cornerRadius(10)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
-                
+
             } else {
                 Button {
                     NotificationCenter.default.post(
