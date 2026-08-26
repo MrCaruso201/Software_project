@@ -65,32 +65,12 @@ struct AdminEventRegistrationsView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 4) {
-                    // CSV import
-                    Button {
-                        showCSVImporter = true
-                    } label: {
-                        if isUploadingCSV {
-                            ProgressView().tint(.kartAccent).scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "chart.bar.doc.horizontal")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                    }
-                    .foregroundColor(.kartAccent)
-
-                    // Gestione Liberatoria
-                    Button(action: { showReleaseFormSheet = true }) {
-                        Image(systemName: "signature")
-                    }
-                    .foregroundColor(.kartAccent)
-
-                    // Aggiungi iscrizione
-                    Button(action: { showAddRegistrationSheet = true }) {
-                        Image(systemName: "plus")
-                    }
-                    .foregroundColor(.kartAccent)
+                // Aggiungi iscrizione
+                Button(action: { showAddRegistrationSheet = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .bold))
                 }
+                .foregroundColor(.kartAccent)
             }
             if showAsSheet {
                 ToolbarItem(placement: .navigationBarLeading) {

@@ -37,8 +37,8 @@ struct ClassificaLiveView: View {
                 ShareSheet(items: [url])
             }
         }
-        .onChange(of: exportRequested) { requested in
-            guard requested else { return }
+        .onChange(of: exportRequested) { oldValue, newValue in
+            guard newValue else { return }
             exportRequested = false
             csvExportURL = buildCSV()
             if csvExportURL != nil { showShareSheet = true }
