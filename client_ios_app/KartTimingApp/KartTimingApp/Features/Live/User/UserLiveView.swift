@@ -16,7 +16,7 @@ struct UserLiveView: View {
         NavigationStack {
             TabView {
                 // ── Tab 1: Classifica ─────────────────────────────────
-                ClassificaLiveView(viewModel: viewModel)
+                ClassificaLiveView(viewModel: viewModel, exportRequested: .constant(false))
                     .tabItem { Label("Classifica", systemImage: "list.number") }
                 
                 // ── Tab 2: Team View ──────────────────────────────────

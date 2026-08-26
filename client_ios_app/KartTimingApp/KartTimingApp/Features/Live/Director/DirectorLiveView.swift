@@ -8,27 +8,27 @@ struct DirectorLiveView: View {
     @EnvironmentObject var authState: AuthState
     @Environment(\.dismiss) private var dismiss
 
-    @State private var showStatusConfirm = false
-    @State private var pendingStatus: String? = nil
-
     private var isStarted: Bool { event.status == "started" }
     private var isFinished: Bool { event.status == "finished" }
-    private var isAdmin: Bool { authState.currentUser?.role == .admin }
+
+    /// Trigger per l'export CSV: viene settato a true dalla toolbar,
+    /// ClassificaLiveView lo osserva con onChange e avvia il download.
+    @State private var csvExportRequested = false
 
     var body: some View {
         NavigationStack {
             TabView {
                 // ── Tab 1: Classifica ─────────────────────────────────
-                ClassificaLiveView(viewModel: viewModel)
+                ClassificaLiveView(viewModel: viewModel, exportRequested: $csvExportRequested)
                     .tabItem { Label("Classifica", systemImage: "list.number") }
 
                 // ── Tab 2: Kart (Assegnazione) ────────────────────────
                 KartAssignmentView(event: event, viewModel: viewModel)
                     .tabItem { Label("Kart", systemImage: "flag.2.crossed.fill") }
                     
-                // ── Tab 3: Penalità ───────────────────────────────────
+                // ── Tab 3: Gestione LIVE (Penalità + Controllo Gara) ─────────────
                 KartPenaltyView(event: event, viewModel: viewModel)
-                    .tabItem { Label("Penalità", systemImage: "exclamationmark.triangle.fill") }
+                    .tabItem { Label("Gestione LIVE", systemImage: "exclamationmark.triangle.fill") }
 
                 // ── Tab 4: Messaggi ───────────────────────────────────
                 MessaggiView(viewModel: viewModel)
@@ -59,51 +59,17 @@ struct DirectorLiveView: View {
                     }
                 }
 
-                // ── Pulsante Avvia / Termina / Reset ─────────────────
+                // ── Esporta classifica CSV (solo admin/director) ───────
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if isFinished && isAdmin {
-                        // Solo admin può resettare a "scheduled"
-                        Button("Ripristina") {
-                            pendingStatus = "scheduled"
-                            showStatusConfirm = true
-                        }
-                        .foregroundColor(.orange)
-                        .font(.system(size: 13, weight: .bold))
-                    } else if !isFinished {
-                        Button(isStarted ? "Termina" : "Avvia") {
-                            pendingStatus = isStarted ? "finished" : "started"
-                            showStatusConfirm = true
-                        }
-                        .foregroundColor(isStarted ? .red : .green)
-                        .font(.system(size: 13, weight: .bold))
+                    Button {
+                        csvExportRequested = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .semibold))
                     }
+                    .foregroundColor(.kartAccent)
                 }
             }
-        }
-        .confirmationDialog(confirmTitle, isPresented: $showStatusConfirm, titleVisibility: .visible) {
-            Button(confirmButtonLabel, role: pendingStatus == "finished" ? .destructive : nil) {
-                guard let s = pendingStatus else { return }
-                Task { try? await viewModel.updateEventStatus(s) }
-            }
-            Button("Annulla", role: .cancel) { }
-        }
-    }
-
-    private var confirmTitle: String {
-        switch pendingStatus {
-        case "started":   return "Avviare la gara?"
-        case "finished":  return "Terminare la gara?"
-        case "scheduled": return "Ripristinare lo stato a 'Programmata'?"
-        default:          return "Conferma"
-        }
-    }
-
-    private var confirmButtonLabel: String {
-        switch pendingStatus {
-        case "started":   return "Avvia Gara"
-        case "finished":  return "Termina Gara"
-        case "scheduled": return "Ripristina"
-        default:          return "Conferma"
         }
     }
 }

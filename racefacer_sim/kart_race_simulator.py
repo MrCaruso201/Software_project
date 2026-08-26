@@ -40,7 +40,7 @@ BASE_URL                 = "https://simulator"
 # team: nome della squadra (None = gara individuale)
 # username: username dell'account app (None = pilota non iscritto)
 DRIVERS = [
-    {"name": "Marco Rossi",       "kart": "101", "base_time": 73.5, "sigma": 0.35, "team": "Scuderia Alpha", "username": "marco"},
+    {"name": "Marco Rossi",       "kart": "101", "base_time": 73.5, "sigma": 0.35, "team": "Scuderia Alpha", "username": "user"},
     {"name": "Luca Ferrari",      "kart": "102", "base_time": 74.2, "sigma": 0.40, "team": "Scuderia Alpha", "username": None},
     {"name": "Sofia Esposito",    "kart": "103", "base_time": 75.8, "sigma": 0.55, "team": "Red Karts",     "username": None},
     {"name": "Giovanni Bianchi",  "kart": "104", "base_time": 76.1, "sigma": 0.45, "team": "Red Karts",     "username": None},

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Vista Classifica Live per il Race Director.
 /// Mostra la classifica proveniente dal WebSocket,
@@ -6,8 +7,15 @@ import SwiftUI
 struct ClassificaLiveView: View {
     @ObservedObject var viewModel: LiveViewModel
     @EnvironmentObject var manager: KartTimingManager
-    
+
+    /// Binding settato a `true` dal parent (DirectorLiveView) per triggerare l'export.
+    @Binding var exportRequested: Bool
+
     @State private var expandedDriverId: String? = nil
+
+    // CSV export
+    @State private var showShareSheet = false
+    @State private var csvExportURL: URL? = nil
 
     var body: some View {
         ZStack {
@@ -23,6 +31,17 @@ struct ClassificaLiveView: View {
                     emptyState
                 }
             }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let url = csvExportURL {
+                ShareSheet(items: [url])
+            }
+        }
+        .onChange(of: exportRequested) { requested in
+            guard requested else { return }
+            exportRequested = false
+            csvExportURL = buildCSV()
+            if csvExportURL != nil { showShareSheet = true }
         }
     }
 
@@ -439,4 +458,165 @@ struct ClassificaLiveView: View {
         guard parts.count == 2 else { return iso }
         return String(parts[1].prefix(8))
     }
+
+    // MARK: - CSV Export con correzione penalità
+
+    /// Costruisce il CSV della classifica istantanea applicando le penalità in tempo.
+    /// Algoritmo:
+    ///   1. Per ogni pilota, converte il gap (stringa) in secondi.
+    ///   2. Calcola il gap rettificato = gapRaw + penalitàPilota − penalitàLeader.
+    ///   3. Riordina per gap rettificato crescente (i distaccati su giro rimangono in fondo).
+    ///   4. Ricalcola i gap relativi dal nuovo primo.
+    ///   5. Serializza in CSV con colonne: Posizione, Squadra, Miglior Giro, Gap, Giri.
+    private func buildCSV() -> URL? {
+        guard let timing = manager.timing, !timing.rows.isEmpty else { return nil }
+
+        let h = timing.headers
+        let posIdx   = colIndex(in: h, keywords: ["pos", "pos.", "p", "#"]) ?? 0
+        let kartIdx  = colIndex(in: h, keywords: ["kart", "num", "n°", "no", "bib"])
+        let nameIdx  = colIndex(in: h, keywords: ["driver", "pilota", "name", "nome", "pilot"])
+        let bestIdx  = colIndex(in: h, keywords: ["best", "migliore", "fastest", "record"])
+        let gapIdx   = colIndex(in: h, keywords: ["gap", "diff", "distanza", "behind"])
+        // "Giri" = contatore giri totali — non confondere con "Miglior Giro" (best lap time)
+        let lapsIdx: Int? = h.indices.first { i in
+            let col = h[i].lowercased().trimmingCharacters(in: .whitespaces)
+            return col == "giri" || col == "laps" || col.contains("tours") || col.contains("rounds")
+        }
+
+        struct Entry {
+            var originalPos: Int
+            var name: String
+            var bestLap: String
+            var rawGapStr: String
+            var rawGapSeconds: Double?  // nil = distacco in giri (es. "+1 giro")
+            var lapsStr: String
+            var kartNumber: Int?
+            var penaltySeconds: Int
+            var adjustedGap: Double?    // rawGapSeconds + penalitàPropria − penalitàLeader
+        }
+
+        var entries: [Entry] = timing.rows.enumerated().map { idx, row in
+            let posStr  = row.indices.contains(posIdx)  ? row[posIdx]  : "\(idx + 1)"
+            let name    = nameIdx.flatMap { row.indices.contains($0)  ? row[$0]  : nil } ?? ""
+            let best    = bestIdx.flatMap { row.indices.contains($0)  ? row[$0]  : nil } ?? "-"
+            let gap     = gapIdx.flatMap  { row.indices.contains($0)  ? row[$0]  : nil } ?? ""
+            let laps    = lapsIdx.flatMap { row.indices.contains($0)  ? row[$0]  : nil } ?? "-"
+            let kartStr = kartIdx.flatMap { row.indices.contains($0)  ? row[$0]  : nil } ?? ""
+            let kartNum = Int(kartStr.trimmingCharacters(in: .whitespaces))
+            let penalty = kartNum.map { viewModel.totalPenaltySeconds(for: $0) } ?? 0
+            let gapSec  = parseGapToSeconds(gap)
+            return Entry(
+                originalPos: Int(posStr) ?? (idx + 1),
+                name: name,
+                bestLap: best,
+                rawGapStr: gap,
+                rawGapSeconds: gapSec,
+                lapsStr: laps,
+                kartNumber: kartNum,
+                penaltySeconds: penalty,
+                adjustedGap: nil
+            )
+        }
+
+        // Penalità del leader attuale = il pilota con rawGapSeconds più basso (== 0)
+        let leaderPenalty: Int = {
+            let sameLap = entries.filter { $0.rawGapSeconds != nil }
+            return sameLap.min(by: { $0.rawGapSeconds! < $1.rawGapSeconds! })?.penaltySeconds ?? 0
+        }()
+
+        // Gap rettificato per ogni pilota
+        for i in entries.indices {
+            if let raw = entries[i].rawGapSeconds {
+                entries[i].adjustedGap = raw
+                    + Double(entries[i].penaltySeconds)
+                    - Double(leaderPenalty)
+            }
+            // adjustedGap rimane nil per i distaccati su giro
+        }
+
+        // Ordinamento: stesso giro → per adjustedGap crescente; distaccati su giro → posizione originale
+        let sameLap   = entries.filter { $0.adjustedGap != nil }.sorted { $0.adjustedGap! < $1.adjustedGap! }
+        let lapBehind = entries.filter { $0.adjustedGap == nil  }.sorted { $0.originalPos < $1.originalPos }
+        let sorted    = sameLap + lapBehind
+
+        let newLeaderAdj = sameLap.first?.adjustedGap ?? 0.0
+
+        // Costruzione CSV
+        var lines = ["Posizione,Squadra,Miglior Giro,Gap,Giri"]
+        for (i, entry) in sorted.enumerated() {
+            let gapStr: String
+            if i == 0 {
+                gapStr = "Leader"
+            } else if let adj = entry.adjustedGap {
+                let diff = adj - newLeaderAdj
+                gapStr = diff <= 0 ? "Leader" : formatGapSeconds(diff)
+            } else {
+                // Distaccato su giro: preserva la stringa originale (es. "+1 giro")
+                gapStr = entry.rawGapStr
+            }
+            let safeName = entry.name.isEmpty    ? "-" : entry.name
+            let safeBest = entry.bestLap.isEmpty || entry.bestLap == "-" ? "-" : entry.bestLap
+            lines.append("\(i + 1),\(safeName),\(safeBest),\(gapStr),\(entry.lapsStr)")
+        }
+
+        let csvString = lines.joined(separator: "\r\n")
+
+        // Salvataggio in file temporaneo
+        let df = DateFormatter()
+        df.dateFormat = "yyyyMMdd_HHmmss"
+        let filename = "classifica_\(df.string(from: Date())).csv"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        do {
+            try csvString.write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    /// Converte una stringa di gap (es. "+1:23.456", "+45.2", "Leader") in secondi.
+    /// Restituisce nil se il gap è espresso in giri (es. "+1 giro") e non convertibile.
+    private func parseGapToSeconds(_ gap: String) -> Double? {
+        let s = gap.trimmingCharacters(in: .whitespaces).lowercased()
+        // Leader / assente
+        if s == "leader" || s.isEmpty || s == "-" || s == "0" { return 0.0 }
+        // Distacchi in giri → non convertibili in secondi
+        if s.contains("giro") || s.contains("giri") || s.contains("lap") || s.contains("tour") {
+            return nil
+        }
+        let stripped = s.hasPrefix("+") ? String(s.dropFirst()) : s
+        // Formato "M:SS.mmm"
+        if stripped.contains(":") {
+            let parts = stripped.split(separator: ":")
+            if parts.count == 2,
+               let mins = Double(parts[0]),
+               let secs = Double(parts[1]) {
+                return mins * 60 + secs
+            }
+        }
+        // Formato "SS.mmm"
+        return Double(stripped)
+    }
+
+    /// Formatta un gap in secondi come stringa CSV (es. "+45.230" oppure "+1:05.230").
+    private func formatGapSeconds(_ seconds: Double) -> String {
+        guard seconds > 0 else { return "Leader" }
+        if seconds < 60 {
+            return String(format: "+%.3f", seconds)
+        }
+        let mins = Int(seconds) / 60
+        let secs = seconds - Double(mins * 60)
+        return String(format: "+%d:%06.3f", mins, secs)
+    }
+}
+
+// MARK: - Share Sheet
+
+/// Wrapper UIKit per UIActivityViewController (share/download del file CSV).
+private struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }

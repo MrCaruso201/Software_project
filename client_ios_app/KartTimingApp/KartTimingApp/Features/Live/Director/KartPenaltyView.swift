@@ -7,6 +7,11 @@ struct KartPenaltyView: View {
     let event: RaceEvent
     @ObservedObject var viewModel: LiveViewModel
     @EnvironmentObject var manager: KartTimingManager
+    @EnvironmentObject var authState: AuthState
+
+    // Race control
+    @State private var showStatusConfirm = false
+    @State private var pendingStatus: String? = nil
 
     // Selezione destinatario
     enum Target: Equatable {
@@ -66,11 +71,17 @@ struct KartPenaltyView: View {
         return nil
     }
 
+    private var isStarted:  Bool { event.status == "started" }
+    private var isFinished: Bool { event.status == "finished" }
+    private var isAdmin:    Bool { authState.currentUser?.role == .admin }
+
     var body: some View {
         ZStack {
             Color.kartBG.ignoresSafeArea()
 
             VStack(spacing: 0) {
+                raceControlSection
+
                 targetPicker
                     .padding(.horizontal, 16)
                     .padding(.top, 14)
@@ -105,11 +116,81 @@ struct KartPenaltyView: View {
         } message: {
             Text(actionError ?? "")
         }
+        .confirmationDialog(confirmTitle, isPresented: $showStatusConfirm, titleVisibility: .visible) {
+            Button(confirmButtonLabel, role: pendingStatus == "finished" ? .destructive : nil) {
+                guard let s = pendingStatus else { return }
+                Task { try? await viewModel.updateEventStatus(s) }
+            }
+            Button("Annulla", role: .cancel) { }
+        }
         .onAppear {
             if selectedType == nil, let first = viewModel.penaltyTypes.first {
                 selectedType = first
                 if let defSec = first.defaultSeconds { seconds = String(defSec) }
             }
+        }
+    }
+
+    // MARK: - Race Control Section
+
+    /// Banner in cima alla schermata "Gestione LIVE" con il pulsante Avvia/Termina/Ripristina.
+    private var raceControlSection: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("CONTROLLO GARA")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundColor(.kartDim)
+                Text(isStarted ? "In corso" : isFinished ? "Terminata" : "In attesa")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(isStarted ? .kartGreen : isFinished ? .kartDim : .white)
+            }
+            Spacer()
+
+            if isFinished && isAdmin {
+                Button("Ripristina") {
+                    pendingStatus = "scheduled"
+                    showStatusConfirm = true
+                }
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.orange)
+                .cornerRadius(8)
+            } else if !isFinished {
+                Button(isStarted ? "Termina Gara" : "Avvia Gara") {
+                    pendingStatus = isStarted ? "finished" : "started"
+                    showStatusConfirm = true
+                }
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(isStarted ? Color.kartRed : Color.kartGreen)
+                .cornerRadius(8)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.kartPanel)
+
+    }
+
+    private var confirmTitle: String {
+        switch pendingStatus {
+        case "started":   return "Avviare la gara?"
+        case "finished":  return "Terminare la gara?"
+        case "scheduled": return "Ripristinare lo stato a 'Programmata'?"
+        default:          return "Conferma"
+        }
+    }
+
+    private var confirmButtonLabel: String {
+        switch pendingStatus {
+        case "started":   return "Avvia Gara"
+        case "finished":  return "Termina Gara"
+        case "scheduled": return "Ripristina"
+        default:          return "Conferma"
         }
     }
 
