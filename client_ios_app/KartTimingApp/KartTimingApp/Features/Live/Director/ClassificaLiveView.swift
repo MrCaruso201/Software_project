@@ -1,10 +1,12 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// Vista Classifica Live per il Race Director.
 /// Mostra la classifica proveniente dal WebSocket,
 /// con badge per le penalità totali di ogni kart.
 struct ClassificaLiveView: View {
+    var isDirector: Bool = false
     @ObservedObject var viewModel: LiveViewModel
     @EnvironmentObject var manager: KartTimingManager
 
@@ -16,6 +18,18 @@ struct ClassificaLiveView: View {
     // CSV export
     @State private var showShareSheet = false
     @State private var csvExportURL: URL? = nil
+
+    // Upload CSV
+    @State private var showFileImporter = false
+    @State private var isUploadingResults = false
+    @State private var uploadError: String? = nil
+    @State private var selectedFileURL: URL? = nil
+    
+    // Session Naming
+    @State private var editingSessionName: String = ""
+    @State private var isSavingSessionName = false
+    
+    @State private var viewMode: String = "live" // "live", "qualifying", "final"
     
     private var lastFlagMessage: RaceMessage? {
         viewModel.messages.filter {
@@ -35,10 +49,89 @@ struct ClassificaLiveView: View {
             Color.kartBG.ignoresSafeArea()
 
             VStack(spacing: 0) {
+                sessionNameBanner
+                
                 // Status bar
                 statusBar
 
-                if let timing = manager.timing, !timing.rows.isEmpty {
+                Menu {
+                    Button(action: { viewMode = "live" }) {
+                        Label("Live Timing", systemImage: "timer")
+                    }
+                    Button(action: { viewMode = "qualifying" }) {
+                        Label("Qualifica (Griglia)", systemImage: "flag.checkered")
+                    }
+                    Button(action: { viewMode = "final" }) {
+                        Label("Classifica Finale", systemImage: "list.number")
+                    }
+                } label: {
+                    HStack {
+                        Text(viewMode == "live" ? "Live Timing" : (viewMode == "qualifying" ? "Qualifica (Griglia)" : "Classifica Finale"))
+                            .font(.system(size: 16, weight: .bold))
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                    }
+                    .padding()
+                    .foregroundColor(.white)
+                    .background(Color.kartPanel)
+                    .cornerRadius(8)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                
+                if isDirector && viewMode != "live" {
+                    HStack(spacing: 16) {
+                        Button(action: { showFileImporter = true }) {
+                            HStack {
+                                Image(systemName: "square.and.arrow.up")
+                                Text("Carica CSV")
+                            }
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.kartAccent)
+                            .cornerRadius(8)
+                        }
+                        
+                        Button(action: {
+                            Task {
+                                do {
+                                    try await viewModel.deleteResultsCSV(resultType: viewMode)
+                                } catch {
+                                    uploadError = error.localizedDescription
+                                }
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "trash")
+                                Text("Cancella CSV")
+                            }
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.red)
+                            .cornerRadius(8)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.kartPanel)
+                }
+
+                if viewMode != "live" && viewModel.eventResults.contains(where: { $0.resultType == viewMode }) {
+                    staticResultsView()
+                } else if viewMode != "live" {
+                    VStack {
+                        Spacer()
+                        Text("Nessun risultato caricato per questa modalità.")
+                            .foregroundColor(.kartDim)
+                            .font(.system(size: 14))
+                        Spacer()
+                    }
+                } else if let timing = manager.timing, !timing.rows.isEmpty {
                     timingTable(timing: timing)
                 } else {
                     emptyState
@@ -55,6 +148,150 @@ struct ClassificaLiveView: View {
             exportRequested = false
             csvExportURL = buildCSV()
             if csvExportURL != nil { showShareSheet = true }
+        }
+        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.commaSeparatedText]) { result in
+            switch result {
+            case .success(let url):
+                self.selectedFileURL = url
+                Task { await handleCSVUpload(type: viewMode) }
+            case .failure(let error):
+                self.uploadError = error.localizedDescription
+            }
+        }
+        .alert("Errore", isPresented: .constant(uploadError != nil)) {
+            Button("OK") { uploadError = nil }
+        } message: {
+            Text(uploadError ?? "")
+        }
+        .onChange(of: viewModel.currentSessionName) { _, new in
+            if !isSavingSessionName {
+                self.editingSessionName = new ?? ""
+            }
+        }
+    }
+
+    private func handleCSVUpload(type: String) async {
+        guard let url = selectedFileURL else { return }
+        isUploadingResults = true
+        do {
+            _ = try await viewModel.uploadResultsCSV(fileURL: url, resultType: type)
+            self.viewMode = type // Switch to static results view automatically
+        } catch {
+            self.uploadError = error.localizedDescription
+        }
+        isUploadingResults = false
+        selectedFileURL = nil
+    }
+
+    // ── Session Banner ──────────────────────────────────────────────────────
+
+    private var sessionNameBanner: some View {
+        HStack {
+            if isDirector {
+                TextField("Nome Turno (es. Gara 1)", text: $editingSessionName)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(8)
+                    .background(Color.white.opacity(0.1))
+                    .cornerRadius(8)
+                    .onSubmit {
+                        Task {
+                            isSavingSessionName = true
+                            try? await viewModel.updateEventStatus(sessionName: editingSessionName)
+                            isSavingSessionName = false
+                        }
+                    }
+            } else if let sessionName = viewModel.currentSessionName, !sessionName.isEmpty {
+                Text(sessionName)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.top, 10)
+    }
+
+    // ── Risultati Statici (Griglia o Classifica Finale) ───────────────────
+
+    @ViewBuilder
+    private func staticResultsView() -> some View {
+        let results = viewModel.eventResults
+            .filter { $0.resultType == viewMode }
+            .sorted { ($0.position ?? 999) < ($1.position ?? 999) }
+        
+        VStack(spacing: 0) {
+            HStack {
+                Text(viewMode == "qualifying" ? "GRIGLIA DI PARTENZA" : "RISULTATI (\(viewMode.uppercased()))")
+                    .font(.system(size: 14, weight: .black, design: .monospaced))
+                    .foregroundColor(.kartAccent)
+                Spacer()
+            }
+            .padding()
+            .background(Color.kartPanel)
+            
+            ScrollView {
+                if viewMode == "qualifying" {
+                    // F1 Style Grid with inverted U
+                    VStack(spacing: 16) {
+                        ForEach(results) { res in
+                            let isRight = (res.position ?? 1) % 2 == 0
+                            HStack {
+                                if isRight { Spacer(minLength: 60) }
+                                
+                                VStack(spacing: 4) {
+                                    let bestStr = res.formattedBestLap ?? ""
+                                    let nameText = bestStr.isEmpty ? res.displayName : "\(res.displayName) - \(bestStr)"
+                                    Text(nameText)
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .lineLimit(1)
+                                        
+                                    Text("\(res.position ?? 0)")
+                                        .font(.system(size: 24, weight: .black, design: .monospaced))
+                                        .foregroundColor(.white)
+                                        .frame(width: 50, height: 50)
+                                        .background(Color.kartPanel)
+                                        .overlay(
+                                            InvertedUShape().stroke(Color.white, lineWidth: 3)
+                                        )
+                                }
+                                .padding()
+                                
+                                if !isRight { Spacer(minLength: 60) }
+                            }
+                        }
+                    }
+                    .padding()
+                } else {
+                    // List format for final results
+                    VStack(spacing: 8) {
+                        ForEach(results) { res in
+                            HStack {
+                                Text("\(res.position ?? 0)°")
+                                    .font(.system(size: 18, weight: .black, design: .monospaced))
+                                    .foregroundColor(.kartAccent)
+                                    .frame(width: 40, alignment: .leading)
+                                Text(res.displayName)
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.white)
+                                Spacer()
+                                if let best = res.formattedBestLap {
+                                    Text(best)
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .foregroundColor(.kartDim)
+                                }
+                            }
+                            .padding()
+                            .background(Color.kartPanel)
+                            .cornerRadius(8)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        }
+                    }
+                    .padding()
+                }
+            }
         }
     }
 
@@ -633,6 +870,20 @@ struct ClassificaLiveView: View {
         let mins = Int(seconds) / 60
         let secs = seconds - Double(mins * 60)
         return String(format: "+%d:%06.3f", mins, secs)
+    }
+}
+
+// MARK: - Custom Shapes
+
+/// Forma a "U" rovesciata per la griglia di partenza
+private struct InvertedUShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        return path
     }
 }
 

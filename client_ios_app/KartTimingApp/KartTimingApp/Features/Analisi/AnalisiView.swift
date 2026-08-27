@@ -418,7 +418,7 @@ struct CircuitCard: View {
                              EventResult(id: 0, eventId: 0, userId: nil, driverName: nil, memberEmail: nil,
                                          position: nil, bestLapMs: ms, gap: nil, laps: nil, isOfficial: true,
                                          teamId: nil, teamName: nil, note: nil, username: nil, kartNumber: nil,
-                                         profilePictureUrl: nil, createdAt: "")
+                                         resultType: nil, profilePictureUrl: nil, createdAt: "")
                              .formattedBestLap
                          } ?? "—",
                          accent: .kartAccent)
@@ -428,7 +428,7 @@ struct CircuitCard: View {
                              EventResult(id: 0, eventId: 0, userId: nil, driverName: nil, memberEmail: nil,
                                          position: nil, bestLapMs: ms, gap: nil, laps: nil, isOfficial: false,
                                          teamId: nil, teamName: nil, note: nil, username: nil, kartNumber: nil,
-                                         profilePictureUrl: nil, createdAt: "")
+                                         resultType: nil, profilePictureUrl: nil, createdAt: "")
                              .formattedBestLap
                          } ?? "—",
                          accent: .orange)

@@ -257,6 +257,7 @@ struct AdminEventGestioneView: View {
                     maxStintDuration: localEvent.maxStintDuration,
                     createdAt: localEvent.createdAt,
                     status: newStatus,
+                    sessionName: localEvent.sessionName,
                     releaseFormText: localEvent.releaseFormText
                 )
             }

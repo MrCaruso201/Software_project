@@ -19,6 +19,7 @@ struct RaceEvent: Identifiable, Codable {
     let createdAt: String
     /// "scheduled" | "started" | "finished"
     let status: String
+    let sessionName: String?
     let releaseFormText: String?
     
     enum CodingKeys: String, CodingKey {
@@ -39,6 +40,7 @@ struct RaceEvent: Identifiable, Codable {
         case maxStintDuration = "max_stint_duration"
         case createdAt = "created_at"
         case status
+        case sessionName = "session_name"
         case releaseFormText = "release_form_text"
     }
 

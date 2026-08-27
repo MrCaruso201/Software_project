@@ -18,7 +18,7 @@ struct UserLiveView: View {
         NavigationStack {
             TabView {
                 // ── Tab 1: Classifica ─────────────────────────────────
-                ClassificaLiveView(viewModel: viewModel, exportRequested: .constant(false))
+                ClassificaLiveView(isDirector: false, viewModel: viewModel, exportRequested: .constant(false))
                     .tabItem { Label("Classifica", systemImage: "list.number") }
 
                 // ── Tab 2: Team View (solo utenti registrati) ──────────
@@ -28,7 +28,7 @@ struct UserLiveView: View {
                 }
             }
             .tint(.kartAccent)
-            .navigationTitle(event.title)
+            .navigationTitle(viewModel.currentSessionName ?? event.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {

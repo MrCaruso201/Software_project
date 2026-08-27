@@ -52,6 +52,7 @@ struct EventResult: Identifiable, Codable {
     let note: String?
     let username: String?
     let kartNumber: Int?
+    let resultType: String?
     let profilePictureUrl: String?
     let createdAt: String
 
@@ -71,6 +72,7 @@ struct EventResult: Identifiable, Codable {
         case note
         case username
         case kartNumber        = "kart_number"
+        case resultType        = "result_type"
         case profilePictureUrl = "profile_picture_url"
         case createdAt         = "created_at"
     }

@@ -45,7 +45,7 @@ struct KartPenaltyView: View {
 
     @State private var selectedTarget: Target = .broadcast
     @State private var actionError: String? = nil
-
+    
     // Penalità kart
     @State private var selectedType: PenaltyType? = nil
     @State private var seconds: String = ""
@@ -153,26 +153,27 @@ struct KartPenaltyView: View {
 
     /// Banner in cima alla schermata "Gestione LIVE" con il pulsante Avvia/Termina/Ripristina.
     private var raceControlSection: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("CONTROLLO GARA")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundColor(.kartDim)
-                Text(isStarted ? "In corso" : isFinished ? "Terminata" : "In attesa")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundColor(isStarted ? .kartGreen : isFinished ? .kartDim : .white)
-            }
-            Spacer()
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("CONTROLLO GARA")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(.kartDim)
+                    Text(isStarted ? "In corso" : isFinished ? "Terminata" : "In attesa")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundColor(isStarted ? .kartGreen : isFinished ? .kartDim : .white)
+                }
+                Spacer()
 
-            RoundedRectangle(cornerRadius: 6)
-                .fill(raceStatusColor)
-                .frame(width: 44, height: 28)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(raceStatusColor)
+                    .frame(width: 44, height: 28)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.kartPanel)
     }
-
 
     // MARK: - Target Picker (Menu a tendina)
 

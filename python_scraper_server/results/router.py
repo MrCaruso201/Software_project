@@ -58,6 +58,7 @@ def _to_response(result: EventResult, db: Session) -> EventResultResponse:
         note=result.note,
         username=user.username if user else None,
         kart_number=result.kart_number,
+        result_type=result.result_type,
         profile_picture_url=user.profile_picture_url if user else None,
         created_at=result.created_at,
     )
@@ -151,6 +152,7 @@ def get_my_result_for_event(
 @router.post("/events/{event_id}/results/import_csv", response_model=CSVImportResponse)
 async def import_results_from_csv(
     event_id: int,
+    result_type: str = "final",
     file: UploadFile = File(...),
     user_payload: dict = Depends(require_role(Role.ADMIN)),
     db: Session = Depends(get_db),
@@ -189,10 +191,11 @@ async def import_results_from_csv(
     if reader.fieldnames is None:
         raise HTTPException(status_code=400, detail="CSV vuoto o privo di intestazione")
 
-    # Cancella risultati ufficiali precedenti per questo evento
+    # Cancella risultati ufficiali precedenti per questo evento e questo tipo di risultato
     db.query(EventResult).filter(
         EventResult.event_id == event_id,
         EventResult.is_official == True,
+        EventResult.result_type == result_type,
     ).delete()
 
     imported = 0
@@ -354,6 +357,7 @@ async def import_results_from_csv(
             team_id=matched_team_id,
             team_name=team_name,
             kart_number=kart_number,
+            result_type=result_type,
         ))
         imported += 1
 
@@ -371,6 +375,7 @@ async def import_results_from_csv(
 @router.delete("/events/{event_id}/results", status_code=status.HTTP_204_NO_CONTENT)
 def delete_event_results(
     event_id: int,
+    result_type: str = "final",
     user_payload: dict = Depends(require_role(Role.ADMIN)),
     db: Session = Depends(get_db),
 ):
@@ -378,6 +383,7 @@ def delete_event_results(
     db.query(EventResult).filter(
         EventResult.event_id == event_id,
         EventResult.is_official == True,
+        EventResult.result_type == result_type,
     ).delete()
     db.commit()
     return None

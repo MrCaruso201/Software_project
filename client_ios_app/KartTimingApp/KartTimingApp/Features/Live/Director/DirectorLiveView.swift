@@ -21,7 +21,7 @@ struct DirectorLiveView: View {
         NavigationStack {
             TabView(selection: $selectedTab) {
                 // ── Tab 1: Classifica ─────────────────────────────────
-                ClassificaLiveView(viewModel: viewModel, exportRequested: $csvExportRequested)
+                ClassificaLiveView(isDirector: true, viewModel: viewModel, exportRequested: $csvExportRequested)
                     .tabItem { Label("Classifica", systemImage: "list.number") }
                     .tag(0)
 
@@ -41,7 +41,7 @@ struct DirectorLiveView: View {
                     .tag(3)
             }
             .tint(.kartAccent)
-            .navigationTitle(event.title)
+            .navigationTitle(viewModel.currentSessionName ?? event.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {

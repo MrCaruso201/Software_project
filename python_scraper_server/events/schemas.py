@@ -20,6 +20,7 @@ class EventBase(BaseModel):
     description: Optional[str] = None
     race_duration: Optional[int] = None
     max_stint_duration: Optional[int] = None
+    session_name: Optional[str] = None
     release_form_text: Optional[str] = None
 
 class EventCreate(EventBase):
@@ -43,6 +44,7 @@ class EventUpdate(BaseModel):
     race_duration: Optional[int] = None
     max_stint_duration: Optional[int] = None
     status: Optional[str] = None  # "scheduled" | "started" | "finished"
+    session_name: Optional[str] = None
 
 class EventResponse(EventBase):
     id: int

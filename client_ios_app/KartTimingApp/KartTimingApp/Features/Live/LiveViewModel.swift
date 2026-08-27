@@ -13,6 +13,8 @@ class LiveViewModel: ObservableObject {
     @Published var myKart: MyKartResponse = MyKartResponse()
     @Published var registeredTeams: [TeamRegistrationResponse] = []
     @Published var registeredIndividuals: [EventRegistrationWithUserResponse] = []
+    @Published var currentSessionName: String? = nil
+    @Published var eventResults: [EventResult] = []
 
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
@@ -57,12 +59,48 @@ class LiveViewModel: ObservableObject {
 
     func fetchAll() async {
         await withTaskGroup(of: Void.self) { group in
+            group.addTask { await self.fetchEvent() }
             group.addTask { await self.fetchKartAssignments() }
             group.addTask { await self.fetchPenaltyTypes() }
             group.addTask { await self.fetchPenalties() }
             group.addTask { await self.fetchMessages() }
             group.addTask { await self.fetchRegisteredTeams() }
             group.addTask { await self.fetchRegisteredIndividuals() }
+            group.addTask { await self.fetchResults() }
+        }
+    }
+
+    // MARK: - Fetch Event
+    
+    func fetchEvent() async {
+        guard let url = endpoint("/events/\(eventId)"),
+              let token = token else { return }
+        do {
+            var req = URLRequest(url: url)
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            let (data, _) = try await NetworkService.shared.data(for: req)
+            let decoded = try JSONDecoder().decode(RaceEvent.self, from: data)
+            DispatchQueue.main.async {
+                self.currentSessionName = decoded.sessionName
+            }
+        } catch {
+            print("Error fetching event details:", error)
+        }
+    }
+
+    // MARK: - Fetch Results
+    
+    private func fetchResults() async {
+        guard let url = endpoint("/events/\(eventId)/results"),
+              let token = token else { return }
+        do {
+            var req = URLRequest(url: url)
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            let (data, _) = try await NetworkService.shared.data(for: req)
+            let decoded = try JSONDecoder().decode([EventResult].self, from: data)
+            DispatchQueue.main.async { self.eventResults = decoded }
+        } catch {
+            print("Error fetching results:", error)
         }
     }
 
@@ -87,8 +125,10 @@ class LiveViewModel: ObservableObject {
         stopPolling()
         pollingTask = Task {
             while !Task.isCancelled {
+                await fetchEvent()
                 await fetchMyKart()
                 await fetchPenalties()
+                await fetchResults()
                 try? await Task.sleep(nanoseconds: UInt64(pollingInterval * 1_000_000_000))
             }
         }
@@ -258,19 +298,101 @@ class LiveViewModel: ObservableObject {
 
     // MARK: - Event Status
 
-    func updateEventStatus(_ newStatus: String) async throws {
+    func updateEventStatus(_ newStatus: String? = nil, sessionName: String? = nil) async throws {
         guard let url = endpoint("/events/\(eventId)/status"),
               let token = token else { throw URLError(.badURL) }
         var req = URLRequest(url: url)
         req.httpMethod = "PATCH"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["status": newStatus])
+        
+        var bodyParams: [String: Any] = [:]
+        if let newStatus = newStatus {
+            bodyParams["status"] = newStatus
+        }
+        if let sessionName = sessionName {
+            bodyParams["session_name"] = sessionName
+        }
+        req.httpBody = try JSONSerialization.data(withJSONObject: bodyParams)
         let (data, resp) = try await NetworkService.shared.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
             throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
         }
+        // Force fetch to update locally
+        await fetchEvent()
+    }
+
+    // MARK: - CSV Upload
+
+    func uploadResultsCSV(fileURL: URL, resultType: String) async throws -> Int {
+        guard let token = token else { throw URLError(.userAuthenticationRequired) }
+        
+        // Remove /api if present as we need the events endpoint
+        guard let base = serverURL?.absoluteString.replacingOccurrences(of: "/api", with: "") else { throw URLError(.badURL) }
+        let cleanBase = base.hasSuffix("/") ? String(base.dropLast()) : base
+        guard let uploadURL = URL(string: "\(cleanBase)/events/\(eventId)/results/import_csv?result_type=\(resultType)") else { throw URLError(.badURL) }
+        
+        let didStart = fileURL.startAccessingSecurityScopedResource()
+        defer { if didStart { fileURL.stopAccessingSecurityScopedResource() } }
+        
+        let csvData = try Data(contentsOf: fileURL)
+        let boundary = "Boundary-\(UUID().uuidString)"
+        
+        var request = URLRequest(url: uploadURL)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var body = Data()
+        let filename = fileURL.lastPathComponent
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: text/csv\r\n\r\n".data(using: .utf8)!)
+        body.append(csvData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+        
+        let (data, response) = try await NetworkService.shared.data(for: request)
+        
+        if let http = response as? HTTPURLResponse {
+            if http.statusCode == 200 {
+                struct ImportResp: Decodable { let imported: Int; let errors: [String] }
+                if let resp = try? JSONDecoder().decode(ImportResp.self, from: data) {
+                    await fetchResults()
+                    return resp.imported
+                }
+                await fetchResults()
+                return 0
+            } else {
+                let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore \(http.statusCode)"
+                throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+            }
+        }
+        throw URLError(.badServerResponse)
+    }
+
+    func deleteResultsCSV(resultType: String) async throws {
+        guard let token = token else { throw URLError(.userAuthenticationRequired) }
+        guard let base = serverURL?.absoluteString.replacingOccurrences(of: "/api", with: "") else { throw URLError(.badURL) }
+        let cleanBase = base.hasSuffix("/") ? String(base.dropLast()) : base
+        guard let deleteURL = URL(string: "\(cleanBase)/events/\(eventId)/results?result_type=\(resultType)") else { throw URLError(.badURL) }
+
+        var request = URLRequest(url: deleteURL)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await NetworkService.shared.data(for: request)
+        if let http = response as? HTTPURLResponse {
+            if http.statusCode == 204 || http.statusCode == 200 {
+                await fetchResults()
+                return
+            } else {
+                let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore \(http.statusCode)"
+                throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+            }
+        }
+        throw URLError(.badServerResponse)
     }
 
     // MARK: - Helpers

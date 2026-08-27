@@ -106,6 +106,9 @@ def update_event_status(
 
     event = _get_event_or_404(event_id, db)
     
+    if body.session_name is not None:
+        event.session_name = body.session_name
+
     # Notify users if the event is starting
     if body.status == "started" and event.status != "started":
         from notifications.router import notify_user

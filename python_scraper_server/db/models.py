@@ -62,6 +62,7 @@ class Event(Base):
     race_duration = Column(Integer, nullable=True) # durata gara in minuti
     max_stint_duration = Column(Integer, nullable=True) # durata massima stint in minuti
     status = Column(String, default="scheduled", nullable=False) # "scheduled" | "started" | "finished"
+    session_name = Column(String, nullable=True) # "Qualifiche", "Gara 1", ecc.
     release_form_text = Column(Text, nullable=True) # Testo della liberatoria personalizzato per l'evento
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
@@ -122,6 +123,7 @@ class EventResult(Base):
     team_id      = Column(String,  nullable=True)   # UUID team (gare a squadre)
     team_name    = Column(String,  nullable=True)   # nome squadra
     kart_number  = Column(Integer, nullable=True)   # numero kart
+    result_type  = Column(String,  default="final", nullable=False) # "session", "qualifying", "final"
     note         = Column(Text,    nullable=True)
     created_at   = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 

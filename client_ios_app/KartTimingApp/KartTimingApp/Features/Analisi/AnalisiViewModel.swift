@@ -31,8 +31,8 @@ class AnalisiViewModel: ObservableObject {
         let now = Date()
         return confirmedRegistrations.compactMap { reg -> (RaceEvent, EventRegistrationResponse)? in
             guard let event = events.first(where: { $0.id == reg.eventId }),
-                  let date  = parseDate(from: event.eventDate),
-                  date < now else { return nil }
+                  let date  = parseDate(from: event.eventDate) else { return nil }
+            guard date < now || event.status == "finished" else { return nil }
             return (event, reg)
         }
         .sorted { a, b in
@@ -46,8 +46,8 @@ class AnalisiViewModel: ObservableObject {
         let now = Date()
         return confirmedRegistrations.compactMap { reg -> (RaceEvent, EventRegistrationResponse)? in
             guard let event = events.first(where: { $0.id == reg.eventId }),
-                  let date  = parseDate(from: event.eventDate),
-                  date > now else { return nil }
+                  let date  = parseDate(from: event.eventDate) else { return nil }
+            guard date > now && event.status != "finished" else { return nil }
             return (event, reg)
         }
         .sorted { a, b in
