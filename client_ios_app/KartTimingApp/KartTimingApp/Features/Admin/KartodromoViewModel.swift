@@ -24,7 +24,7 @@ class KartodromoViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 self.isLoading = false
                 if let error = error {
@@ -63,7 +63,7 @@ class KartodromoViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 self.isLoading = false
                 if let error = error {
@@ -98,7 +98,7 @@ class KartodromoViewModel: ObservableObject {
         guard let body = try? JSONSerialization.data(withJSONObject: data) else { completion(false); return }
         request.httpBody = body
 
-        URLSession.shared.dataTask(with: request) { _, response, _ in
+        NetworkService.shared.dataTask(with: request) { _, response, _ in
             DispatchQueue.main.async {
                 if let http = response as? HTTPURLResponse, http.statusCode == 201 {
                     self.fetchAll(serverURL: serverURL, token: token)
@@ -124,7 +124,7 @@ class KartodromoViewModel: ObservableObject {
         guard let body = try? JSONSerialization.data(withJSONObject: data) else { completion(false); return }
         request.httpBody = body
 
-        URLSession.shared.dataTask(with: request) { _, response, _ in
+        NetworkService.shared.dataTask(with: request) { _, response, _ in
             DispatchQueue.main.async {
                 if let http = response as? HTTPURLResponse, http.statusCode == 200 {
                     self.fetchAll(serverURL: serverURL, token: token)
@@ -147,7 +147,7 @@ class KartodromoViewModel: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        URLSession.shared.dataTask(with: request) { _, response, _ in
+        NetworkService.shared.dataTask(with: request) { _, response, _ in
             DispatchQueue.main.async {
                 if let http = response as? HTTPURLResponse, http.statusCode == 204 {
                     self.fetchAll(serverURL: serverURL, token: token)
@@ -190,7 +190,7 @@ class KartodromoViewModel: ObservableObject {
         body.append("\(crlf)--\(boundary)--\(crlf)".data(using: .utf8)!)
         request.httpBody = body
 
-        URLSession.shared.dataTask(with: request) { _, response, _ in
+        NetworkService.shared.dataTask(with: request) { _, response, _ in
             DispatchQueue.main.async {
                 if let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
                     self.fetchAll(serverURL: serverURL, token: token)

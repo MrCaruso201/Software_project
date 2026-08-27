@@ -30,7 +30,7 @@ struct AuthService {
         let body = ["username": username, "password": password]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NetworkService.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
 
         if httpResponse.statusCode == 401 {
@@ -59,7 +59,7 @@ struct AuthService {
         let body = ["username": username, "email": email, "password": password]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NetworkService.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
 
         if httpResponse.statusCode != 201 {
@@ -78,7 +78,7 @@ struct AuthService {
         let body = ["refresh_token": refreshToken]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NetworkService.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
 
         if httpResponse.statusCode != 200 {
@@ -103,7 +103,7 @@ struct AuthService {
         let body = ["refresh_token": refreshToken]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        _ = try? await URLSession.shared.data(for: request) // Non ci interessa l'esito
+        _ = try? await NetworkService.shared.data(for: request) // Non ci interessa l'esito
     }
 
     // Helper per estrarre l'errore dalle risposte FastAPI
@@ -126,7 +126,7 @@ struct AuthService {
         let body = ["old_password": oldPassword, "new_password": newPassword]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NetworkService.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
 
         if httpResponse.statusCode != 200 {
@@ -149,7 +149,7 @@ struct AuthService {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NetworkService.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
 
         if httpResponse.statusCode != 200 {
@@ -177,7 +177,7 @@ struct AuthService {
         
         request.httpBody = body
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NetworkService.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
         
         if httpResponse.statusCode != 200 {
@@ -224,7 +224,7 @@ extension AuthService {
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NetworkService.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
 
         if httpResponse.statusCode != 200 {
@@ -250,7 +250,7 @@ extension AuthService {
         let body = ["role": role]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await NetworkService.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
 
         if httpResponse.statusCode != 200 {

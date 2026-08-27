@@ -254,7 +254,7 @@ struct EditProfileView: View {
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, _, _ in
+        NetworkService.shared.dataTask(with: request) { data, _, _ in
             DispatchQueue.main.async {
                 self.isFetching = false
                 if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {

@@ -159,7 +159,7 @@ struct EventDetailContentView: View {
             var req = URLRequest(url: fullURL)
             req.httpMethod = "GET"
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, resp) = try await URLSession.shared.data(for: req)
+            let (data, resp) = try await NetworkService.shared.data(for: req)
             if let http = resp as? HTTPURLResponse, http.statusCode == 200 {
                 if let updated = try? JSONDecoder().decode(RaceEvent.self, from: data) {
                     event = updated
@@ -170,7 +170,7 @@ struct EventDetailContentView: View {
             var regReq = URLRequest(url: regURL)
             regReq.httpMethod = "GET"
             regReq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (regData, regResp) = try await URLSession.shared.data(for: regReq)
+            let (regData, regResp) = try await NetworkService.shared.data(for: regReq)
             if let http = regResp as? HTTPURLResponse, http.statusCode == 200 {
                 if let regs = try? JSONDecoder().decode([EventRegistrationResponse].self, from: regData) {
                     if let myReg = regs.first(where: { $0.eventId == event.id }) {

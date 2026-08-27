@@ -199,7 +199,7 @@ struct TeamMemberView: View {
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 isFetching = false
                 if let data = data,

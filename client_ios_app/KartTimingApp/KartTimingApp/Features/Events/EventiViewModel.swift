@@ -20,7 +20,7 @@ class EventiViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 self.isLoading = false
                 defer { completion?() }
@@ -66,7 +66,7 @@ class EventiViewModel: ObservableObject {
             return
         }
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 201 {
                     self.fetchEvents(serverURL: serverURL)
@@ -99,7 +99,7 @@ class EventiViewModel: ObservableObject {
             return
         }
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     self.fetchEvents(serverURL: serverURL)
@@ -124,7 +124,7 @@ class EventiViewModel: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, (httpRes.statusCode == 200 || httpRes.statusCode == 204) {
                     self.events.removeAll { $0.id == eventId }
@@ -146,7 +146,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 guard let data = data, error == nil else { return }
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
@@ -197,7 +197,7 @@ class EventiViewModel: ObservableObject {
             request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         }
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     completion(false, error.localizedDescription)
@@ -247,7 +247,7 @@ class EventiViewModel: ObservableObject {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     completion(false, error.localizedDescription)
@@ -297,7 +297,7 @@ class EventiViewModel: ObservableObject {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     completion(false, error.localizedDescription)
@@ -331,7 +331,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     completion(false, error.localizedDescription)
@@ -388,7 +388,7 @@ class EventiViewModel: ObservableObject {
         
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     completion(false, error.localizedDescription)
@@ -428,7 +428,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 guard let data = data, error == nil else {
                     completion(nil)
@@ -458,7 +458,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     print("Error fetching unassigned regs: \(error)")
@@ -490,7 +490,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 guard let data = data, error == nil else {
                     completion(nil)
@@ -519,7 +519,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "PATCH"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     completion(true)
@@ -541,7 +541,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "PATCH"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     completion(true)
@@ -563,7 +563,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, (httpRes.statusCode == 200 || httpRes.statusCode == 204) {
                     completion(true)
@@ -592,7 +592,7 @@ class EventiViewModel: ObservableObject {
         
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     print("Error assigning team: \(error)")
@@ -630,7 +630,7 @@ class EventiViewModel: ObservableObject {
         
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     print("Error creating team from individuals: \(error)")
@@ -660,7 +660,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "PATCH"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     completion(true)
@@ -682,7 +682,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "PATCH"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     completion(true)
@@ -704,7 +704,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, (httpRes.statusCode == 200 || httpRes.statusCode == 204) {
                     completion(true)
@@ -726,7 +726,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "PATCH"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     completion(true)
@@ -748,7 +748,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "PATCH"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     completion(true)
@@ -770,7 +770,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "PATCH"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     completion(true)
@@ -792,7 +792,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "PATCH"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     completion(true)
@@ -824,7 +824,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     completion(false, error.localizedDescription)
@@ -858,7 +858,7 @@ class EventiViewModel: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 guard let data = data, error == nil else {
                     completion(nil)
@@ -897,7 +897,7 @@ class EventiViewModel: ObservableObject {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     completion(false, error.localizedDescription)
@@ -930,7 +930,7 @@ class EventiViewModel: ObservableObject {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let data = data, let decoded = try? JSONDecoder().decode(SignedReleaseResponse.self, from: data) {
                     completion(decoded)
@@ -963,7 +963,7 @@ class EventiViewModel: ObservableObject {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     completion(nil, error.localizedDescription)
@@ -1003,7 +1003,7 @@ class EventiViewModel: ObservableObject {
         let body: [String: Any] = ["release_form_text": text]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     completion(true)
@@ -1031,7 +1031,7 @@ class EventiViewModel: ObservableObject {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     completion(nil, error.localizedDescription)
@@ -1065,7 +1065,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 guard let data = data, error == nil else {
                     completion(nil)
@@ -1091,7 +1091,7 @@ class EventiViewModel: ObservableObject {
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 {
                     completion(true)

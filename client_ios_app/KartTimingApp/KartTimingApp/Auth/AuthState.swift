@@ -50,13 +50,11 @@ class AuthState: ObservableObject {
         self.isGuestSession = false
     }
 
-    /// Tenta di rinfrescare il token. Chiamata quando WebSocket riceve 4401.
-    /// - Parameter onRefreshed: closure opzionale invocata (sul main actor) con il
-    ///   nuovo access token se il refresh ha successo. Usata per riconnettere il WebSocket.
-    func handleTokenExpiry(onRefreshed: ((String) -> Void)? = nil) async {
+    /// Tenta di rinfrescare il token e lo restituisce (nuova versione per NetworkService)
+    func handleTokenExpiryWithReturn() async -> String? {
         guard let refreshToken = KeychainService.load(key: "refresh_token") else {
             self.logout()
-            return
+            return nil
         }
 
         do {
@@ -65,10 +63,20 @@ class AuthState: ObservableObject {
             if let user = decodeJWT(newAccess) {
                 self.currentUser = user
             }
-            onRefreshed?(newAccess)
+            return newAccess
         } catch {
             print("Refresh fallito, faccio logout: \(error.localizedDescription)")
             self.logout()
+            return nil
+        }
+    }
+
+    /// Tenta di rinfrescare il token. Chiamata quando WebSocket riceve 4401.
+    /// - Parameter onRefreshed: closure opzionale invocata (sul main actor) con il
+    ///   nuovo access token se il refresh ha successo. Usata per riconnettere il WebSocket.
+    func handleTokenExpiry(onRefreshed: ((String) -> Void)? = nil) async {
+        if let newAccess = await handleTokenExpiryWithReturn() {
+            onRefreshed?(newAccess)
         }
     }
 

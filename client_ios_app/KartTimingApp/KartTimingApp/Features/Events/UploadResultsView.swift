@@ -291,7 +291,7 @@ struct UploadResultsView: View {
             body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
             request.httpBody = body
 
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await NetworkService.shared.data(for: request)
 
             if let http = response as? HTTPURLResponse {
                 if http.statusCode == 200 {
@@ -339,7 +339,7 @@ struct UploadResultsView: View {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await NetworkService.shared.data(for: request)
             if let http = response as? HTTPURLResponse {
                 if http.statusCode == 204 {
                     deleteSuccess = true

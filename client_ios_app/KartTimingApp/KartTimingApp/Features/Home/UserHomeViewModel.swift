@@ -42,7 +42,7 @@ class UserHomeViewModel: ObservableObject {
         var reqMe = URLRequest(url: serverURL.appendingPathComponent("auth/me"))
         reqMe.httpMethod = "GET"
         reqMe.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: reqMe) { data, _, _ in
+        NetworkService.shared.dataTask(with: reqMe) { data, _, _ in
             DispatchQueue.main.async {
                 if let data = data, let p = try? JSONDecoder().decode(UserProfile.self, from: data) {
                     self.profile = p
@@ -56,7 +56,7 @@ class UserHomeViewModel: ObservableObject {
         var reqReg = URLRequest(url: serverURL.appendingPathComponent("events/registrations/me"))
         reqReg.httpMethod = "GET"
         reqReg.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: reqReg) { data, _, _ in
+        NetworkService.shared.dataTask(with: reqReg) { data, _, _ in
             DispatchQueue.main.async {
                 if let data = data, let regs = try? JSONDecoder().decode([EventRegistrationResponse].self, from: data) {
                     self.registrations = regs
@@ -71,7 +71,7 @@ class UserHomeViewModel: ObservableObject {
         var reqNotif = URLRequest(url: serverURL.appendingPathComponent("notifications/me"))
         reqNotif.httpMethod = "GET"
         reqNotif.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: reqNotif) { data, _, _ in
+        NetworkService.shared.dataTask(with: reqNotif) { data, _, _ in
             DispatchQueue.main.async {
                 if let data = data, let notifs = try? JSONDecoder().decode([ServerNotification].self, from: data) {
                     self.serverNotifications = notifs
@@ -85,7 +85,7 @@ class UserHomeViewModel: ObservableObject {
         var reqEv = URLRequest(url: serverURL.appendingPathComponent("events"))
         reqEv.httpMethod = "GET"
         reqEv.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: reqEv) { data, _, _ in
+        NetworkService.shared.dataTask(with: reqEv) { data, _, _ in
             DispatchQueue.main.async {
                 if let data = data, let evs = try? JSONDecoder().decode([RaceEvent].self, from: data) {
                     self.events = evs
@@ -110,7 +110,7 @@ class UserHomeViewModel: ObservableObject {
             var req = URLRequest(url: url.appendingPathComponent("notifications/me"))
             req.httpMethod = "DELETE"
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            URLSession.shared.dataTask(with: req).resume()
+            NetworkService.shared.dataTask(with: req).resume()
         }
         DispatchQueue.main.async {
             // Save current IDs to cleared list
@@ -132,7 +132,7 @@ class UserHomeViewModel: ObservableObject {
                 var reqRead = URLRequest(url: serverURL.appendingPathComponent("notifications/\(serverId)/read"))
                 reqRead.httpMethod = "POST"
                 reqRead.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                URLSession.shared.dataTask(with: reqRead) { _, _, _ in }.resume()
+                NetworkService.shared.dataTask(with: reqRead) { _, _, _ in }.resume()
             }
         }
         
@@ -154,7 +154,7 @@ class UserHomeViewModel: ObservableObject {
                 var req = URLRequest(url: url)
                 req.httpMethod = "DELETE"
                 req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                URLSession.shared.dataTask(with: req).resume()
+                NetworkService.shared.dataTask(with: req).resume()
                 
                 DispatchQueue.main.async {
                     self.serverNotifications.removeAll(where: { $0.id == serverNotifId })

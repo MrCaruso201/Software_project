@@ -65,7 +65,7 @@ struct KartodromoService {
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await NetworkService.shared.data(for: request)
         } catch {
             throw KartodromoServiceError.networkError(error)
         }

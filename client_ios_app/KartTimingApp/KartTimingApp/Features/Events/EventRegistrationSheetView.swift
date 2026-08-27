@@ -106,7 +106,7 @@ struct EventRegistrationSheetView: View {
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { data, _, _ in
+        NetworkService.shared.dataTask(with: request) { data, _, _ in
             if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let email = json["email"] as? String {
                 DispatchQueue.main.async {
                     self.leaderEmail = email

@@ -232,7 +232,7 @@ class AnalisiViewModel: ObservableObject {
         if let pos = position { body["position"] = pos }
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        URLSession.shared.dataTask(with: req) { [weak self] data, response, _ in
+        NetworkService.shared.dataTask(with: req) { [weak self] data, response, _ in
             DispatchQueue.main.async {
                 guard let http = response as? HTTPURLResponse,
                       (200..<300).contains(http.statusCode),
@@ -275,7 +275,7 @@ class AnalisiViewModel: ObservableObject {
         ]
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        URLSession.shared.dataTask(with: req) { [weak self] data, response, _ in
+        NetworkService.shared.dataTask(with: req) { [weak self] data, response, _ in
             DispatchQueue.main.async {
                 guard let http = response as? HTTPURLResponse,
                       (200..<300).contains(http.statusCode),
@@ -298,7 +298,7 @@ class AnalisiViewModel: ObservableObject {
         req.httpMethod = "GET"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        URLSession.shared.dataTask(with: req) { data, _, _ in
+        NetworkService.shared.dataTask(with: req) { data, _, _ in
             DispatchQueue.main.async {
                 guard let data else { completion(nil); return }
                 completion(try? JSONDecoder().decode(T.self, from: data))

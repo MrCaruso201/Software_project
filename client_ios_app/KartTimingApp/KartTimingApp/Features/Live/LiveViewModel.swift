@@ -72,7 +72,7 @@ class LiveViewModel: ObservableObject {
         do {
             var req = URLRequest(url: url)
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await URLSession.shared.data(for: req)
+            let (data, _) = try await NetworkService.shared.data(for: req)
             let decoded = try JSONDecoder().decode(MyKartResponse.self, from: data)
             self.myKart = decoded
         } catch {
@@ -100,7 +100,7 @@ class LiveViewModel: ObservableObject {
         do {
             var req = URLRequest(url: url)
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await URLSession.shared.data(for: req)
+            let (data, _) = try await NetworkService.shared.data(for: req)
             self.registeredTeams = try JSONDecoder().decode([TeamRegistrationResponse].self, from: data)
         } catch { }
     }
@@ -113,7 +113,7 @@ class LiveViewModel: ObservableObject {
         do {
             var req = URLRequest(url: url)
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await URLSession.shared.data(for: req)
+            let (data, _) = try await NetworkService.shared.data(for: req)
             self.kartAssignments = try JSONDecoder().decode([LiveKartAssignment].self, from: data)
         } catch { }
     }
@@ -127,7 +127,7 @@ class LiveViewModel: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body: [String: Any?] = ["team_id": teamId, "kart_number": kartNumber, "team_name": teamName]
         req.httpBody = try JSONSerialization.data(withJSONObject: body.compactMapValues { $0 })
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await NetworkService.shared.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
             throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
@@ -141,7 +141,7 @@ class LiveViewModel: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await NetworkService.shared.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
             throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
@@ -157,7 +157,7 @@ class LiveViewModel: ObservableObject {
         do {
             var req = URLRequest(url: url)
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await URLSession.shared.data(for: req)
+            let (data, _) = try await NetworkService.shared.data(for: req)
             self.penaltyTypes = try JSONDecoder().decode([PenaltyType].self, from: data)
         } catch { }
     }
@@ -168,7 +168,7 @@ class LiveViewModel: ObservableObject {
         do {
             var req = URLRequest(url: url)
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await URLSession.shared.data(for: req)
+            let (data, _) = try await NetworkService.shared.data(for: req)
             self.penalties = try JSONDecoder().decode([RacePenalty].self, from: data)
         } catch { }
     }
@@ -184,7 +184,7 @@ class LiveViewModel: ObservableObject {
         if let s = seconds { body["seconds"] = s }
         if let n = note, !n.isEmpty { body["note"] = n }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await NetworkService.shared.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
             throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
@@ -198,7 +198,7 @@ class LiveViewModel: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        _ = try await URLSession.shared.data(for: req)
+        _ = try await NetworkService.shared.data(for: req)
         await fetchAll()
     }
 
@@ -210,7 +210,7 @@ class LiveViewModel: ObservableObject {
         do {
             var req = URLRequest(url: url)
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await URLSession.shared.data(for: req)
+            let (data, _) = try await NetworkService.shared.data(for: req)
             self.messages = try JSONDecoder().decode([RaceMessage].self, from: data)
         } catch { }
     }
@@ -225,7 +225,7 @@ class LiveViewModel: ObservableObject {
         var body: [String: Any] = ["message_type": type.rawValue, "text": text]
         if let k = targetKart { body["target_kart"] = k }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await NetworkService.shared.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
             throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
@@ -239,7 +239,7 @@ class LiveViewModel: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        _ = try await URLSession.shared.data(for: req)
+        _ = try await NetworkService.shared.data(for: req)
         await fetchAll()
     }
 
@@ -253,7 +253,7 @@ class LiveViewModel: ObservableObject {
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: ["status": newStatus])
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await NetworkService.shared.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
             let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
             throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])

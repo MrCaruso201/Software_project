@@ -868,7 +868,7 @@ struct AdminEventRegistrationsView: View {
         body.append("\(crlf)--\(boundary)--\(crlf)".data(using: .utf8)!)
         request.httpBody = body
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 self.isUploadingCSV = false
 

@@ -235,7 +235,7 @@ struct AdminEventGestioneView: View {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.httpBody = try JSONSerialization.data(withJSONObject: ["status": newStatus])
-            let (data, resp) = try await URLSession.shared.data(for: req)
+            let (data, resp) = try await NetworkService.shared.data(for: req)
             if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
                 let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
                 statusError = msg

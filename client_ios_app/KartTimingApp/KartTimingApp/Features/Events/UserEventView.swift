@@ -453,7 +453,7 @@ struct UserEventView: View {
             var req = URLRequest(url: regURL)
             req.httpMethod = "GET"
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, resp) = try await URLSession.shared.data(for: req)
+            let (data, resp) = try await NetworkService.shared.data(for: req)
             if let http = resp as? HTTPURLResponse, http.statusCode == 200 {
                 if let regs = try? JSONDecoder().decode([EventRegistrationResponse].self, from: data) {
                     if let myReg = regs.first(where: { $0.eventId == localEvent.id }) {

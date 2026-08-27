@@ -51,7 +51,7 @@ class AdminUserSearchViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        NetworkService.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 self.isLoading = false
                 if let error = error {
@@ -84,7 +84,7 @@ class AdminUserSearchViewModel: ObservableObject {
         var reqEvents = URLRequest(url: eventsURL)
         reqEvents.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: reqEvents) { data, _, _ in
+        NetworkService.shared.dataTask(with: reqEvents) { data, _, _ in
             if let data = data, let events = try? JSONDecoder().decode([RaceEvent].self, from: data) {
                 DispatchQueue.main.async { self.allEvents = events }
             }
@@ -97,7 +97,7 @@ class AdminUserSearchViewModel: ObservableObject {
         var reqRegs = URLRequest(url: regsURL)
         reqRegs.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: reqRegs) { data, response, _ in
+        NetworkService.shared.dataTask(with: reqRegs) { data, response, _ in
             if let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200,
                let data = data, let regs = try? JSONDecoder().decode([EventRegistrationResponse].self, from: data) {
                 DispatchQueue.main.async { self.userRegistrations = regs }
