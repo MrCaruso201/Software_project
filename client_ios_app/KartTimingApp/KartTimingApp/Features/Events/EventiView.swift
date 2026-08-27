@@ -323,23 +323,43 @@ struct EventiView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    // Se passato, mostra Risultati, altrimenti Apri Evento
+                    // Se passato, mostra Risultati, e per admin anche Apri Evento. Altrimenti solo Apri Evento.
                     if isPast {
-                        Button {
-                            analisiViewModel.fetchClassification(serverURL: server.httpURL, eventId: event.id, token: authState.currentToken)
-                            eventForClassification = event
-                        } label: {
-                            HStack(spacing: 6) {
-                                Text("Risultati")
-                                    .font(.system(size: 13, weight: .bold))
-                                Image(systemName: "list.number")
-                                    .font(.system(size: 11, weight: .bold))
+                        HStack(spacing: 12) {
+                            Button {
+                                analisiViewModel.fetchClassification(serverURL: server.httpURL, eventId: event.id, token: authState.currentToken)
+                                eventForClassification = event
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Text("Risultati")
+                                        .font(.system(size: 13, weight: .bold))
+                                    Image(systemName: "list.number")
+                                        .font(.system(size: 11, weight: .bold))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 11)
+                                .background(Color.kartAccent)
+                                .foregroundColor(.black)
+                                .cornerRadius(8)
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 11)
-                            .background(Color.kartAccent)
-                            .foregroundColor(.black)
-                            .cornerRadius(8)
+                            
+                            if isAdmin {
+                                Button {
+                                    selectedEventToOpen = event
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Text("Apri Evento")
+                                            .font(.system(size: 13, weight: .bold))
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 11, weight: .bold))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 11)
+                                    .background(Color.kartAccent)
+                                    .foregroundColor(.black)
+                                    .cornerRadius(8)
+                                }
+                            }
                         }
                     } else {
                         Button {

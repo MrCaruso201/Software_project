@@ -459,7 +459,17 @@ struct KartPenaltyView: View {
 
     private func penaltyTypeButton(_ pType: PenaltyType) -> some View {
         let isSelected = selectedType?.id == pType.id
-        let accentCol: Color = pType.isWarning ? .kartDim : .yellow
+        
+        let accentCol: Color = {
+            switch pType.code {
+            case "black_flag": return .red
+            case "blue_flag": return .blue
+            case "custom": return .purple
+            case "drop_position": return .orange
+            default:
+                return pType.isWarning ? .kartDim : .yellow
+            }
+        }()
 
         return Button(action: {
             withAnimation(.spring(response: 0.25)) {
@@ -479,29 +489,29 @@ struct KartPenaltyView: View {
                     // Penalità fissa con tempo noto → mostra il tempo
                     Text("+\(defSec)s")
                         .font(.system(size: 18, weight: .black, design: .monospaced))
-                        .foregroundColor(isSelected ? .black : accentCol)
+                        .foregroundColor(isSelected ? .white : accentCol)
                 } else {
                     Image(systemName: pType.systemIcon)
                         .font(.system(size: 22))
-                        .foregroundColor(isSelected ? .black : accentCol)
+                        .foregroundColor(isSelected ? .white : accentCol)
                 }
                 Text(pType.name)
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(isSelected ? .black : .white)
+                    .foregroundColor(isSelected ? .white : .white)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                 if let threshold = pType.warningThreshold {
                     Text("Auto dopo \(threshold)x")
                         .font(.system(size: 9))
-                        .foregroundColor(isSelected ? .black.opacity(0.6) : .kartDim)
+                        .foregroundColor(isSelected ? .white.opacity(0.8) : accentCol.opacity(0.8))
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .padding(.horizontal, 8)
-            .background(isSelected ? accentCol : Color.kartPanel)
+            .background(isSelected ? accentCol : accentCol.opacity(0.15))
             .cornerRadius(12)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSelected ? accentCol : Color.white.opacity(0.06), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSelected ? accentCol : accentCol.opacity(0.4), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .animation(.spring(response: 0.25), value: isSelected)
