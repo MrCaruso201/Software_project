@@ -29,7 +29,26 @@ struct ClassificaLiveView: View {
     @State private var editingSessionName: String = ""
     @State private var isSavingSessionName = false
     
-    @State private var viewMode: String = "live" // "live", "qualifying", "final"
+    @State private var viewMode: String = "live" // "live", "qualifying", "final", ...
+    
+    // Custom Tabs
+    @State private var showAddTabAlert = false
+    @State private var newTabName = ""
+    @State private var customTabs: [String] = []
+    
+    private var extraTabs: [String] {
+        let resultsTypes: [String] = viewModel.eventResults.compactMap { $0.resultType }
+        let allTypes: [String] = resultsTypes + customTabs
+        let uniqueTypes: Set<String> = Set(allTypes)
+        return uniqueTypes.filter { !$0.isEmpty && $0 != "qualifying" && $0 != "final" && $0 != "live" }.sorted()
+    }
+    
+    private var currentLabelText: String {
+        if viewMode == "live" { return "Live Timing" }
+        if viewMode == "qualifying" { return "Qualifica (Griglia)" }
+        if viewMode == "final" { return "Classifica Finale" }
+        return viewMode.capitalized
+    }
     
     private var lastFlagMessage: RaceMessage? {
         viewModel.messages.filter {
@@ -64,9 +83,25 @@ struct ClassificaLiveView: View {
                     Button(action: { viewMode = "final" }) {
                         Label("Classifica Finale", systemImage: "list.number")
                     }
+                    
+                    if !extraTabs.isEmpty {
+                        Divider()
+                        ForEach(extraTabs, id: \.self) { tab in
+                            Button(action: { viewMode = tab }) {
+                                Label(tab.capitalized, systemImage: "doc.text")
+                            }
+                        }
+                    }
+                    
+                    if isDirector {
+                        Divider()
+                        Button(action: { showAddTabAlert = true }) {
+                            Label("Aggiungi nuova tab...", systemImage: "plus")
+                        }
+                    }
                 } label: {
                     HStack {
-                        Text(viewMode == "live" ? "Live Timing" : (viewMode == "qualifying" ? "Qualifica (Griglia)" : "Classifica Finale"))
+                        Text(currentLabelText)
                             .font(.system(size: 16, weight: .bold))
                         Spacer()
                         Image(systemName: "chevron.down")
@@ -162,6 +197,22 @@ struct ClassificaLiveView: View {
             Button("OK") { uploadError = nil }
         } message: {
             Text(uploadError ?? "")
+        }
+        .alert("Nuova Tab", isPresented: $showAddTabAlert) {
+            TextField("Nome (es. Prove Libere)", text: $newTabName)
+            Button("Annulla", role: .cancel) { newTabName = "" }
+            Button("Aggiungi") {
+                let trimmed = newTabName.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty {
+                    if !customTabs.contains(trimmed) {
+                        customTabs.append(trimmed)
+                    }
+                    viewMode = trimmed
+                }
+                newTabName = ""
+            }
+        } message: {
+            Text("Inserisci il nome per la nuova classifica.")
         }
         .onChange(of: viewModel.currentSessionName) { _, new in
             if !isSavingSessionName {
