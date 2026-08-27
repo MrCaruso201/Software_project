@@ -42,9 +42,9 @@ struct RaceEvent: Identifiable, Codable {
         case releaseFormText = "release_form_text"
     }
 
-    /// True se la gara è a squadre (max_people_per_group > 1)
+    /// True se la gara è a squadre (min_people_per_group >= 2 oppure max_people_per_group > 1)
     var isTeamEvent: Bool {
-        return (maxPeoplePerGroup ?? 1) > 1
+        return (minPeoplePerGroup ?? 1) >= 2 || (maxPeoplePerGroup ?? 1) > 1
     }
 
     /// Data deadline parsata come oggetto Date

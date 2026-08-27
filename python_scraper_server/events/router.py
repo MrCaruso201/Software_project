@@ -166,7 +166,10 @@ def register_for_event(
     past_deadline = bool(event.registration_deadline and now > event.registration_deadline)
 
     # Determina se è una gara a squadre
-    is_team_event = event.max_people_per_group is not None and event.max_people_per_group > 1
+    is_team_event = (
+        (event.min_people_per_group is not None and event.min_people_per_group >= 2) or
+        (event.max_people_per_group is not None and event.max_people_per_group > 1)
+    )
     creating_team = is_team_event and team_data and team_data.team_name.strip()
 
     if creating_team:

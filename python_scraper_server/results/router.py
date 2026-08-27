@@ -174,7 +174,8 @@ async def import_results_from_csv(
         raise HTTPException(status_code=404, detail="Evento non trovato")
 
     is_team_event = (
-        event.max_people_per_group is not None and event.max_people_per_group > 1
+        (event.min_people_per_group is not None and event.min_people_per_group >= 2) or
+        (event.max_people_per_group is not None and event.max_people_per_group > 1)
     )
 
     # Decode CSV (gestisce BOM da Excel)
