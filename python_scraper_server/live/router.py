@@ -178,6 +178,7 @@ def get_kart_assignments(
         .all()
     )
     manual_by_kart = {a.kart_number: a for a in manual_assignments}
+    manual_team_ids = {a.team_id for a in manual_assignments if a.team_id}
 
     # 2. Team e piloti iscritti per match automatico
     from db.models import User
@@ -186,14 +187,15 @@ def get_kart_assignments(
     team_name_map = {}
     for reg, user in registrations:
         t_name = (reg.team_name or "").strip().lower()
+        team_ident = reg.team_id or str(reg.id)
         if t_name:
-            team_name_map[t_name] = (reg.team_id, reg.team_name)
+            team_name_map[t_name] = (team_ident, reg.team_name)
         if user:
             full_name = f"{user.first_name or ''} {user.last_name or ''}".strip().lower()
             if full_name:
-                team_name_map[full_name] = (reg.team_id, f"{user.first_name or ''} {user.last_name or ''}".strip())
+                team_name_map[full_name] = (team_ident, f"{user.first_name or ''} {user.last_name or ''}".strip())
             if user.username:
-                team_name_map[user.username.lower()] = (reg.team_id, user.username)
+                team_name_map[user.username.lower()] = (team_ident, user.username)
 
     # 3. Leggi il JSON del live timing
     url = _get_kartodromo_url(event, db)
@@ -233,7 +235,9 @@ def get_kart_assignments(
                 matched_team_id = ""
                 matched_team_name = driver_name
                 if d_name_lower in team_name_map:
-                    matched_team_id, matched_team_name = team_name_map[d_name_lower]
+                    tid, tname = team_name_map[d_name_lower]
+                    if tid not in manual_team_ids:
+                        matched_team_id, matched_team_name = tid, tname
                 
                 r = KartAssignmentResponse(
                     id=0,
@@ -272,27 +276,26 @@ def assign_kart(
     _require_director(user_payload)
     _get_event_or_404(event_id, db)
 
-    # Controlla conflitti: stesso kart già assegnato in questo evento
-    existing_kart = db.query(LiveKartAssignment).filter(
-        LiveKartAssignment.event_id == event_id,
-        LiveKartAssignment.kart_number == body.kart_number
-    ).first()
-    if existing_kart:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Il kart {body.kart_number} è già assegnato alla squadra '{existing_kart.team_name or existing_kart.team_id}'"
-        )
-
-    # Controlla conflitti: stesso team già ha un kart
+    # 1. Se il team ha già un kart assegnato, rimuoviamo l'assegnazione precedente
     existing_team = db.query(LiveKartAssignment).filter(
         LiveKartAssignment.event_id == event_id,
         LiveKartAssignment.team_id == body.team_id
     ).first()
     if existing_team:
+        db.delete(existing_team)
+
+    # 2. Se il kart richiesto è già assegnato a un altro team, blocca l'operazione
+    existing_kart = db.query(LiveKartAssignment).filter(
+        LiveKartAssignment.event_id == event_id,
+        LiveKartAssignment.kart_number == body.kart_number
+    ).first()
+    if existing_kart and existing_kart.team_id != body.team_id:
         raise HTTPException(
-            status_code=400,
-            detail=f"Questa squadra ha già il kart {existing_team.kart_number} assegnato"
+            status_code=409, 
+            detail=f"Il kart {body.kart_number} è già assegnato al team {existing_kart.team_name or existing_kart.team_id}!"
         )
+
+    db.flush()
 
     assignment = LiveKartAssignment(
         event_id=event_id,
@@ -570,6 +573,11 @@ def get_my_kart(
         assignment = db.query(LiveKartAssignment).filter(
             LiveKartAssignment.event_id == event_id,
             LiveKartAssignment.team_id == registration.team_id
+        ).first()
+    else:
+        assignment = db.query(LiveKartAssignment).filter(
+            LiveKartAssignment.event_id == event_id,
+            LiveKartAssignment.team_id == str(registration.id)
         ).first()
 
     kart_number = None

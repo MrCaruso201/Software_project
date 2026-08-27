@@ -21,6 +21,7 @@ class EventResultResponse(BaseModel):
     team_name: Optional[str] = None
     note: Optional[str] = None
     username: Optional[str] = None          # popolato dal join con users
+    kart_number: Optional[int] = None
     profile_picture_url: Optional[str] = None
     created_at: datetime
 

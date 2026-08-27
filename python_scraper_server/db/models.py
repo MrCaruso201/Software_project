@@ -121,6 +121,7 @@ class EventResult(Base):
     is_official  = Column(Boolean, default=False, nullable=False)  # True = admin, False = utente
     team_id      = Column(String,  nullable=True)   # UUID team (gare a squadre)
     team_name    = Column(String,  nullable=True)   # nome squadra
+    kart_number  = Column(Integer, nullable=True)   # numero kart
     note         = Column(Text,    nullable=True)
     created_at   = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 

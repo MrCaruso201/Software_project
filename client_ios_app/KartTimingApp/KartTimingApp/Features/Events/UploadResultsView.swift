@@ -97,19 +97,17 @@ struct UploadResultsView: View {
             .padding(.top, 12)
 
             if event.isTeamEvent {
-                csvFormatRow("Posizione, Squadra, Miglior Giro, Gap, Giri")
-                csvFormatRow("1, Team Alpha, 1:05.234, Leader, 46")
-                csvFormatRow("2, Team Beta, 1:06.100, +1 giro, 45")
-                csvFormatRow("3, Team Gamma, 1:06.810, +1 giro, 45")
+                csvFormatRow("Posizione, Kart, Squadra, Miglior Giro, Gap, Giri")
+                csvFormatRow("1, 14, Team Alpha, 1:05.234, Leader, 46")
+                csvFormatRow("2, 22, Team Beta, 1:06.100, +1 giro, 45")
+                csvFormatRow("3, 7, Team Gamma, 1:06.810, +1 giro, 45")
             } else {
-                csvFormatRow("Posizione, Pilota, Miglior Giro, Gap, Giri, username")
-                csvFormatRow("1, Mario Rossi, 1:05.234, Leader, 12, mario_r")
-                csvFormatRow("2, Luca Bianchi, 1:06.100, +0.8, 12,")
+                csvFormatRow("Posizione, Kart, Pilota, Miglior Giro, Gap, Giri")
+                csvFormatRow("1, 14, Mario Rossi, 1:05.234, Leader, 12")
+                csvFormatRow("2, 22, Luca Bianchi, 1:06.100, +0.8, 12")
             }
 
-            let hint = event.isTeamEvent
-                ? "Il nome squadra deve corrispondere a quello usato in fase di iscrizione. L'utente viene associato automaticamente."
-                : "La colonna \"username\" è opzionale: se presente associa il risultato all'account dell'utente."
+            let hint = "La colonna \"Kart\" serve per abbinare automaticamente il risultato al giusto utente/team in base all'assegnazione fatta durante il live timing."
             Text(hint)
                 .font(.system(size: 11))
                 .foregroundColor(.kartDim)

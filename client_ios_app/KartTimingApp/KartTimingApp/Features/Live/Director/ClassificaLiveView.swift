@@ -567,7 +567,7 @@ struct ClassificaLiveView: View {
         let newLeaderAdj = sameLap.first?.adjustedGap ?? 0.0
 
         // Costruzione CSV
-        var lines = ["Posizione,Squadra,Miglior Giro,Gap,Giri"]
+        var lines = ["Posizione,Kart,Squadra,Miglior Giro,Gap,Giri"]
         for (i, entry) in sorted.enumerated() {
             let gapStr: String
             if i == 0 {
@@ -581,7 +581,8 @@ struct ClassificaLiveView: View {
             }
             let safeName = entry.name.isEmpty    ? "-" : entry.name
             let safeBest = entry.bestLap.isEmpty || entry.bestLap == "-" ? "-" : entry.bestLap
-            lines.append("\(i + 1),\(safeName),\(safeBest),\(gapStr),\(entry.lapsStr)")
+            let safeKart = entry.kartNumber.map { String($0) } ?? "-"
+            lines.append("\(i + 1),\(safeKart),\(safeName),\(safeBest),\(gapStr),\(entry.lapsStr)")
         }
 
         let csvString = lines.joined(separator: "\r\n")

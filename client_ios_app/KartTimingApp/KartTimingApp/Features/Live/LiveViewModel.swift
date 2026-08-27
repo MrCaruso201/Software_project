@@ -12,6 +12,7 @@ class LiveViewModel: ObservableObject {
     @Published var messages: [RaceMessage] = []
     @Published var myKart: MyKartResponse = MyKartResponse()
     @Published var registeredTeams: [TeamRegistrationResponse] = []
+    @Published var registeredIndividuals: [EventRegistrationWithUserResponse] = []
 
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
@@ -61,6 +62,7 @@ class LiveViewModel: ObservableObject {
             group.addTask { await self.fetchPenalties() }
             group.addTask { await self.fetchMessages() }
             group.addTask { await self.fetchRegisteredTeams() }
+            group.addTask { await self.fetchRegisteredIndividuals() }
         }
     }
 
@@ -102,6 +104,17 @@ class LiveViewModel: ObservableObject {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             let (data, _) = try await NetworkService.shared.data(for: req)
             self.registeredTeams = try JSONDecoder().decode([TeamRegistrationResponse].self, from: data)
+        } catch { }
+    }
+
+    private func fetchRegisteredIndividuals() async {
+        guard let url = endpoint("/events/\(eventId)/registrations"),
+              let token = token else { return }
+        do {
+            var req = URLRequest(url: url)
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            let (data, _) = try await NetworkService.shared.data(for: req)
+            self.registeredIndividuals = try JSONDecoder().decode([EventRegistrationWithUserResponse].self, from: data)
         } catch { }
     }
 

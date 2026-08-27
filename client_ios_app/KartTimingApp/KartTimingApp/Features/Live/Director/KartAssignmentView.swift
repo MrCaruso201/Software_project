@@ -1,45 +1,28 @@
 import SwiftUI
 
-/// Pannello per assegnare i kart alle squadre iscritte
+/// Pannello per assegnare i kart alle iscrizioni (squadre o singoli)
 struct KartAssignmentView: View {
     let event: RaceEvent
     @ObservedObject var viewModel: LiveViewModel
     @EnvironmentObject var manager: KartTimingManager
 
-    struct TeamSelection: Identifiable {
+    struct RegistrationSelection: Identifiable {
         let id: String
-        let name: String
+        let defaultName: String
     }
 
-    @State private var teamToAssign: TeamSelection? = nil
+    @State private var regToAssign: RegistrationSelection? = nil
     @State private var showAssignAlert = false
     @State private var assignKartNumberText = ""
+    @State private var assignKartNameText = ""
     @State private var actionError: String? = nil
 
-    // Combina i team iscritti e gli assegnamenti orfani
-    var combinedList: [TeamItem] {
-        var items: [TeamItem] = []
-        var processedTeamIds = Set<String>()
-        
-        // 1. Team Iscritti
-        for team in viewModel.registeredTeams {
-            let match = viewModel.kartAssignments.first(where: { $0.teamId == team.teamId })
-            items.append(TeamItem(id: team.teamId, name: team.teamName, assignment: match))
-            processedTeamIds.insert(team.teamId)
-        }
-        
-        // 2. Orfani
-        for kart in viewModel.kartAssignments {
-            let effTeamId = kart.teamId.isEmpty ? UUID().uuidString : kart.teamId
-            if !processedTeamIds.contains(effTeamId) {
-                items.append(TeamItem(id: effTeamId, name: kart.teamName ?? "Sconosciuto", assignment: kart))
-                if !kart.teamId.isEmpty {
-                    processedTeamIds.insert(effTeamId)
-                }
-            }
-        }
-        
-        return items
+    private var enrolledTeams: [TeamRegistrationResponse] {
+        viewModel.registeredTeams.filter { $0.overallStatus != "waitlist" }
+    }
+    
+    private var enrolledIndividuals: [EventRegistrationWithUserResponse] {
+        viewModel.registeredIndividuals.filter { $0.status != "waitlist" }
     }
 
     var body: some View {
@@ -47,63 +30,56 @@ struct KartAssignmentView: View {
             Color.kartBG.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 12) {
-                    // Header
-                    HStack {
-                        Text("\(viewModel.kartAssignments.count) kart assegnati su \(combinedList.count) squadre")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(.kartDim)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-
-                    if combinedList.isEmpty {
-                        emptyKarts
-                    } else {
-                        LazyVStack(spacing: 12) {
-                            ForEach(combinedList) { item in
-                                KartRow(
-                                    teamName: item.name,
-                                    assignment: item.assignment,
-                                    penaltyCount: item.assignment != nil ? (viewModel.penaltiesByKart[item.assignment!.kartNumber]?.filter { !$0.isWarning }.count ?? 0) : 0,
-                                    totalPenaltySeconds: item.assignment != nil ? viewModel.totalPenaltySeconds(for: item.assignment!.kartNumber) : 0,
-                                    onTap: {
-                                        teamToAssign = TeamSelection(id: item.id, name: item.name)
-                                        assignKartNumberText = item.assignment != nil ? String(item.assignment!.kartNumber) : ""
-                                        showAssignAlert = true
-                                    },
-                                    onRemove: {
-                                        if let kart = item.assignment {
-                                            Task {
-                                                do { try await viewModel.removeKart(kartNumber: kart.kartNumber) }
-                                                catch { actionError = error.localizedDescription }
-                                            }
-                                        }
-                                    }
-                                )
+                VStack(spacing: 20) {
+                    if event.isTeamEvent {
+                        if enrolledTeams.isEmpty {
+                            emptyView
+                        } else {
+                            LazyVStack(spacing: 12) {
+                                ForEach(enrolledTeams) { team in
+                                    teamCard(team)
+                                }
                             }
                         }
-                        .padding(.horizontal, 16)
+                    } else {
+                        if enrolledIndividuals.isEmpty {
+                            emptyView
+                        } else {
+                            LazyVStack(spacing: 12) {
+                                ForEach(enrolledIndividuals) { reg in
+                                    individualCard(reg)
+                                }
+                            }
+                        }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 20)
                 .padding(.bottom, 30)
             }
         }
-        .alert("Assegna Kart a \(teamToAssign?.name ?? "")", isPresented: $showAssignAlert) {
+        .alert("Assegna Kart", isPresented: $showAssignAlert) {
             TextField("Numero Kart", text: $assignKartNumberText)
                 .keyboardType(.numberPad)
+            TextField("Username", text: $assignKartNameText)
+            
             Button("Assegna") {
-                guard let num = Int(assignKartNumberText), let team = teamToAssign else { return }
+                guard let num = Int(assignKartNumberText), let reg = regToAssign else { return }
                 Task {
                     do {
-                        try await viewModel.assignKart(teamId: team.id, kartNumber: num, teamName: team.name)
+                        try await viewModel.assignKart(
+                            teamId: reg.id,
+                            kartNumber: num,
+                            teamName: assignKartNameText.trimmingCharacters(in: .whitespaces).isEmpty ? reg.defaultName : assignKartNameText
+                        )
                     } catch {
                         actionError = error.localizedDescription
                     }
                 }
             }
             Button("Annulla", role: .cancel) { }
+        } message: {
+            Text("Inserisci il numero del kart e il nome esatto che appare sul monitor dei tempi in pista.")
         }
         .alert("Errore", isPresented: .init(
             get: { actionError != nil },
@@ -114,102 +90,193 @@ struct KartAssignmentView: View {
             Text(actionError ?? "")
         }
     }
-
-    private var emptyKarts: some View {
+    
+    private var emptyView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "flag.2.crossed")
+            Image(systemName: event.isTeamEvent ? "person.3.fill" : "person.fill")
                 .font(.system(size: 44))
                 .foregroundColor(.kartDim.opacity(0.4))
-            Text("Nessuna squadra iscritta")
+            Text(event.isTeamEvent ? "Nessuna squadra iscritta" : "Nessun pilota iscritto")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.kartDim)
-            Text("Le squadre iscritte all'evento appariranno qui.")
+            Text("Le iscrizioni appariranno qui.")
                 .font(.system(size: 12))
                 .foregroundColor(.kartDim.opacity(0.6))
-                .multilineTextAlignment(.center)
         }
         .padding(40)
     }
-}
-
-struct TeamItem: Identifiable {
-    let id: String
-    let name: String
-    let assignment: LiveKartAssignment?
-}
-
-// MARK: - Kart Card
-
-struct KartRow: View {
-    let teamName: String
-    let assignment: LiveKartAssignment?
-    let penaltyCount: Int
-    let totalPenaltySeconds: Int
-    let onTap: () -> Void
-    let onRemove: (() -> Void)?
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // Area cliccabile: Numero e Nome
-            Button(action: onTap) {
-                HStack(spacing: 12) {
-                    // Numero Kart (colonna piccola)
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(assignment != nil ? Color.kartAccent.opacity(0.12) : Color.white.opacity(0.05))
+    
+    // MARK: - Team Card
+    
+    private func teamCard(_ team: TeamRegistrationResponse) -> some View {
+        let assignment = viewModel.kartAssignments.first(where: { $0.teamId == team.teamId })
+        let penaltyCount = assignment != nil ? (viewModel.penaltiesByKart[assignment!.kartNumber]?.filter { !$0.isWarning }.count ?? 0) : 0
+        let totalPenaltySeconds = assignment != nil ? viewModel.totalPenaltySeconds(for: assignment!.kartNumber) : 0
+        
+        return VStack(alignment: .leading, spacing: 0) {
+            // Header: Info Assegnazione
+            assignmentHeader(
+                assignment: assignment,
+                defaultName: team.teamName,
+                id: team.teamId,
+                penaltyCount: penaltyCount,
+                totalPenaltySeconds: totalPenaltySeconds
+            )
+            
+            Divider().background(Color.white.opacity(0.08))
+            
+            // Lista Membri
+            VStack(spacing: 0) {
+                ForEach(team.members) { member in
+                    HStack(spacing: 10) {
+                        memberFallbackIcon
                         
-                        Text(assignment != nil ? "#\(assignment!.kartNumber)" : "-")
-                            .font(.system(size: 20, weight: .black, design: .monospaced))
-                            .foregroundColor(assignment != nil ? .kartAccent : .kartDim)
-                    }
-                    .frame(width: 56, height: 56)
-                    
-                    // Nome Squadra e badge penalità
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(teamName)
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                        
-                        if let _ = assignment, (totalPenaltySeconds > 0 || penaltyCount > 0) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                Text("\(penaltyCount) pen. | +\(totalPenaltySeconds)s")
+                        VStack(alignment: .leading, spacing: 1) {
+                            if let name = member.username, !name.isEmpty {
+                                Text(name)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.white)
                             }
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(.orange)
-                        } else if assignment == nil {
-                            Text("Tocca per assegnare un kart")
-                                .font(.system(size: 11))
-                                .foregroundColor(.kartDim)
+                            if let email = member.email {
+                                Text(email)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.kartDim)
+                            }
                         }
+                        Spacer()
+                        
+                        if member.isTeamLeader {
+                            Text("LEADER")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.kartAccent.opacity(0.2))
+                                .foregroundColor(.kartAccent)
+                                .cornerRadius(3)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    
+                    if member.id != team.members.last?.id {
+                        Divider().background(Color.white.opacity(0.05)).padding(.leading, 52)
                     }
                 }
             }
-            .buttonStyle(PlainButtonStyle())
-            
-            Spacer()
-            
-            // Azioni
-            if assignment != nil {
-                HStack(spacing: 8) {
-                    if let onRemove = onRemove {
-                        Button(action: onRemove) {
-                            Image(systemName: "trash.fill")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(width: 38, height: 38)
-                                .background(Color.red.opacity(0.8))
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
-            }
+            .background(Color.kartPanel.opacity(0.6))
         }
-        .padding(10)
         .background(Color.kartPanel)
         .cornerRadius(12)
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.07), lineWidth: 1))
+    }
+    
+    // MARK: - Individual Card
+    
+    private func individualCard(_ reg: EventRegistrationWithUserResponse) -> some View {
+        let regIdStr = String(reg.id)
+        let assignment = viewModel.kartAssignments.first(where: { $0.teamId == regIdStr })
+        let penaltyCount = assignment != nil ? (viewModel.penaltiesByKart[assignment!.kartNumber]?.filter { !$0.isWarning }.count ?? 0) : 0
+        let totalPenaltySeconds = assignment != nil ? viewModel.totalPenaltySeconds(for: assignment!.kartNumber) : 0
+        let defaultName = reg.username ?? reg.email ?? "Utente"
+        
+        return VStack(alignment: .leading, spacing: 0) {
+            assignmentHeader(
+                assignment: assignment,
+                defaultName: defaultName,
+                id: regIdStr,
+                penaltyCount: penaltyCount,
+                totalPenaltySeconds: totalPenaltySeconds
+            )
+            
+            Divider().background(Color.white.opacity(0.08))
+            
+            HStack(spacing: 10) {
+                memberFallbackIcon
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(defaultName)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                    if let email = reg.email, reg.username != nil {
+                        Text(email)
+                            .font(.system(size: 11))
+                            .foregroundColor(.kartDim)
+                    }
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.kartPanel.opacity(0.6))
+        }
+        .background(Color.kartPanel)
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.07), lineWidth: 1))
+    }
+    
+    // MARK: - Shared Header
+    
+    private func assignmentHeader(assignment: LiveKartAssignment?, defaultName: String, id: String, penaltyCount: Int, totalPenaltySeconds: Int) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(assignment != nil ? Color.kartAccent.opacity(0.12) : Color.white.opacity(0.05))
+                
+                Text(assignment != nil ? "#\(assignment!.kartNumber)" : "-")
+                    .font(.system(size: 20, weight: .black, design: .monospaced))
+                    .foregroundColor(assignment != nil ? .kartAccent : .kartDim)
+            }
+            .frame(width: 56, height: 56)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(assignment?.teamName ?? defaultName)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                if let _ = assignment, (totalPenaltySeconds > 0 || penaltyCount > 0) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                        Text("\(penaltyCount) pen. | +\(totalPenaltySeconds)s")
+                    }
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(.orange)
+                } else if assignment == nil {
+                    Text("Nessun kart assegnato")
+                        .font(.system(size: 11))
+                        .foregroundColor(.kartDim)
+                }
+            }
+            
+            Spacer()
+            
+            // Buttons
+            HStack(spacing: 8) {
+                Button {
+                    regToAssign = RegistrationSelection(id: id, defaultName: assignment?.teamName ?? defaultName)
+                    assignKartNumberText = assignment != nil ? String(assignment!.kartNumber) : ""
+                    assignKartNameText = assignment?.teamName ?? defaultName
+                    showAssignAlert = true
+                } label: {
+                    Text(assignment != nil ? "Modifica" : "Assegna")
+                        .font(.system(size: 11, weight: .bold))
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .padding(10)
+    }
+    
+    private var memberFallbackIcon: some View {
+        Image(systemName: "person.fill")
+            .font(.system(size: 14))
+            .foregroundColor(.kartDim)
+            .frame(width: 32, height: 32)
+            .background(Color.white.opacity(0.06))
+            .clipShape(Circle())
     }
 }

@@ -417,7 +417,7 @@ struct CircuitCard: View {
                          value: stat.bestEventLapMs.flatMap { ms -> String? in
                              EventResult(id: 0, eventId: 0, userId: nil, driverName: nil, memberEmail: nil,
                                          position: nil, bestLapMs: ms, gap: nil, laps: nil, isOfficial: true,
-                                         teamId: nil, teamName: nil, note: nil, username: nil,
+                                         teamId: nil, teamName: nil, note: nil, username: nil, kartNumber: nil,
                                          profilePictureUrl: nil, createdAt: "")
                              .formattedBestLap
                          } ?? "—",
@@ -427,7 +427,7 @@ struct CircuitCard: View {
                          value: stat.bestSelfLapMs.flatMap { ms -> String? in
                              EventResult(id: 0, eventId: 0, userId: nil, driverName: nil, memberEmail: nil,
                                          position: nil, bestLapMs: ms, gap: nil, laps: nil, isOfficial: false,
-                                         teamId: nil, teamName: nil, note: nil, username: nil,
+                                         teamId: nil, teamName: nil, note: nil, username: nil, kartNumber: nil,
                                          profilePictureUrl: nil, createdAt: "")
                              .formattedBestLap
                          } ?? "—",
@@ -623,7 +623,7 @@ struct ClassificationSheet: View {
     // ── Helper: utente corrente ───────────────────────────────────────────────
 
     private var currentUserId: Int? {
-        authState.currentUser?.id
+        viewModel.targetUserId ?? authState.currentUser?.id
     }
 
     // ── Classifica Individuale ────────────────────────────────────────────────
@@ -645,10 +645,17 @@ struct ClassificationSheet: View {
             positionBadge(result.position)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(result.displayName)
-                    .font(.system(size: 14, weight: isMe ? .bold : .semibold))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    if let k = result.kartNumber {
+                        Text("#\(k)")
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
+                    Text(result.displayName)
+                        .font(.system(size: 14, weight: isMe ? .bold : .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                }
 
                 HStack(spacing: 12) {
                     if let lap = result.formattedBestLap {
@@ -703,6 +710,7 @@ struct ClassificationSheet: View {
         let bestLapMs: Int?
         let laps: Int?
         let isMyTeam: Bool
+        let kartNumber: Int?
     }
 
     private func buildUniqueTeams(_ results: [EventResult]) -> [TeamRow] {
@@ -727,7 +735,8 @@ struct ClassificationSheet: View {
                 gap: r.gap,
                 bestLapMs: r.bestLapMs,
                 laps: r.laps,
-                isMyTeam: isMyTeam
+                isMyTeam: isMyTeam,
+                kartNumber: r.kartNumber
             ))
         }
         return teams
@@ -743,6 +752,11 @@ struct ClassificationSheet: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
+                    if let k = team.kartNumber {
+                        Text("#\(k)")
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
                     Image(systemName: "person.3.fill")
                         .font(.system(size: 9))
                         .foregroundColor(.kartDim)

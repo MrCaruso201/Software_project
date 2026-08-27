@@ -15,6 +15,7 @@ class AnalisiViewModel: ObservableObject {
     @Published var isLoading:      Bool                          = true
     @Published var errorMessage:   String?                       = nil
     @Published var isReadOnly:     Bool                          = false
+    @Published var targetUserId:   Int?                          = nil
 
     /// Classifiche complete di singoli eventi (fetched on-demand)
     @Published var classifications: [Int: [EventResult]]         = [:]
@@ -125,6 +126,7 @@ class AnalisiViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         isReadOnly = (targetUserId != nil)
+        self.targetUserId = targetUserId
 
         let group = DispatchGroup()
 

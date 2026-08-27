@@ -57,6 +57,7 @@ def _to_response(result: EventResult, db: Session) -> EventResultResponse:
         team_name=result.team_name,
         note=result.note,
         username=user.username if user else None,
+        kart_number=result.kart_number,
         profile_picture_url=user.profile_picture_url if user else None,
         created_at=result.created_at,
     )
@@ -159,15 +160,14 @@ async def import_results_from_csv(
     Sovrascrive tutti i risultati ufficiali precedenti per questo evento.
 
     Formato CSV gare individuali:
-      Posizione, Pilota, Miglior Giro (opzionale), Gap (opzionale), Giri (opzionale), username (opzionale)
+      Posizione, Kart, Pilota, Miglior Giro (opzionale), Gap (opzionale), Giri (opzionale), username (opzionale)
 
-    Formato CSV gare a squadre (semplificato):
-      Posizione, Squadra, Miglior Giro (opzionale), Gap (opzionale), Giri (opzionale)
+    Formato CSV gare a squadre:
+      Posizione, Kart, Squadra, Miglior Giro (opzionale), Gap (opzionale), Giri (opzionale)
 
-    - In gare a squadre viene cercato automaticamente il team leader nelle registrazioni
-      e il risultato viene collegato al suo user_id.
-    - Se la squadra non è trovata nelle registrazioni, il risultato viene salvato senza utente.
-    - La colonna username è opzionale: se presente sovrascrive la ricerca automatica.
+    La colonna "Kart" è molto consigliata. Il backend cercherà l'utente incrociando
+    la tabella delle assegnazioni live (`LiveKartAssignment`). Se manca il "Kart",
+    proverà a fare un match sul nome (il "Nome sul Monitor" che era stato assegnato).
     """
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
@@ -188,9 +188,6 @@ async def import_results_from_csv(
     if reader.fieldnames is None:
         raise HTTPException(status_code=400, detail="CSV vuoto o privo di intestazione")
 
-    # Normalizza i nomi delle colonne presenti
-    fieldnames_lower = [f.strip().lower() for f in reader.fieldnames if f]
-
     # Cancella risultati ufficiali precedenti per questo evento
     db.query(EventResult).filter(
         EventResult.event_id == event_id,
@@ -200,6 +197,11 @@ async def import_results_from_csv(
     imported = 0
     errors: list[str] = []
 
+    from db.models import LiveKartAssignment
+    
+    # Pre-carica tutte le registrazioni per velocizzare
+    all_regs = db.query(EventRegistration).filter(EventRegistration.event_id == event_id).all()
+    
     for i, row in enumerate(reader, start=2):
         # Normalizza chiavi (case insensitive + strip); salta righe completamente vuote
         row = {k.strip().lower(): (v.strip() if v is not None else "") for k, v in row.items() if k}
@@ -214,9 +216,16 @@ async def import_results_from_csv(
             errors.append(f"Riga {i}: posizione '{raw_pos}' non valida — riga saltata")
             continue
 
-        # Pilota e Squadra
+        # Kart, Pilota e Squadra
+        raw_kart = row.get("kart", row.get("numero", row.get("num", ""))).strip()
+        kart_number = None
+        if raw_kart:
+            try: kart_number = int(raw_kart)
+            except ValueError: pass
+
         driver_name = row.get("pilota", row.get("driver", row.get("email", ""))).strip() or None
         team_name = row.get("squadra", row.get("team", row.get("team_name", ""))).strip() or None
+        monitor_name = team_name if is_team_event else driver_name
 
         # Miglior giro (opzionale)
         best_lap_ms: Optional[int] = None
@@ -251,80 +260,86 @@ async def import_results_from_csv(
             except ValueError:
                 pass
 
-        # Username colonna (opzionale, sovrascrive ricerca automatica)
-        username_col = row.get("username", "").strip()
-
+        # Identificazione Utente / Registrazione tramite LiveKartAssignment
         user_id = None
         member_email = None
         matched_team_id = None
-
-        # Risolvi user_id da username se fornito esplicitamente
+        
+        # 1. Username esplicito (override manuale)
+        username_col = row.get("username", "").strip()
         if username_col:
             u = db.query(User).filter(User.username == username_col).first()
             if u:
                 user_id = u.id
                 member_email = u.email
 
-        if is_team_event and team_name:
-            # Cerca le registrazioni per questa squadra in questo evento
-            team_regs = db.query(EventRegistration).filter(
-                EventRegistration.event_id == event_id,
-                EventRegistration.team_name == team_name,
-            ).all()
+        # 2. Ricerca automatica tramite Kart o Nome Monitor
+        if not user_id:
+            assignment = None
+            if kart_number is not None:
+                assignment = db.query(LiveKartAssignment).filter(
+                    LiveKartAssignment.event_id == event_id,
+                    LiveKartAssignment.kart_number == kart_number
+                ).first()
+            
+            if not assignment and monitor_name:
+                # Fallback: ricerca case-insensitive per team_name (Nome Monitor)
+                from sqlalchemy import func
+                assignment = db.query(LiveKartAssignment).filter(
+                    LiveKartAssignment.event_id == event_id,
+                    func.lower(LiveKartAssignment.team_name) == monitor_name.lower()
+                ).first()
 
+            if assignment:
+                # Trovata assegnazione! Il team_id in LiveKartAssignment è l'ID del team o l'ID della reg (come stringa)
+                t_id_str = assignment.team_id
+                
+                if is_team_event:
+                    # In eventi a squadre, cerchiamo tutte le reg con questo team_id
+                    team_regs = [r for r in all_regs if r.team_id == t_id_str]
+                    if team_regs:
+                        matched_team_id = t_id_str
+                        # Assegna al leader se c'è, altrimenti al primo utente valido
+                        leader_reg = next(
+                            (r for r in team_regs if r.is_team_leader and r.user_id),
+                            next((r for r in team_regs if r.user_id), None)
+                        )
+                        if leader_reg:
+                            user_id = leader_reg.user_id
+                            member_email = leader_reg.member_email
+                else:
+                    # In eventi individuali, team_id è la stringa dell'ID registrazione
+                    try:
+                        reg_id = int(t_id_str)
+                        reg = next((r for r in all_regs if r.id == reg_id), None)
+                        if reg and reg.user_id:
+                            user_id = reg.user_id
+                            member_email = reg.member_email
+                    except ValueError:
+                        pass
+        
+        # Se non è stato trovato nulla tramite i kart, tentiamo l'ultimo disperato fallback
+        # sul nome squadra direttamente nelle registrazioni (come faceva prima)
+        if not user_id and is_team_event and team_name:
+            team_regs = [r for r in all_regs if r.team_name and r.team_name.lower() == team_name.lower()]
             if team_regs:
                 matched_team_id = team_regs[0].team_id
+                leader_reg = next(
+                    (r for r in team_regs if r.is_team_leader and r.user_id),
+                    next((r for r in team_regs if r.user_id), None)
+                )
+                if leader_reg:
+                    user_id = leader_reg.user_id
+                    member_email = leader_reg.member_email
 
-                # Se non è stato fornito username nel CSV, ricerca automatica del leader
-                if not username_col:
-                    leader_reg = next(
-                        (r for r in team_regs if r.is_team_leader and r.user_id),
-                        next((r for r in team_regs if r.user_id), None)
-                    )
-                    if leader_reg:
-                        user_id = leader_reg.user_id
-                        member_email = leader_reg.member_email
-
-                # Crea UN SOLO risultato per squadra
-                db.add(EventResult(
-                    event_id=event_id,
-                    user_id=user_id,
-                    driver_name=driver_name,
-                    member_email=member_email,
-                    position=position,
-                    best_lap_ms=best_lap_ms,
-                    gap=gap,
-                    laps=laps,
-                    is_official=True,
-                    team_id=matched_team_id,
-                    team_name=team_name,
-                ))
-                imported += 1
-                continue
-            else:
-                # Squadra non trovata nelle registrazioni: salva comunque senza utente
-                errors.append(f"Riga {i}: squadra '{team_name}' non trovata nelle iscrizioni (salvato senza utente)")
-                db.add(EventResult(
-                    event_id=event_id,
-                    user_id=None,
-                    driver_name=driver_name,
-                    member_email=None,
-                    position=position,
-                    best_lap_ms=best_lap_ms,
-                    gap=gap,
-                    laps=laps,
-                    is_official=True,
-                    team_id=None,
-                    team_name=team_name,
-                ))
-                imported += 1
-                continue
-
-        elif is_team_event and not team_name:
+        # Salvataggio risultato
+        if is_team_event and not team_name and not monitor_name:
             errors.append(f"Riga {i}: squadra mancante in gara a squadre — riga saltata")
             continue
+            
+        if not user_id:
+            errors.append(f"Riga {i}: '{monitor_name or 'Kart ' + str(kart_number)}' non ha trovato associazioni valide (salvato senza account)")
 
-        # Gara individuale (fallback)
         db.add(EventResult(
             event_id=event_id,
             user_id=user_id,
@@ -335,8 +350,9 @@ async def import_results_from_csv(
             gap=gap,
             laps=laps,
             is_official=True,
-            team_id=None,
-            team_name=None,
+            team_id=matched_team_id,
+            team_name=team_name,
+            kart_number=kart_number,
         ))
         imported += 1
 
