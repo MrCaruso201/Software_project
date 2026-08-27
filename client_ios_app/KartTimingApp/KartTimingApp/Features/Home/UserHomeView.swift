@@ -146,155 +146,164 @@ struct UserHomeView: View {
     // MARK: - Next Event Card
     @ViewBuilder
     private var nextEventCard: some View {
-        if let nextEvent = viewModel.events
+        let upcomingEvents = viewModel.events
             .filter({ ($0.dateObject ?? .distantFuture) >= Calendar.current.startOfDay(for: Date()) })
             .sorted(by: { ($0.dateObject ?? .distantFuture) < ($1.dateObject ?? .distantFuture) })
-            .first, let eventDate = nextEvent.dateObject {
             
-            let isRegistered = viewModel.registrations.contains { $0.eventId == nextEvent.id && $0.status == "confirmed" }
+        if let firstNext = upcomingEvents.first, let firstDate = firstNext.dateObject {
+            let nextEvents = upcomingEvents.filter { 
+                guard let d = $0.dateObject else { return false }
+                return Calendar.current.isDate(d, inSameDayAs: firstDate)
+            }
             
-            if Calendar.current.isDateInToday(eventDate) {
-                let isLive = nextEvent.status == "started"
+            VStack(spacing: 12) {
+                ForEach(nextEvents) { nextEvent in
+                    let isRegistered = viewModel.registrations.contains { $0.eventId == nextEvent.id && $0.status == "confirmed" }
+                    
+                    if Calendar.current.isDateInToday(firstDate) {
+                        let isLive = nextEvent.status == "started"
 
-                VStack(spacing: 8) {
-                    // ── Riquadro info evento (tap → dettaglio) ────────────
-                    Button {
-                        NotificationCenter.default.post(
-                            name: NSNotification.Name("OpenEventDetail"),
-                            object: nil,
-                            userInfo: ["eventId": nextEvent.id]
-                        )
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(spacing: 6) {
-                                    if isLive {
-                                        Circle()
-                                            .fill(Color.red)
-                                            .frame(width: 7, height: 7)
+                        VStack(spacing: 8) {
+                            // ── Riquadro info evento (tap → dettaglio) ────────────
+                            Button {
+                                NotificationCenter.default.post(
+                                    name: NSNotification.Name("OpenEventDetail"),
+                                    object: nil,
+                                    userInfo: ["eventId": nextEvent.id]
+                                )
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack(spacing: 6) {
+                                            if isLive {
+                                                Circle()
+                                                    .fill(Color.red)
+                                                    .frame(width: 7, height: 7)
+                                            }
+                                            Text(isLive ? "LIVE ORA" : "EVENTO OGGI")
+                                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                                .foregroundColor(isLive ? .red : (isRegistered ? .green : .red))
+                                        }
+                                        Text(nextEvent.title)
+                                            .font(.system(size: 16, weight: .bold))
+                                            .foregroundColor(.white)
+                                        Text(isLive ? "Tocca per i dettagli" : "Tocca per i dettagli")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.kartDim)
                                     }
-                                    Text(isLive ? "LIVE ORA" : "EVENTO OGGI")
-                                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                    Spacer()
+                                    Image(systemName: isLive ? "flag.checkered" : "stopwatch.fill")
+                                        .font(.system(size: 30))
                                         .foregroundColor(isLive ? .red : (isRegistered ? .green : .red))
                                 }
+                                .padding(16)
+                                .background(
+                                    isLive
+                                        ? Color.red.opacity(0.08)
+                                        : Color.kartPanel
+                                )
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(
+                                            isLive
+                                                ? Color.red.opacity(0.4)
+                                                : (isRegistered ? Color.green : Color.red).opacity(0.5),
+                                            lineWidth: isLive ? 1.5 : 1
+                                        )
+                                )
+                                .shadow(
+                                    color: isLive ? Color.red.opacity(0.15) : .clear,
+                                    radius: 10, x: 0, y: 4
+                                )
+                            }
+                            .buttonStyle(.plain)
+
+                            // ── Pulsante Entra in Live (solo se gara avviata) ─────
+                            if isLive {
+                                Button {
+                                    liveEventUserIsRegistered = isRegistered
+                                    liveEvent = nextEvent
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        ZStack {
+                                            Circle().fill(Color.red).frame(width: 8, height: 8)
+                                        }
+                                        Text("Entra in Live")
+                                            .font(.system(size: 15, weight: .bold))
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 13, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 13)
+                                    .frame(maxWidth: .infinity)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.red.opacity(0.85), Color.orange.opacity(0.65)],
+                                            startPoint: .leading, endPoint: .trailing
+                                        )
+                                    )
+                                    .cornerRadius(10)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+
+                    } else {
+                        Button {
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("OpenEventDetail"),
+                                object: nil,
+                                userInfo: ["eventId": nextEvent.id]
+                            )
+                        } label: {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "timer")
+                                        .foregroundColor(isRegistered ? .green : .kartAccent)
+                                    Text("PROSSIMO EVENTO")
+                                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                        .foregroundColor(isRegistered ? .green : .kartAccent)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(.kartDim)
+                                }
+                                
                                 Text(nextEvent.title)
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(.white)
-                                Text(isLive ? "Tocca per i dettagli" : "Tocca per i dettagli")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.kartDim)
-                            }
-                            Spacer()
-                            Image(systemName: isLive ? "flag.checkered" : "stopwatch.fill")
-                                .font(.system(size: 30))
-                                .foregroundColor(isLive ? .red : (isRegistered ? .green : .red))
-                        }
-                        .padding(16)
-                        .background(
-                            isLive
-                                ? Color.red.opacity(0.08)
-                                : Color.kartPanel
-                        )
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(
-                                    isLive
-                                        ? Color.red.opacity(0.4)
-                                        : (isRegistered ? Color.green : Color.red).opacity(0.5),
-                                    lineWidth: isLive ? 1.5 : 1
-                                )
-                        )
-                        .shadow(
-                            color: isLive ? Color.red.opacity(0.15) : .clear,
-                            radius: 10, x: 0, y: 4
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    // ── Pulsante Entra in Live (solo se gara avviata) ─────
-                    if isLive {
-                        Button {
-                            liveEventUserIsRegistered = isRegistered
-                            liveEvent = nextEvent
-                        } label: {
-                            HStack(spacing: 10) {
-                                ZStack {
-                                    Circle().fill(Color.red).frame(width: 8, height: 8)
+                                    .lineLimit(1)
+                                    
+                                let city = nextEvent.location.components(separatedBy: " - ").first ?? nextEvent.location
+                                
+                                HStack(spacing: 6) {
+                                    Image(systemName: "mappin.circle.fill")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.kartDim)
+                                    Text(city)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(.kartDim)
+                                        .lineLimit(1)
                                 }
-                                Text("Entra in Live")
-                                    .font(.system(size: 15, weight: .bold))
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 13, weight: .semibold))
+                                
+                                HStack {
+                                    Text("- \(countdownString(to: firstDate))")
+                                        .font(.system(size: 24, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                                .padding(.top, 4)
                             }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 13)
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color.red.opacity(0.85), Color.orange.opacity(0.65)],
-                                    startPoint: .leading, endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(10)
+                            .padding(16)
+                            .background(Color.kartPanel)
+                            .cornerRadius(12)
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke((isRegistered ? Color.green : Color.white).opacity(0.06), lineWidth: 1))
                         }
                         .buttonStyle(.plain)
                     }
                 }
-
-            } else {
-                Button {
-                    NotificationCenter.default.post(
-                        name: NSNotification.Name("OpenEventDetail"),
-                        object: nil,
-                        userInfo: ["eventId": nextEvent.id]
-                    )
-                } label: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Image(systemName: "timer")
-                                .foregroundColor(isRegistered ? .green : .kartAccent)
-                            Text("PROSSIMO EVENTO")
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .foregroundColor(isRegistered ? .green : .kartAccent)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.kartDim)
-                        }
-                        
-                        Text(nextEvent.title)
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                            
-                        let city = nextEvent.location.components(separatedBy: " - ").first ?? nextEvent.location
-                        
-                        HStack(spacing: 6) {
-                            Image(systemName: "mappin.circle.fill")
-                                .font(.system(size: 13))
-                                .foregroundColor(.kartDim)
-                            Text(city)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.kartDim)
-                                .lineLimit(1)
-                        }
-                        
-                        HStack {
-                            Text("- \(countdownString(to: eventDate))")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                        .padding(.top, 4)
-                    }
-                    .padding(16)
-                    .background(Color.kartPanel)
-                    .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke((isRegistered ? Color.green : Color.white).opacity(0.06), lineWidth: 1))
-                }
-                .buttonStyle(.plain)
             }
         }
     }
