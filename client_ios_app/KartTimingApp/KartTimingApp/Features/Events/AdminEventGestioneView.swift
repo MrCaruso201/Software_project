@@ -16,9 +16,17 @@ struct AdminEventGestioneView: View {
     @State private var showStatusConfirm = false
     @State private var pendingStatus: String? = nil
     @State private var showLive = false
+    @State private var hasFinalResults = false
 
     private var isStarted: Bool { localEvent.status == "started" }
     private var isFinished: Bool { localEvent.status == "finished" }
+
+    // MARK: - Computed Properties for UI
+    private var actionButtonText: String { isStarted ? "Termina Evento" : "Avvia Evento" }
+    private var actionButtonIcon: String { isStarted ? "stop.circle.fill" : "play.circle.fill" }
+    private var actionButtonColor: Color { isStarted ? .red : .black }
+    private var actionButtonPendingStatus: String { isStarted ? "finished" : "started" }
+    private var uploadButtonText: String { hasFinalResults ? "Sostituisci i risultati CSV" : "Carica i risultati CSV" }
 
     var body: some View {
         ZStack {
@@ -69,23 +77,23 @@ struct AdminEventGestioneView: View {
                             if !isFinished {
                                 // Avvia Evento / Termina Evento
                                 Button(action: {
-                                    pendingStatus = isStarted ? "finished" : "started"
+                                    pendingStatus = actionButtonPendingStatus
                                     showStatusConfirm = true
                                 }) {
                                     HStack(spacing: 10) {
                                         if isUpdatingStatus {
                                             ProgressView()
-                                                .tint(isStarted ? .red : .black)
+                                                .tint(actionButtonColor)
                                                 .scaleEffect(0.85)
                                         } else {
-                                            Image(systemName: isStarted ? "stop.circle.fill" : "play.circle.fill")
+                                            Image(systemName: actionButtonIcon)
                                                 .font(.system(size: 17, weight: .semibold))
-                                            Text(isStarted ? "Termina Evento" : "Avvia Evento")
+                                            Text(actionButtonText)
                                                 .font(.system(size: 15, weight: .bold))
                                         }
                                         Spacer()
                                     }
-                                    .foregroundColor(isStarted ? .red : .black)
+                                    .foregroundColor(actionButtonColor)
                                     .padding(.horizontal, 18)
                                     .padding(.vertical, 16)
                                     .frame(maxWidth: .infinity)
@@ -139,7 +147,7 @@ struct AdminEventGestioneView: View {
                                     HStack(spacing: 10) {
                                         Image(systemName: "arrow.up.doc.fill")
                                             .font(.system(size: 17, weight: .semibold))
-                                        Text("Carica Risultati")
+                                        Text(uploadButtonText)
                                             .font(.system(size: 15, weight: .bold))
                                         Spacer()
                                     }
@@ -157,27 +165,7 @@ struct AdminEventGestioneView: View {
                                     pendingStatus = "scheduled"
                                     showStatusConfirm = true
                                 }) {
-                                    HStack(spacing: 10) {
-                                        if isUpdatingStatus {
-                                            ProgressView().tint(.orange).scaleEffect(0.85)
-                                        } else {
-                                            Image(systemName: "arrow.counterclockwise.circle.fill")
-                                                .font(.system(size: 17, weight: .semibold))
-                                            Text("Ripristina a 'Programmata'")
-                                                .font(.system(size: 15, weight: .bold))
-                                        }
-                                        Spacer()
-                                    }
-                                    .foregroundColor(.orange)
-                                    .padding(.horizontal, 18)
-                                    .padding(.vertical, 16)
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.orange.opacity(0.12))
-                                    .cornerRadius(14)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 14)
-                                            .stroke(Color.orange.opacity(0.4), lineWidth: 1)
-                                    )
+                                    ripristinaButtonContent
                                 }
                                 .disabled(isUpdatingStatus)
                             }
@@ -216,6 +204,58 @@ struct AdminEventGestioneView: View {
         .fullScreenCover(isPresented: $showLive) {
             LiveRootView(server: server, event: localEvent)
                 .environmentObject(authState)
+        }
+        .onAppear {
+            Task {
+                await checkFinalResults()
+            }
+        }
+        .onChange(of: showUploadResults) { _, newValue in
+            if !newValue {
+                Task {
+                    await checkFinalResults()
+                }
+            }
+        }
+    }
+
+    // MARK: - Subviews
+    @ViewBuilder
+    private var ripristinaButtonContent: some View {
+        HStack(spacing: 10) {
+            if isUpdatingStatus {
+                ProgressView().tint(.orange).scaleEffect(0.85)
+            } else {
+                Image(systemName: "arrow.counterclockwise.circle.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                Text("Ripristina a 'Programmata'")
+                    .font(.system(size: 15, weight: .bold))
+            }
+            Spacer()
+        }
+        .foregroundColor(.orange)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity)
+        .background(Color.orange.opacity(0.15))
+        .cornerRadius(14)
+    }
+
+    private func checkFinalResults() async {
+        guard let baseURL = server.httpURL?.absoluteString else { return }
+        guard let url = URL(string: "\(baseURL)/events/\(localEvent.id)/results") else { return }
+        var req = URLRequest(url: url)
+        if let token = authState.currentToken {
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        do {
+            let (data, _) = try await URLSession.shared.data(for: req)
+            if let json = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                let finalResults = json.filter { ($0["result_type"] as? String) == "final" }
+                hasFinalResults = !finalResults.isEmpty
+            }
+        } catch {
+            print("Errore fetch risultati finali: \(error)")
         }
     }
 
