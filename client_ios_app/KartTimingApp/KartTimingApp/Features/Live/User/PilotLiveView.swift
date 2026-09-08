@@ -193,7 +193,6 @@ struct PilotLiveView: View {
             checkForNewTextMessage(messages: myKart.messages)
             
             if let latestFlag = myKart.messages.last(where: { $0.flagFlashColor != nil }) {
-                currentFlagMessage = latestFlag
                 lastFlagMessageId = latestFlag.id
             }
 
@@ -411,7 +410,6 @@ struct PilotLiveView: View {
         if latestFlag.id == lastFlagMessageId { return }
 
         lastFlagMessageId = latestFlag.id
-        currentFlagMessage = latestFlag
         guard let color = latestFlag.flagFlashColor else { return }
         triggerFlash(color: color, flashIndex: 0)
     }
