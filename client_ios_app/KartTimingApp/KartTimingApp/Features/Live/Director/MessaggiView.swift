@@ -38,14 +38,24 @@ struct MessaggiView: View {
 
             VStack(spacing: 0) {
                 // Header
-                HStack {
-                    Text("Cronologia messaggi")
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(.kartDim)
+                VStack(spacing: 12) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("CRONOLOGIA MESSAGGI")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(.kartDim)
+                            Text("Log comunicazioni e penalità")
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .foregroundColor(.white)
+                        }
+                        Spacer()
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(Color.kartPanel)
+                
+                Divider().background(Color.white.opacity(0.06))
 
                 if combinedLog.isEmpty {
                     Spacer()

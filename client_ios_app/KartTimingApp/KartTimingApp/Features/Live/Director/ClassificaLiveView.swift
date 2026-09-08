@@ -404,7 +404,6 @@ struct ClassificaLiveView: View {
         }
     }
 
-    @ViewBuilder
     private func staticResultCard(res: EventResult) -> some View {
         let pos = res.position ?? 0
         let isFirst = pos == 1
@@ -725,7 +724,7 @@ struct ClassificaLiveView: View {
                             
                             // Badges Penalità
                             if hasBlackFlag {
-                                Text("BANDIERA NERA")
+                                Text("DSQ")
                                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 4)
