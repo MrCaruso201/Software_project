@@ -237,7 +237,7 @@ struct ClassificaLiveView: View {
     // ── Session Banner ──────────────────────────────────────────────────────
 
     private var sessionNameBanner: some View {
-        HStack {
+        HStack(spacing: 8) {
             if isDirector {
                 TextField("Nome Turno (es. Gara 1)", text: $editingSessionName)
                     .font(.system(size: 16, weight: .bold))
@@ -246,12 +246,24 @@ struct ClassificaLiveView: View {
                     .background(Color.white.opacity(0.1))
                     .cornerRadius(8)
                     .onSubmit {
-                        Task {
-                            isSavingSessionName = true
-                            try? await viewModel.updateEventStatus(sessionName: editingSessionName)
-                            isSavingSessionName = false
-                        }
+                        saveSessionName()
                     }
+                
+                // Pulsante salva esplicito (evita dipendenza dal tasto Invio)
+                Button {
+                    saveSessionName()
+                } label: {
+                    if isSavingSessionName {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .tint(.kartAccent)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.kartAccent)
+                    }
+                }
+                .disabled(isSavingSessionName)
             } else if let sessionName = viewModel.currentSessionName, !sessionName.isEmpty {
                 Text(sessionName)
                     .font(.system(size: 16, weight: .bold))
@@ -262,6 +274,14 @@ struct ClassificaLiveView: View {
         }
         .padding(.horizontal)
         .padding(.top, 10)
+    }
+    
+    private func saveSessionName() {
+        Task {
+            isSavingSessionName = true
+            try? await viewModel.updateEventStatus(sessionName: editingSessionName)
+            isSavingSessionName = false
+        }
     }
 
     // ── Risultati Statici (Griglia o Classifica Finale) ───────────────────

@@ -38,18 +38,12 @@ struct UserLiveView: View {
                         .foregroundColor(.kartAccent)
                 }
 
-                // ── Indicatore LIVE ───────────────────────────────────
+                // ── Titolo evento ────────────────────────────────────
                 ToolbarItem(placement: .principal) {
-                    HStack(spacing: 6) {
-                        if isStarted {
-                            Circle()
-                                .fill(Color.red)
-                                .frame(width: 7, height: 7)
-                        }
-                        Text(isStarted ? "LIVE" : "IN ATTESA")
-                            .font(.system(size: 11, weight: .black, design: .monospaced))
-                            .foregroundColor(isStarted ? .red : .gray)
-                    }
+                    Text(event.title)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
                 }
 
                 // ── Pulsante Pilot View (solo utenti registrati) ───────

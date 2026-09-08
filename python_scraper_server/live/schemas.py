@@ -91,5 +91,5 @@ class MyKartResponse(BaseModel):
 # ── Event Status Update ──────────────────────────────────────────────────────
 
 class EventStatusUpdate(BaseModel):
-    status: str  # "scheduled" | "started" | "finished"
+    status: Optional[str] = None  # "scheduled" | "started" | "finished"
     session_name: Optional[str] = None

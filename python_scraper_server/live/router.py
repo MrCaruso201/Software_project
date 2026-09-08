@@ -98,7 +98,7 @@ def update_event_status(
     """
     _require_director(user_payload)
 
-    if body.status not in VALID_STATUSES:
+    if body.status is not None and body.status not in VALID_STATUSES:
         raise HTTPException(
             status_code=400,
             detail=f"Status non valido. Valori accettati: {VALID_STATUSES}"
@@ -110,7 +110,7 @@ def update_event_status(
         event.session_name = body.session_name
 
     # Notify users if the event is starting
-    if body.status == "started" and event.status != "started":
+    if body.status is not None and body.status == "started" and event.status != "started":
         from notifications.router import notify_user
         
         # 1. Rifiuta (elimina) tutte le iscrizioni non confermate
@@ -154,10 +154,11 @@ def update_event_status(
                 message=f"L'evento {event.title} è appena iniziato! Apri l'app per seguire il live timing."
             )
 
-    event.status = body.status
+    if body.status is not None:
+        event.status = body.status
     db.commit()
     db.refresh(event)
-    return {"event_id": event_id, "status": event.status}
+    return {"event_id": event_id, "status": event.status, "session_name": event.session_name}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
