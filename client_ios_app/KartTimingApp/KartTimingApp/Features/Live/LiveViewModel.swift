@@ -127,6 +127,7 @@ class LiveViewModel: ObservableObject {
             while !Task.isCancelled {
                 await fetchEvent()
                 await fetchMyKart()
+                await fetchMessages()   // necessario per syncRaceTimesFromMessages → timer
                 await fetchPenalties()
                 await fetchResults()
                 try? await Task.sleep(nanoseconds: UInt64(pollingInterval * 1_000_000_000))
@@ -264,8 +265,42 @@ class LiveViewModel: ObservableObject {
             var req = URLRequest(url: url)
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             let (data, _) = try await NetworkService.shared.data(for: req)
-            self.messages = try JSONDecoder().decode([RaceMessage].self, from: data)
+            let decoded = try JSONDecoder().decode([RaceMessage].self, from: data)
+            self.messages = decoded
+            // Ricalcola raceStartTime e raceEndTime dai messaggi del server
+            syncRaceTimesFromMessages(decoded)
         } catch { }
+    }
+
+    /// Ricava raceStartTime e raceEndTime dai messaggi broadcast in ordine cronologico.
+    /// - "Gara Iniziata" (custom) → imposta raceStartTime, azzera raceEndTime
+    /// - "checkered_flag" → imposta raceEndTime
+    private func syncRaceTimesFromMessages(_ msgs: [RaceMessage]) {
+        let broadcast = msgs
+            .filter { $0.isBroadcast }
+            .sorted {
+                guard let d1 = $0.parsedDate, let d2 = $1.parsedDate else { return false }
+                return d1 < d2
+            }
+
+        var newStart: Date? = nil
+        var newEnd: Date? = nil
+
+        for msg in broadcast {
+            switch msg.messageType {
+            case "custom" where msg.text.lowercased() == "gara iniziata":
+                newStart = msg.parsedDate
+                newEnd = nil   // reset: gara ripartita
+            case "checkered_flag":
+                newEnd = msg.parsedDate
+            default:
+                break
+            }
+        }
+
+        // Aggiorna solo se i valori sono cambiati per evitare re-render inutili
+        if raceStartTime != newStart { raceStartTime = newStart }
+        if raceEndTime   != newEnd   { raceEndTime   = newEnd   }
     }
 
     func sendMessage(targetKart: Int?, type: MessagePreset, text: String) async throws {

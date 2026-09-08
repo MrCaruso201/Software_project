@@ -15,11 +15,13 @@ struct TeamLiveView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 16) {
-                        if hasCheckeredFlag { checkeredFlagCard }
+                        if let flag = currentFlagMessage {
+                            currentFlagCard(flag)
+                        }
                         kartHeroCard
                         if !myKart.penalties.isEmpty { penaltiesCard }
                         if !myKart.messages.isEmpty { messagesCard }
-                        if myKart.penalties.isEmpty && myKart.messages.isEmpty && !hasCheckeredFlag { allClearCard }
+                        if myKart.penalties.isEmpty && myKart.messages.isEmpty && currentFlagMessage == nil { allClearCard }
                     }
                     .padding(16)
                     .padding(.bottom, 30)
@@ -28,8 +30,21 @@ struct TeamLiveView: View {
         }
     }
 
-    private var hasCheckeredFlag: Bool {
-        myKart.messages.contains(where: { $0.messageType == "checkered_flag" })
+    /// Ultima bandiera broadcast globale (per il banner).
+    /// Include anche i messaggi custom "Gara Iniziata" (trattati come bandiera verde).
+    private var currentFlagMessage: RaceMessage? {
+        viewModel.messages
+            .filter {
+                $0.isBroadcast && (
+                    ["yellow_flag", "red_flag", "green_flag", "checkered_flag"].contains($0.messageType)
+                    || ($0.messageType == "custom" && $0.text.lowercased() == "gara iniziata")
+                )
+            }
+            .sorted {
+                guard let d1 = $0.parsedDate, let d2 = $1.parsedDate else { return false }
+                return d1 < d2
+            }
+            .last
     }
 
     // MARK: - Kart Hero Card
@@ -262,22 +277,32 @@ struct TeamLiveView: View {
         .cornerRadius(14)
     }
 
-    // MARK: - Checkered Flag Card
+    // MARK: - Current Flag Card
 
-    private var checkeredFlagCard: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "flag.checkered.2.crossed")
+    private func currentFlagCard(_ msg: RaceMessage) -> some View {
+        let (bg, fg, icon, label): (Color, Color, String, String) = {
+            switch msg.messageType {
+            case "yellow_flag":    return (.yellow,        .black, "flag.fill",                "BANDIERA GIALLA")
+            case "red_flag":        return (.red,           .white, "flag.fill",                "BANDIERA ROSSA")
+            case "green_flag":      return (Color.kartGreen,.black, "flag.fill",                "BANDIERA VERDE")
+            case "checkered_flag": return (Color.white,    .black, "flag.checkered.2.crossed", "BANDIERA A SCACCHI")
+            case "custom":          return (Color.kartGreen,.black, "flag.fill",                "GARA IN CORSO")
+            default:                return (.gray,          .white, "flag.fill",                "BANDIERA")
+            }
+        }()
+        return VStack(spacing: 12) {
+            Image(systemName: icon)
                 .font(.system(size: 40))
-                .foregroundColor(.black)
-            Text("BANDIERA A SCACCHI")
+                .foregroundColor(fg)
+            Text(label)
                 .font(.system(size: 22, weight: .black, design: .monospaced))
-                .foregroundColor(.black)
+                .foregroundColor(fg)
         }
         .frame(maxWidth: .infinity)
         .padding(24)
-        .background(Color.white)
+        .background(bg)
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black.opacity(0.1), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(fg.opacity(0.2), lineWidth: 1))
     }
 
     // MARK: - No Kart State
