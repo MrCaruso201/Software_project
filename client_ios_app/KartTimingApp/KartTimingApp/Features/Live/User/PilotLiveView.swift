@@ -9,6 +9,8 @@ private extension RaceMessage {
         case "yellow_flag": return .yellow
         case "red_flag":    return .red
         case "green_flag":  return .green
+        case "checkered_flag": return .white
+        case "custom" where text.lowercased() == "gara iniziata": return .green
         default:            return nil
         }
     }
@@ -16,17 +18,26 @@ private extension RaceMessage {
     var flagIcon: String? {
         switch messageType {
         case "yellow_flag", "red_flag", "green_flag": return "flag.fill"
+        case "custom" where text.lowercased() == "gara iniziata": return "flag.fill"
+        case "checkered_flag": return "flag.checkered.2.crossed"
         default: return nil
         }
     }
 
-    var flagColor: Color? { flagFlashColor }
+    var flagColor: Color? {
+        switch messageType {
+        case "checkered_flag": return .black // In the badge, white bg means black text/icon is better, but badge background is based on color.opacity(0.25). We'll handle this in flagBadge itself or return white here and adjust badge. Wait, if we return .white, text will be white on white. Let's return .white and fix badge, or return .black for checkered. Actually, checkered is better as .white and we can handle it in the view, but let's just return .white for now.
+        default: return flagFlashColor
+        }
+    }
 
     var flagLabel: String {
         switch messageType {
         case "yellow_flag": return "GIALLA"
         case "red_flag":    return "ROSSA"
         case "green_flag":  return "VERDE"
+        case "checkered_flag": return "A SCACCHI"
+        case "custom" where text.lowercased() == "gara iniziata": return "IN CORSO"
         default:            return ""
         }
     }
@@ -48,7 +59,6 @@ struct PilotLiveView: View {
     @State private var flashColor: Color = .clear
     @State private var flashOpacity: Double = 0
     @State private var lastFlagMessageId: Int? = nil
-    @State private var currentFlagMessage: RaceMessage? = nil
 
     @State private var showingBlueFlagScreen = false
     @State private var processedBlueFlagIds: Set<Int> = []
@@ -64,8 +74,19 @@ struct PilotLiveView: View {
         myKart.penalties.contains(where: { $0.penaltyType == "black_flag" })
     }
 
-    private var hasCheckeredFlag: Bool {
-        myKart.messages.contains(where: { $0.messageType == "checkered_flag" })
+    private var currentFlagMessage: RaceMessage? {
+        viewModel.messages
+            .filter {
+                $0.isBroadcast && (
+                    ["yellow_flag", "red_flag", "green_flag", "checkered_flag"].contains($0.messageType)
+                    || ($0.messageType == "custom" && $0.text.lowercased() == "gara iniziata")
+                )
+            }
+            .sorted {
+                guard let d1 = $0.parsedDate, let d2 = $1.parsedDate else { return false }
+                return d1 < d2
+            }
+            .last
     }
 
     private var isGlobalRedFlag: Bool {
@@ -74,6 +95,25 @@ struct PilotLiveView: View {
     
     private var isGlobalYellowFlag: Bool {
         currentFlagMessage?.messageType == "yellow_flag"
+    }
+    
+    private var isGaraIniziata: Bool {
+        guard let msg = currentFlagMessage else { return false }
+        return msg.messageType == "green_flag" || (msg.messageType == "custom" && msg.text.lowercased() == "gara iniziata")
+    }
+    
+    private var hasLapTimes: Bool {
+        guard let timing = manager.timing, let kartNum = myKart.kartNumber else { return false }
+        let h = timing.headers
+        let kartIdx = colIndex(in: h, keywords: ["kart", "num", "n°", "no", "bib"])
+        let lapIdx  = colIndex(in: h, keywords: ["last", "lap", "giro", "time", "tempo"])
+        
+        if let kIdx = kartIdx, let pilotRowIdx = timing.rows.firstIndex(where: { $0.indices.contains(kIdx) && $0[kIdx] == String(kartNum) }) {
+            let pilotRow = timing.rows[pilotRowIdx]
+            let lapTime = (lapIdx != nil && lapIdx! < pilotRow.count) ? pilotRow[lapIdx!] : "-"
+            return lapTime != "-"
+        }
+        return false
     }
 
     var body: some View {
@@ -92,6 +132,8 @@ struct PilotLiveView: View {
                 redFlagState
             } else if isGlobalYellowFlag {
                 yellowFlagState
+            } else if isGaraIniziata && !hasLapTimes && myKart.kartNumber != nil {
+                greenFlagState
             } else {
                 if myKart.kartNumber == nil {
                     noKartState
@@ -110,9 +152,6 @@ struct PilotLiveView: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 12) {
                             flagBadge
-                            if hasCheckeredFlag {
-                                checkeredFlagBadge
-                            }
                         }
                         Spacer()
                         penaltyBadge
@@ -323,36 +362,22 @@ struct PilotLiveView: View {
         if let flagMsg = currentFlagMessage,
            let icon = flagMsg.flagIcon,
            let color = flagMsg.flagColor {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 28, weight: .heavy))
-                    .foregroundColor(color)
-                Text(flagMsg.flagLabel)
-                    .font(.system(size: 20, weight: .heavy, design: .monospaced))
-                    .foregroundColor(color)
+            if !(isGaraIniziata && hasLapTimes) {
+                HStack(spacing: 8) {
+                    Image(systemName: icon)
+                        .font(.system(size: 28, weight: .heavy))
+                        .foregroundColor(color)
+                    Text(flagMsg.flagLabel)
+                        .font(.system(size: 20, weight: .heavy, design: .monospaced))
+                        .foregroundColor(color)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(color.opacity(0.25))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(color.opacity(0.8), lineWidth: 2))
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(color.opacity(0.25))
-            .clipShape(Capsule())
-            .overlay(Capsule().stroke(color.opacity(0.8), lineWidth: 2))
         }
-    }
-
-    // MARK: - Checkered Flag Badge
-
-    @ViewBuilder
-    private var checkeredFlagBadge: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "flag.checkered.2.crossed")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.black)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color.white)
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.black, lineWidth: 2))
     }
 
     // MARK: - Penalty Badge (top-right HUD)
@@ -626,6 +651,32 @@ struct PilotLiveView: View {
                     .minimumScaleFactor(0.2)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 20)
+            }
+            .padding(40)
+        }
+    }
+    
+    // MARK: - Green Flag State
+
+    private var greenFlagState: some View {
+        ZStack {
+            Color.kartGreen.ignoresSafeArea()
+            VStack(spacing: 24) {
+                Image(systemName: "flag.fill")
+                    .font(.system(size: 90))
+                    .foregroundColor(.black)
+                
+                Text("GARA INIZIATA")
+                    .font(.system(size: 70, weight: .black, design: .monospaced))
+                    .foregroundColor(.black)
+                    .minimumScaleFactor(0.4)
+                    .lineLimit(1)
+                
+                Text("BUONA GARA!")
+                    .font(.system(size: 50, weight: .black, design: .monospaced))
+                    .foregroundColor(.black)
+                    .minimumScaleFactor(0.4)
+                    .lineLimit(1)
             }
             .padding(40)
         }
