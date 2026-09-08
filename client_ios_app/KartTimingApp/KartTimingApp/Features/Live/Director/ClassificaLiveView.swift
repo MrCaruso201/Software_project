@@ -35,12 +35,19 @@ struct ClassificaLiveView: View {
     @State private var showAddTabAlert = false
     @State private var newTabName = ""
     @State private var customTabs: [String] = []
+    @State private var showDeleteTabAlert = false
+    @State private var isDeletingTab = false
     
     private var extraTabs: [String] {
         let resultsTypes: [String] = viewModel.eventResults.compactMap { $0.resultType }
         let allTypes: [String] = resultsTypes + customTabs
         let uniqueTypes: Set<String> = Set(allTypes)
         return uniqueTypes.filter { !$0.isEmpty && $0 != "qualifying" && $0 != "final" && $0 != "live" }.sorted()
+    }
+    
+    /// True se la tab corrente è una extra tab eliminabile (non built-in)
+    private var isCurrentTabDeletable: Bool {
+        extraTabs.contains(viewMode)
     }
     
     private var currentLabelText: String {
@@ -116,7 +123,7 @@ struct ClassificaLiveView: View {
                 .padding(.vertical, 8)
                 
                 if isDirector && viewMode != "live" {
-                    HStack(spacing: 16) {
+                    HStack(spacing: 12) {
                         Button(action: { showFileImporter = true }) {
                             HStack {
                                 Image(systemName: "square.and.arrow.up")
@@ -147,10 +154,33 @@ struct ClassificaLiveView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
-                            .background(Color.red)
+                            .background(Color.red.opacity(0.7))
                             .cornerRadius(8)
                         }
+                        
+                        // Elimina l'intera tab (solo per tab extra, non per quelle built-in)
+                        if isCurrentTabDeletable {
+                            Spacer()
+                            Button(action: { showDeleteTabAlert = true }) {
+                                HStack(spacing: 6) {
+                                    if isDeletingTab {
+                                        ProgressView().scaleEffect(0.7).tint(.white)
+                                    } else {
+                                        Image(systemName: "xmark.circle.fill")
+                                    }
+                                    Text(isDeletingTab ? "Eliminazione..." : "Elimina Tab")
+                                }
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(Color.red)
+                                .cornerRadius(8)
+                            }
+                            .disabled(isDeletingTab)
+                        }
                     }
+                    .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
                     .background(Color.kartPanel)
@@ -214,6 +244,14 @@ struct ClassificaLiveView: View {
         } message: {
             Text("Inserisci il nome per la nuova classifica.")
         }
+        .alert("Elimina tab", isPresented: $showDeleteTabAlert) {
+            Button("Annulla", role: .cancel) { }
+            Button("Elimina", role: .destructive) {
+                deleteCurrentTab()
+            }
+        } message: {
+            Text("Vuoi eliminare la tab \"\(viewMode.capitalized)\" e il suo CSV? L'operazione non è reversibile.")
+        }
         .onChange(of: viewModel.currentSessionName) { _, new in
             if !isSavingSessionName {
                 self.editingSessionName = new ?? ""
@@ -233,6 +271,24 @@ struct ClassificaLiveView: View {
         isUploadingResults = false
         selectedFileURL = nil
     }
+    
+    private func deleteCurrentTab() {
+        let tabToDelete = viewMode
+        Task {
+            isDeletingTab = true
+            // Cancella il CSV dal server se esiste
+            if viewModel.eventResults.contains(where: { $0.resultType == tabToDelete }) {
+                try? await viewModel.deleteResultsCSV(resultType: tabToDelete)
+            }
+            // Rimuove dalla lista locale delle custom tabs
+            customTabs.removeAll { $0 == tabToDelete }
+            // Torna alla tab live
+            viewMode = "live"
+            isDeletingTab = false
+        }
+    }
+
+
 
     // ── Session Banner ──────────────────────────────────────────────────────
 
