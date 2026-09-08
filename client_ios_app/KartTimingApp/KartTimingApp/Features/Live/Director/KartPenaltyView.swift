@@ -10,11 +10,7 @@ struct KartPenaltyView: View {
     @EnvironmentObject var authState: AuthState
 
     // Race control
-    private var raceStatusColor: Color {
-        guard event.status == "started" || event.status == "finished" else {
-            return .gray
-        }
-        
+    private var currentGlobalFlag: String? {
         let flagMessages = viewModel.messages.filter {
             $0.messageType == "yellow_flag" ||
             $0.messageType == "red_flag" ||
@@ -23,12 +19,18 @@ struct KartPenaltyView: View {
             ($0.messageType == "custom" && $0.text.lowercased() == "gara iniziata")
         }
         
-        let lastFlag = flagMessages.sorted(by: {
+        return flagMessages.sorted(by: {
             guard let d1 = $0.parsedDate, let d2 = $1.parsedDate else { return false }
             return d1 < d2
         }).last?.messageType
+    }
+
+    private var raceStatusColor: Color {
+        guard event.status == "started" || event.status == "finished" else {
+            return .gray
+        }
         
-        switch lastFlag {
+        switch currentGlobalFlag {
         case "yellow_flag": return .yellow
         case "red_flag": return .red
         case "checkered_flag": return .white
@@ -274,7 +276,7 @@ struct KartPenaltyView: View {
                 globalMessageButton(title: "Bandiera Verde", icon: "flag.fill", color: .green) {
                     sendGlobalMessage(.greenFlag, text: "Bandiera Verde")
                 }
-                if viewModel.raceStartTime == nil || viewModel.raceEndTime != nil {
+                if viewModel.raceStartTime == nil || viewModel.raceEndTime != nil || currentGlobalFlag == "red_flag" {
                     globalMessageButton(title: "Inizia Gara", icon: "play.fill", color: .green) {
                         viewModel.raceStartTime = Date()
                         viewModel.raceEndTime = nil
