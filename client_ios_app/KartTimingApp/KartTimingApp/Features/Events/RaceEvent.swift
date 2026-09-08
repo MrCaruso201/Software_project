@@ -143,6 +143,7 @@ struct EventRegistrationResponse: Codable {
     let memberEmail: String?
     let createdAt: String
     let hasSignedRelease: Bool?
+    var weight: Double?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -155,6 +156,7 @@ struct EventRegistrationResponse: Codable {
         case memberEmail = "member_email"
         case createdAt = "created_at"
         case hasSignedRelease = "has_signed_release"
+        case weight
     }
 }
 
@@ -174,6 +176,7 @@ struct EventRegistrationWithUserResponse: Codable, Identifiable {
     let email: String?
     let profilePictureUrl: String?
     let hasSignedRelease: Bool?
+    var weight: Double?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -189,6 +192,7 @@ struct EventRegistrationWithUserResponse: Codable, Identifiable {
         case email
         case profilePictureUrl = "profile_picture_url"
         case hasSignedRelease = "has_signed_release"
+        case weight
     }
 }
 
@@ -203,6 +207,7 @@ struct TeamMemberResponse: Codable, Identifiable {
     let status: String
     let profilePictureUrl: String?
     let hasSignedRelease: Bool?
+    var weight: Double?
     
     var id: Int { registrationId }
     
@@ -215,6 +220,7 @@ struct TeamMemberResponse: Codable, Identifiable {
         case status
         case profilePictureUrl = "profile_picture_url"
         case hasSignedRelease = "has_signed_release"
+        case weight
     }
 }
 

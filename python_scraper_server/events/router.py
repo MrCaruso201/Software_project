@@ -12,7 +12,7 @@ from db.models import Event, EventRegistration, User, EventResult, KartodromoRes
 from notifications.router import notify_user
 from events.schemas import (
     EventCreate, EventUpdate, EventResponse,
-    EventRegistrationResponse, EventRegistrationWithUserResponse,
+    EventRegistrationResponse, EventRegistrationWithUserResponse, EventRegistrationUpdate,
     TeamRegistrationRequest, TeamRegistrationResponse, TeamMemberResponse,
     AdminIndividualRegistrationRequest, AdminTeamRegistrationRequest,
     AdminAssignTeamRequest, AdminCreateTeamFromIndividualsRequest,
@@ -609,7 +609,8 @@ def get_event_registrations(event_id: int, user_payload: dict = Depends(get_curr
             "username": user.username if user else None,
             "email": reg.member_email or (user.email if user else None),
             "profile_picture_url": user.profile_picture_url if user else None,
-            "has_signed_release": db.query(SignedRelease).filter_by(event_id=reg.event_id, user_id=reg.user_id).first() is not None if reg.user_id else False
+            "has_signed_release": db.query(SignedRelease).filter_by(event_id=reg.event_id, user_id=reg.user_id).first() is not None if reg.user_id else False,
+            "weight": reg.weight
         })
     return result
 
@@ -650,6 +651,7 @@ def get_event_team_registrations(event_id: int, user_payload: dict = Depends(get
                 status=m.status,
                 has_signed_release=db.query(SignedRelease).filter_by(event_id=m.event_id, user_id=m.user_id).first() is not None if m.user_id else False,
                 profile_picture_url=user.profile_picture_url if user else None,
+                weight=m.weight
             ))
         
         # Status complessivo: confirmed solo se il leader è confermato
@@ -667,6 +669,29 @@ def get_event_team_registrations(event_id: int, user_payload: dict = Depends(get
     
     return result
 
+
+# ── Admin: aggiorna iscrizione (es. peso) ───────────────────────────────────
+
+@router.patch("/{event_id}/registrations/{registration_id}", response_model=EventRegistrationResponse)
+def update_registration(event_id: int, registration_id: int, update_data: EventRegistrationUpdate = Body(...), user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+    reg = db.query(EventRegistration).filter(
+        EventRegistration.id == registration_id,
+        EventRegistration.event_id == event_id
+    ).first()
+    
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+        
+    update_dict = update_data.model_dump(exclude_unset=True)
+    for key, value in update_dict.items():
+        setattr(reg, key, value)
+        
+    db.commit()
+    db.refresh(reg)
+    return reg
 
 # ── Admin: conferma iscrizione ────────────────────────────────────────────────
 
@@ -1109,7 +1134,8 @@ def get_unassigned_individuals(event_id: int, user_payload: dict = Depends(get_c
             "username": user.username if user else None,
             "email": reg.member_email or (user.email if user else None),
             "profile_picture_url": user.profile_picture_url if user else None,
-            "has_signed_release": db.query(SignedRelease).filter_by(event_id=reg.event_id, user_id=reg.user_id).first() is not None if reg.user_id else False
+            "has_signed_release": db.query(SignedRelease).filter_by(event_id=reg.event_id, user_id=reg.user_id).first() is not None if reg.user_id else False,
+            "weight": reg.weight
         })
     return result
 

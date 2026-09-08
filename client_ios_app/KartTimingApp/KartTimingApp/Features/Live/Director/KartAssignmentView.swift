@@ -16,6 +16,11 @@ struct KartAssignmentView: View {
     @State private var assignKartNumberText = ""
     @State private var assignKartNameText = ""
     @State private var actionError: String? = nil
+    
+    // MARK: - Weight Edit State
+    @State private var showWeightAlert = false
+    @State private var weightInputValue = ""
+    @State private var weightAlertRegistrationId: Int? = nil
 
     private var enrolledTeams: [TeamRegistrationResponse] {
         viewModel.registeredTeams.filter { $0.overallStatus != "waitlist" }
@@ -89,6 +94,27 @@ struct KartAssignmentView: View {
         } message: {
             Text(actionError ?? "")
         }
+        .alert("Imposta Peso", isPresented: $showWeightAlert) {
+            TextField("Peso in kg (es. 75.5)", text: $weightInputValue)
+                .keyboardType(.decimalPad)
+            Button("Salva") {
+                guard let regId = weightAlertRegistrationId else { return }
+                // Convert comma to dot if needed, then to Double
+                let normalizedInput = weightInputValue.replacingOccurrences(of: ",", with: ".")
+                if let weight = Double(normalizedInput) {
+                    Task {
+                        do {
+                            try await viewModel.updateRegistrationWeight(registrationId: regId, weight: weight)
+                        } catch {
+                            actionError = error.localizedDescription
+                        }
+                    }
+                }
+            }
+            Button("Annulla", role: .cancel) { }
+        } message: {
+            Text("Inserisci il peso del pilota.")
+        }
     }
     
     private var emptyView: some View {
@@ -144,6 +170,8 @@ struct KartAssignmentView: View {
                             }
                         }
                         Spacer()
+                        
+                        weightButton(weight: member.weight, registrationId: member.registrationId)
                         
                         if member.isTeamLeader {
                             Text("LEADER")
@@ -203,6 +231,7 @@ struct KartAssignmentView: View {
                     }
                 }
                 Spacer()
+                weightButton(weight: reg.weight, registrationId: reg.id)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -269,6 +298,36 @@ struct KartAssignmentView: View {
             }
         }
         .padding(10)
+    }
+    
+    private func weightButton(weight: Double?, registrationId: Int) -> some View {
+        Button {
+            weightInputValue = weight != nil ? String(format: "%.1f", weight!) : ""
+            weightAlertRegistrationId = registrationId
+            showWeightAlert = true
+        } label: {
+            if let w = weight {
+                Text(String(format: "%.1f kg", w))
+                    .font(.system(size: 11, weight: .bold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.1))
+                    .foregroundColor(.white)
+                    .cornerRadius(4)
+            } else {
+                HStack(spacing: 2) {
+                    Image(systemName: "plus")
+                    Text("Peso")
+                }
+                .font(.system(size: 10, weight: .semibold))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(Color.kartDim.opacity(0.1))
+                .foregroundColor(.kartDim)
+                .cornerRadius(4)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
     }
     
     private var memberFallbackIcon: some View {

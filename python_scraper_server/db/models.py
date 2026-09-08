@@ -93,6 +93,7 @@ class EventRegistration(Base):
     is_team_leader = Column(Boolean, default=False, nullable=False)  # True per chi ha registrato il team
     member_email = Column(String, nullable=True)     # email del membro (anche non registrato)
     accepts_extra_pilots = Column(Boolean, default=False, nullable=False) # Se la squadra accetta piloti aggiuntivi inseriti dagli admin
+    weight = Column(Float, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (

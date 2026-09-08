@@ -56,6 +56,9 @@ class EventResponse(EventBase):
 
 # ── Iscrizione individuale ─────────────────────────────────────────────────────
 
+class EventRegistrationUpdate(BaseModel):
+    weight: Optional[float] = None
+
 class EventRegistrationResponse(BaseModel):
     id: int
     user_id: Optional[int]
@@ -67,6 +70,7 @@ class EventRegistrationResponse(BaseModel):
     member_email: Optional[str] = None
     accepts_extra_pilots: bool = False
     has_signed_release: bool = False
+    weight: Optional[float] = None
     created_at: datetime
 
     class Config:
@@ -85,6 +89,7 @@ class EventRegistrationWithUserResponse(BaseModel):
     member_email: Optional[str] = None
     accepts_extra_pilots: bool = False
     has_signed_release: bool = False
+    weight: Optional[float] = None
     created_at: datetime
     username: Optional[str] = None
     email: Optional[str] = None
@@ -103,6 +108,7 @@ class TeamMemberResponse(BaseModel):
     is_team_leader: bool
     status: str
     has_signed_release: bool = False
+    weight: Optional[float] = None
     profile_picture_url: Optional[str] = None
 
 class TeamRegistrationResponse(BaseModel):

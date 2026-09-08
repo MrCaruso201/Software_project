@@ -203,6 +203,26 @@ class LiveViewModel: ObservableObject {
         await fetchAll()
     }
 
+    func updateRegistrationWeight(registrationId: Int, weight: Double) async throws {
+        guard let url = endpoint("/events/\(eventId)/registrations/\(registrationId)"),
+              let token = token else { throw URLError(.badURL) }
+        
+        var req = URLRequest(url: url)
+        req.httpMethod = "PATCH"
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let payload: [String: Any] = ["weight": weight]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+        
+        let (data, resp) = try await NetworkService.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore aggiornamento peso"
+            throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+        }
+        await fetchAll()
+    }
+
     // MARK: - Penalties
 
     private func fetchPenaltyTypes() async {
