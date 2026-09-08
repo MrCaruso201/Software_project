@@ -395,31 +395,115 @@ struct ClassificaLiveView: View {
                     // List format for final results
                     VStack(spacing: 8) {
                         ForEach(results) { res in
-                            HStack {
-                                Text("\(res.position ?? 0)°")
-                                    .font(.system(size: 18, weight: .black, design: .monospaced))
-                                    .foregroundColor(.kartAccent)
-                                    .frame(width: 40, alignment: .leading)
-                                Text(res.displayName)
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
-                                Spacer()
-                                if let best = res.formattedBestLap {
-                                    Text(best)
-                                        .font(.system(size: 12, design: .monospaced))
-                                        .foregroundColor(.kartDim)
-                                }
-                            }
-                            .padding()
-                            .background(Color.kartPanel)
-                            .cornerRadius(8)
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                            staticResultCard(res: res)
                         }
                     }
                     .padding()
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func staticResultCard(res: EventResult) -> some View {
+        let pos = res.position ?? 0
+        let isFirst = pos == 1
+        let isSecond = pos == 2
+        let isThird = pos == 3
+        
+        let positionColor: Color = {
+            if isFirst { return Color(red: 1.0, green: 0.84, blue: 0.0) } // Gold
+            if isSecond { return Color(white: 0.75) } // Silver
+            if isThird { return Color(red: 0.8, green: 0.5, blue: 0.2) } // Bronze
+            return .kartDim
+        }()
+        
+        let borderColor = (isFirst || isSecond || isThird) ? positionColor.opacity(0.4) : Color.white.opacity(0.1)
+        
+        return HStack(spacing: 16) {
+            // Posizione
+            Group {
+                if isFirst || isSecond || isThird {
+                    ZStack {
+                        Circle()
+                            .strokeBorder(positionColor.opacity(0.5), lineWidth: 1)
+                            .background(Circle().fill(positionColor.opacity(0.15)))
+                            .frame(width: 44, height: 44)
+                        Text("\(pos)°")
+                            .font(.system(size: 16, weight: .black, design: .monospaced))
+                            .foregroundColor(positionColor)
+                    }
+                    .frame(width: 50)
+                } else {
+                    Text("\(pos)°")
+                        .font(.system(size: 18, weight: .black, design: .monospaced))
+                        .foregroundColor(positionColor)
+                        .frame(width: 50, alignment: .center)
+                }
+            }
+            
+            // Info pilota e tempi
+            VStack(alignment: .leading, spacing: 6) {
+                // Nome e numero
+                HStack(spacing: 8) {
+                    if let kartNum = res.kartNumber {
+                        Text("#\(kartNum)")
+                            .font(.system(size: 16, weight: .black, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.kartDim)
+                    
+                    Text(res.displayName)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                }
+                
+                // Tempi e Gap
+                HStack(spacing: 12) {
+                    if let best = res.formattedBestLap {
+                        HStack(spacing: 4) {
+                            Image(systemName: "stopwatch")
+                                .font(.system(size: 10))
+                                .foregroundColor(.red)
+                            Text(best)
+                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.red)
+                        }
+                    }
+                    if let gap = res.gap {
+                        let isLeader = gap.lowercased() == "leader"
+                        Text(gap)
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundColor(isLeader ? .red : .kartDim)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Giri
+            if let laps = res.laps {
+                VStack(spacing: 2) {
+                    Text("\(laps)")
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundColor(.white)
+                    Text("Giri")
+                        .font(.system(size: 10))
+                        .foregroundColor(.kartDim)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color.kartPanel)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(borderColor, lineWidth: 1)
+        )
     }
 
     // ── Status bar ────────────────────────────────────────────────────────
@@ -597,12 +681,13 @@ struct ClassificaLiveView: View {
         let actualPenaltiesCount = kartPenaltiesList.filter { !$0.isWarning }.count
         let totalCount = kartPenaltiesList.count
         let totalSec = parsedKart > 0 ? viewModel.totalPenaltySeconds(for: parsedKart) : 0
+        let hasBlackFlag = kartPenaltiesList.contains(where: { $0.penaltyType == "black_flag" })
 
         ZStack {
             RoundedRectangle(cornerRadius: 12)
-                .fill(isLeader
+                .fill(hasBlackFlag ? Color.red.opacity(0.2) : (isLeader
                       ? Color.kartAccent.opacity(0.12)
-                      : Color.kartPanel)
+                      : Color.kartPanel))
 
             if isLeader {
                 RoundedRectangle(cornerRadius: 12)
@@ -639,7 +724,16 @@ struct ClassificaLiveView: View {
                             }
                             
                             // Badges Penalità
-                            if actualPenaltiesCount > 0 {
+                            if hasBlackFlag {
+                                Text("BANDIERA NERA")
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 2)
+                                    .background(Color.red)
+                                    .cornerRadius(4)
+                                    .padding(.leading, 4)
+                            } else if actualPenaltiesCount > 0 {
                                 HStack(spacing: 4) {
                                     Text("+\(totalSec)s")
                                         .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -882,6 +976,7 @@ struct ClassificaLiveView: View {
             var kartNumber: Int?
             var penaltySeconds: Int
             var adjustedGap: Double?    // rawGapSeconds + penalitàPropria − penalitàLeader
+            var hasBlackFlag: Bool
         }
 
         var entries: [Entry] = timing.rows.enumerated().map { idx, row in
@@ -892,7 +987,9 @@ struct ClassificaLiveView: View {
             let laps    = lapsIdx.flatMap { row.indices.contains($0)  ? row[$0]  : nil } ?? "-"
             let kartStr = kartIdx.flatMap { row.indices.contains($0)  ? row[$0]  : nil } ?? ""
             let kartNum = Int(kartStr.trimmingCharacters(in: .whitespaces))
+            let kartPenalties = kartNum.map { viewModel.penaltiesByKart[$0] ?? [] } ?? []
             let penalty = kartNum.map { viewModel.totalPenaltySeconds(for: $0) } ?? 0
+            let hasBlackFlag = kartPenalties.contains(where: { $0.penaltyType == "black_flag" })
             let gapSec  = parseGapToSeconds(gap)
             return Entry(
                 originalPos: Int(posStr) ?? (idx + 1),
@@ -903,7 +1000,8 @@ struct ClassificaLiveView: View {
                 lapsStr: laps,
                 kartNumber: kartNum,
                 penaltySeconds: penalty,
-                adjustedGap: nil
+                adjustedGap: nil,
+                hasBlackFlag: hasBlackFlag
             )
         }
 
@@ -923,10 +1021,11 @@ struct ClassificaLiveView: View {
             // adjustedGap rimane nil per i distaccati su giro
         }
 
-        // Ordinamento: stesso giro → per adjustedGap crescente; distaccati su giro → posizione originale
-        let sameLap   = entries.filter { $0.adjustedGap != nil }.sorted { $0.adjustedGap! < $1.adjustedGap! }
-        let lapBehind = entries.filter { $0.adjustedGap == nil  }.sorted { $0.originalPos < $1.originalPos }
-        let sorted    = sameLap + lapBehind
+        // Ordinamento: stesso giro → per adjustedGap crescente; distaccati su giro → posizione originale; squalificati in fondo
+        let sameLap   = entries.filter { $0.adjustedGap != nil && !$0.hasBlackFlag }.sorted { $0.adjustedGap! < $1.adjustedGap! }
+        let lapBehind = entries.filter { $0.adjustedGap == nil && !$0.hasBlackFlag }.sorted { $0.originalPos < $1.originalPos }
+        let disqualified = entries.filter { $0.hasBlackFlag }.sorted { $0.originalPos < $1.originalPos }
+        let sorted    = sameLap + lapBehind + disqualified
 
         let newLeaderAdj = sameLap.first?.adjustedGap ?? 0.0
 
@@ -934,7 +1033,9 @@ struct ClassificaLiveView: View {
         var lines = ["Posizione,Kart,Squadra,Miglior Giro,Gap,Giri"]
         for (i, entry) in sorted.enumerated() {
             let gapStr: String
-            if i == 0 {
+            if entry.hasBlackFlag {
+                gapStr = "Squalificati"
+            } else if i == 0 {
                 gapStr = "Leader"
             } else if let adj = entry.adjustedGap {
                 let diff = adj - newLeaderAdj

@@ -58,6 +58,8 @@ struct KartPenaltyView: View {
     // Messaggio generico broadcast
     @State private var showGenericMessageAlert = false
     @State private var genericMessageText = ""
+    
+    @State private var showCheckeredFlagConfirm = false
 
     // Nota penalità kart
     @State private var showNoteInput = false
@@ -128,6 +130,15 @@ struct KartPenaltyView: View {
                     .padding(.bottom, 30)
                 }
             }
+        }
+        .alert("Termina Gara", isPresented: $showCheckeredFlagConfirm) {
+            Button("Termina", role: .destructive) {
+                viewModel.raceEndTime = Date()
+                sendGlobalMessage(.checkeredFlag, text: "Gara terminata. Rientrate ai box.")
+            }
+            Button("Annulla", role: .cancel) { }
+        } message: {
+            Text("Sei sicuro di voler terminare la gara?")
         }
         .alert("Messaggio", isPresented: $showGenericMessageAlert) {
             TextField("Scrivi il messaggio...", text: $genericMessageText)
@@ -284,8 +295,7 @@ struct KartPenaltyView: View {
                     }
                 } else {
                     globalMessageButton(title: "Bandiera a Scacchi", icon: "flag.checkered.2.crossed", color: Color(white: 0.85)) {
-                        viewModel.raceEndTime = Date()
-                        sendGlobalMessage(.checkeredFlag, text: "Gara terminata. Rientrate ai box.")
+                        showCheckeredFlagConfirm = true
                     }
                 }
             }
@@ -294,6 +304,26 @@ struct KartPenaltyView: View {
             globalMessageButton(title: "Messaggio Generico", icon: "bubble.left.and.bubble.right.fill", color: .blue) {
                 genericMessageText = ""
                 showGenericMessageAlert = true
+            }
+
+            // Bandiere Nere attive
+            let blackFlags = viewModel.penalties.filter { $0.penaltyType == "black_flag" }
+            if !blackFlags.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("BANDIERE NERE ATTIVE")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(.red)
+                        .padding(.top, 16)
+                    
+                    ForEach(blackFlags) { pen in
+                        PenaltyLogRow(penalty: pen, onDelete: {
+                            Task {
+                                do { try await viewModel.deletePenalty(id: pen.id) }
+                                catch { actionError = error.localizedDescription }
+                            }
+                        })
+                    }
+                }
             }
         }
     }

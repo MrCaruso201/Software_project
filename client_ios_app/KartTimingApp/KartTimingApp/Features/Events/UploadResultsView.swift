@@ -21,11 +21,6 @@ struct UploadResultsView: View {
     @State private var importErrors: [String] = []
     
     @State private var resultType: String = "final"
-    private let resultTypes = [
-        ("Risultati Finali", "final"),
-        ("Griglia di Partenza", "qualifying"),
-        ("Risultati Turno", "session")
-    ]
 
     // Cancellazione classifica
     @State private var isDeleting = false
@@ -39,7 +34,6 @@ struct UploadResultsView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         csvInfoSection
-                        resultTypePicker
                         uploadSection
                         if deleteSuccess { deleteFeedbackSection }
                         if let count = importedCount { importSuccessSection(count) }
@@ -127,23 +121,6 @@ struct UploadResultsView: View {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
     }
     
-    @ViewBuilder
-    private var resultTypePicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("TIPO DI RISULTATO")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.kartDim)
-                .padding(.horizontal, 14)
-            
-            Picker("Tipo", selection: $resultType) {
-                ForEach(resultTypes, id: \.1) { label, value in
-                    Text(label).tag(value)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 14)
-        }
-    }
 
     @ViewBuilder
     private var uploadSection: some View {
