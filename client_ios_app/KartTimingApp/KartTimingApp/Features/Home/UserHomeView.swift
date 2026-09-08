@@ -6,8 +6,14 @@ struct UserHomeView: View {
     @StateObject private var viewModel = UserHomeViewModel()
     
     @State private var showNotifications = false
-    @State private var liveEvent: RaceEvent? = nil
-    @State private var liveEventUserIsRegistered: Bool = false
+    @State private var liveEventEntry: LiveEventEntry? = nil
+
+    /// Wrapper atomico per evitare race condition tra liveEvent e isUserRegistered
+    struct LiveEventEntry: Identifiable {
+        let event: RaceEvent
+        let isUserRegistered: Bool
+        var id: Int { event.id }
+    }
     
     var body: some View {
         ZStack {
@@ -74,8 +80,8 @@ struct UserHomeView: View {
         .onAppear {
             viewModel.fetchData(serverURL: server.httpURL, token: authState.currentToken)
         }
-        .fullScreenCover(item: $liveEvent) { ev in
-            LiveRootView(server: server, event: ev, isUserRegistered: liveEventUserIsRegistered)
+        .fullScreenCover(item: $liveEventEntry) { entry in
+            LiveRootView(server: server, event: entry.event, isUserRegistered: entry.isUserRegistered)
                 .environmentObject(authState)
         }
     }
@@ -222,8 +228,7 @@ struct UserHomeView: View {
                             // ── Pulsante Entra in Live (solo se gara avviata) ─────
                             if isLive {
                                 Button {
-                                    liveEventUserIsRegistered = isRegistered
-                                    liveEvent = nextEvent
+                                    liveEventEntry = LiveEventEntry(event: nextEvent, isUserRegistered: isRegistered)
                                 } label: {
                                     HStack(spacing: 10) {
                                         ZStack {
