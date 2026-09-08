@@ -391,7 +391,7 @@ struct PilotLiveView: View {
                 Text("+\(myKart.totalPenaltySeconds)s")
                     .font(.system(size: 22, weight: .heavy, design: .monospaced))
                     .foregroundColor(.orange)
-                Text("(\(myKart.penalties.count))")
+                Text("(\(myKart.actualPenalties.count))")
                     .font(.system(size: 16, weight: .semibold, design: .monospaced))
                     .foregroundColor(.orange.opacity(0.7))
             }
