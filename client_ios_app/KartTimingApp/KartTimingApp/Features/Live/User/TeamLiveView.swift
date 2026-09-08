@@ -6,6 +6,9 @@ struct TeamLiveView: View {
 
     var myKart: MyKartResponse { viewModel.myKart }
 
+    @State private var showingBlueFlagCard = false
+    @State private var processedBlueFlagIds: Set<Int> = []
+
     var body: some View {
         ZStack {
             Color.kartBG.ignoresSafeArea()
@@ -15,18 +18,24 @@ struct TeamLiveView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 16) {
-                        if let flag = currentFlagMessage {
+                        if let flag = activeFlag {
                             currentFlagCard(flag)
                         }
                         kartHeroCard
                         if !myKart.penalties.isEmpty { penaltiesCard }
                         if !myKart.messages.isEmpty { messagesCard }
-                        if myKart.penalties.isEmpty && myKart.messages.isEmpty && currentFlagMessage == nil { allClearCard }
+                        if myKart.penalties.isEmpty && myKart.messages.isEmpty && activeFlag == nil { allClearCard }
                     }
                     .padding(16)
                     .padding(.bottom, 30)
                 }
             }
+        }
+        .onAppear {
+            checkForNewBlueFlags()
+        }
+        .onChange(of: myKart.penalties.count) { _, _ in
+            checkForNewBlueFlags()
         }
     }
 
@@ -45,6 +54,25 @@ struct TeamLiveView: View {
                 return d1 < d2
             }
             .last
+    }
+
+    enum TeamActiveFlag {
+        case black
+        case blue
+        case broadcast(RaceMessage)
+    }
+
+    private var activeFlag: TeamActiveFlag? {
+        if myKart.penalties.contains(where: { $0.penaltyType == "black_flag" }) {
+            return .black
+        }
+        if showingBlueFlagCard {
+            return .blue
+        }
+        if let msg = currentFlagMessage {
+            return .broadcast(msg)
+        }
+        return nil
     }
 
     // MARK: - Kart Hero Card
@@ -279,15 +307,22 @@ struct TeamLiveView: View {
 
     // MARK: - Current Flag Card
 
-    private func currentFlagCard(_ msg: RaceMessage) -> some View {
+    private func currentFlagCard(_ status: TeamActiveFlag) -> some View {
         let (bg, fg, icon, label): (Color, Color, String, String) = {
-            switch msg.messageType {
-            case "yellow_flag":    return (.yellow,        .black, "flag.fill",                "BANDIERA GIALLA")
-            case "red_flag":        return (.red,           .white, "flag.fill",                "BANDIERA ROSSA")
-            case "green_flag":      return (Color.kartGreen,.black, "flag.fill",                "BANDIERA VERDE")
-            case "checkered_flag": return (Color.white,    .black, "flag.checkered.2.crossed", "BANDIERA A SCACCHI")
-            case "custom":          return (Color.kartGreen,.black, "flag.fill",                "GARA IN CORSO")
-            default:                return (.gray,          .white, "flag.fill",                "BANDIERA")
+            switch status {
+            case .black:
+                return (.red, .black, "flag.fill", "BANDIERA NERA")
+            case .blue:
+                return (.blue, .white, "flag.fill", "BANDIERA BLU")
+            case .broadcast(let msg):
+                switch msg.messageType {
+                case "yellow_flag":    return (.yellow,        .black, "flag.fill",                "BANDIERA GIALLA")
+                case "red_flag":        return (.red,           .white, "flag.fill",                "BANDIERA ROSSA")
+                case "green_flag":      return (Color.kartGreen,.black, "flag.fill",                "BANDIERA VERDE")
+                case "checkered_flag": return (Color.white,    .black, "flag.checkered.2.crossed", "BANDIERA A SCACCHI")
+                case "custom":          return (Color.kartGreen,.black, "flag.fill",                "GARA IN CORSO")
+                default:                return (.gray,          .white, "flag.fill",                "BANDIERA")
+                }
             }
         }()
         return VStack(spacing: 12) {
@@ -321,5 +356,24 @@ struct TeamLiveView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(32)
+    }
+
+    // MARK: - Blue Flag Logic
+
+    private func checkForNewBlueFlags() {
+        for penalty in myKart.penalties where penalty.penaltyType == "blue_flag" {
+            if !processedBlueFlagIds.contains(penalty.id) {
+                processedBlueFlagIds.insert(penalty.id)
+                
+                let age = penalty.parsedDate.map { Date().timeIntervalSince($0) } ?? 0
+                if age < 5 {
+                    showingBlueFlagCard = true
+                    let remainingTime = 5 - age
+                    DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
+                        showingBlueFlagCard = false
+                    }
+                }
+            }
+        }
     }
 }
