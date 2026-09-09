@@ -23,7 +23,7 @@ struct UserLiveView: View {
 
                 // ── Tab 2: Team View (solo utenti registrati) ──────────
                 if isUserRegistered {
-                    TeamLiveView(viewModel: viewModel)
+                    TeamLiveView(event: event, viewModel: viewModel)
                         .tabItem { Label("Team View", systemImage: "person.3.fill") }
                 }
             }

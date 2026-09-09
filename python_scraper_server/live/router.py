@@ -624,10 +624,25 @@ def get_my_kart(
                     except ValueError:
                         pass
 
+    # Recupera i membri del team (per eventi a squadre)
+    from live.schemas import TeamMemberWeight
+    team_members = []
+    if registration.team_id:
+        team_regs = db.query(EventRegistration).filter(
+            EventRegistration.event_id == event_id,
+            EventRegistration.team_id == registration.team_id
+        ).order_by(EventRegistration.is_team_leader.desc()).all()
+        for tr in team_regs:
+            member_user = db.query(User).filter(User.id == tr.user_id).first() if tr.user_id else None
+            username = member_user.username if member_user else (tr.member_email or "Membro")
+            team_members.append(TeamMemberWeight(username=username, weight=tr.weight))
+
     if kart_number is None:
         return MyKartResponse(
             team_id=registration.team_id,
-            team_name=registration.team_name
+            team_name=registration.team_name,
+            weight=registration.weight,
+            team_members=team_members
         )
 
     # Penalità per questo kart
@@ -654,8 +669,10 @@ def get_my_kart(
     return MyKartResponse(
         kart_number=kart_number,
         team_id=team_id,
-        team_name=assignment.team_name or registration.team_name,
+        team_name=team_name,
         penalties=[PenaltyResponse.model_validate(p) for p in penalties],
         messages=[MessageResponse.model_validate(m) for m in messages],
-        total_penalty_seconds=total_seconds
+        total_penalty_seconds=total_seconds,
+        weight=registration.weight,
+        team_members=team_members
     )

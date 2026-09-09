@@ -2,12 +2,16 @@ import SwiftUI
 
 /// Team View — mostra posizione, penalità e messaggi dell'intera squadra.
 struct TeamLiveView: View {
+    var event: RaceEvent?
     @ObservedObject var viewModel: LiveViewModel
 
     var myKart: MyKartResponse { viewModel.myKart }
 
     @State private var showingBlueFlagCard = false
     @State private var processedBlueFlagIds: Set<Int> = []
+    @State private var currentDriverIndex: Int = 0
+    @State private var nextDriverIndex: Int = 1
+
 
     var body: some View {
         ZStack {
@@ -22,6 +26,7 @@ struct TeamLiveView: View {
                             currentFlagCard(flag)
                         }
                         kartHeroCard
+                        if event?.weightLimit != nil { weightCard }
                         if !myKart.penalties.isEmpty { penaltiesCard }
                         if !myKart.messages.isEmpty { messagesCard }
                         if myKart.penalties.isEmpty && myKart.messages.isEmpty && activeFlag == nil { allClearCard }
@@ -73,6 +78,269 @@ struct TeamLiveView: View {
             return .broadcast(msg)
         }
         return nil
+    }
+
+    // MARK: - Weight Card
+
+    private var weightCard: some View {
+        Group {
+            if let minLimit = event?.weightLimit {
+                VStack(spacing: 0) {
+                    // Header
+                    HStack(spacing: 6) {
+                        Image(systemName: "scalemass.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.purple)
+                        Text("PESO E ZAVORRA")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(.purple)
+                        Spacer()
+                        Text("Min. \(minLimit, specifier: "%.0f") kg")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(.kartDim)
+                    }
+                    .padding(14)
+                    .background(Color.purple.opacity(0.08))
+
+                    // Righe membri
+                    let members: [(name: String, weight: Double?)] = {
+                        if !myKart.teamMembers.isEmpty {
+                            return myKart.teamMembers.map { ($0.username ?? "Membro", $0.weight) }
+                        } else {
+                            let name = AuthState.shared.currentUser?.username ?? "Tu"
+                            return [(name, myKart.weight)]
+                        }
+                    }()
+
+                    VStack(spacing: 0) {
+                        ForEach(Array(members.enumerated()), id: \.offset) { _, member in
+                            weightMemberRow(name: member.name, weight: member.weight, minLimit: minLimit)
+                            if member.name != members.last?.name {
+                                Divider().background(Color.white.opacity(0.05)).padding(.leading, 14)
+                            }
+                        }
+                    }
+
+                    // Sezione cambio pilota (solo se ci sono ≥2 membri con peso)
+                    if members.count >= 2 {
+                        driverSwapSection(members: members, minLimit: minLimit)
+                    }
+                }
+                .background(Color.kartPanel)
+                .cornerRadius(14)
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.purple.opacity(0.2), lineWidth: 1))
+            }
+        }
+    }
+
+    private func driverSwapSection(members: [(name: String, weight: Double?)], minLimit: Double) -> some View {
+        let safeCurrentIdx = min(currentDriverIndex, members.count - 1)
+        let safeNextIdx = min(nextDriverIndex, members.count - 1)
+        let currentDriver = members[safeCurrentIdx]
+        let nextDriver = members[safeNextIdx]
+
+        // Calcola la zavorra attuale del pilota corrente e quella del prossimo
+        let currentBallast: Int = {
+            guard let w = currentDriver.weight else { return 0 }
+            let diff = minLimit - w
+            return diff > 0 ? Int(ceil(diff / 5.0)) * 5 : 0
+        }()
+        let nextBallast: Int = {
+            guard let w = nextDriver.weight else { return 0 }
+            let diff = minLimit - w
+            return diff > 0 ? Int(ceil(diff / 5.0)) * 5 : 0
+        }()
+        let delta = nextBallast - currentBallast  // positivo = aggiungere, negativo = togliere
+
+        let bothKnown = currentDriver.weight != nil && nextDriver.weight != nil
+        let sameDriver = safeCurrentIdx == safeNextIdx
+
+        return VStack(spacing: 0) {
+            Divider().background(Color.white.opacity(0.08))
+
+            VStack(spacing: 12) {
+                // Header sezione
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.left.arrow.right.circle.fill")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.cyan)
+                    Text("CAMBIO PILOTA")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(.cyan)
+                    Spacer()
+                }
+
+                // Picker affiancati
+                HStack(spacing: 10) {
+                    // Pilota attuale
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("ATTUALE")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundColor(.kartDim)
+                        Picker("", selection: $currentDriverIndex) {
+                            ForEach(members.indices, id: \.self) { i in
+                                Text(members[i].name).tag(i)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(Color.white.opacity(0.06))
+                        .cornerRadius(8)
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.kartDim)
+
+                    // Pilota successivo
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("SUCCESSIVO")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundColor(.kartDim)
+                        Picker("", selection: $nextDriverIndex) {
+                            ForEach(members.indices, id: \.self) { i in
+                                Text(members[i].name).tag(i)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(Color.white.opacity(0.06))
+                        .cornerRadius(8)
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+
+                // Risultato cambio
+                if sameDriver {
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(.kartDim)
+                        Text("Seleziona due piloti diversi")
+                            .font(.system(size: 12))
+                            .foregroundColor(.kartDim)
+                    }
+                    .padding(.vertical, 6)
+                } else if !bothKnown {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.yellow)
+                        Text("Peso mancante: impossibile calcolare")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.yellow)
+                    }
+                    .padding(.vertical, 6)
+                } else if delta == 0 {
+                    HStack(spacing: 10) {
+                        Image(systemName: "equal.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.green)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Nessun cambio zavorra")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                            Text("I due piloti richiedono la stessa zavorra")
+                                .font(.system(size: 11))
+                                .foregroundColor(.kartDim)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                } else {
+                    let isAdding = delta > 0
+                    HStack(spacing: 10) {
+                        Image(systemName: isAdding ? "plus.circle.fill" : "minus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(isAdding ? .orange : .cyan)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(isAdding ? "Aggiungi \(abs(delta)) kg" : "Togli \(abs(delta)) kg")
+                                .font(.system(size: 16, weight: .black, design: .monospaced))
+                                .foregroundColor(isAdding ? .orange : .cyan)
+                            Text(isAdding ? "Aggiungere zavorra al kart" : "Rimuovere zavorra dal kart")
+                                .font(.system(size: 11))
+                                .foregroundColor(.kartDim)
+                        }
+                        Spacer()
+                        // Zavorra finale del prossimo pilota
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text("\(nextBallast) kg")
+                                .font(.system(size: 14, weight: .black, design: .monospaced))
+                                .foregroundColor(.white)
+                            Text("zavorra totale")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(.kartDim)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .padding(14)
+            .background(Color.cyan.opacity(0.05))
+        }
+    }
+
+    private func weightMemberRow(name: String, weight: Double?, minLimit: Double) -> some View {
+        let requiredWeight: Int = {
+            guard let w = weight else { return -1 }
+            let diff = minLimit - w
+            return diff > 0 ? Int(ceil(diff / 5.0)) * 5 : 0
+        }()
+
+        let accentColor: Color = {
+            if weight == nil { return .yellow }
+            return requiredWeight > 0 ? .orange : .green
+        }()
+
+        return HStack(spacing: 12) {
+            Image(systemName: weight == nil ? "exclamationmark.triangle.fill" : (requiredWeight > 0 ? "scalemass.fill" : "checkmark.seal.fill"))
+                .font(.system(size: 18))
+                .foregroundColor(accentColor)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.white)
+                if let w = weight {
+                    Text("\(w, specifier: "%.1f") kg personali")
+                        .font(.system(size: 11))
+                        .foregroundColor(.kartDim)
+                } else {
+                    Text("Peso non impostato")
+                        .font(.system(size: 11))
+                        .foregroundColor(.kartDim)
+                }
+            }
+
+            Spacer()
+
+            if weight == nil {
+                Text("?")
+                    .font(.system(size: 15, weight: .black, design: .monospaced))
+                    .foregroundColor(.yellow)
+            } else if requiredWeight > 0 {
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("+\(requiredWeight) kg")
+                        .font(.system(size: 15, weight: .black, design: .monospaced))
+                        .foregroundColor(.orange)
+                    Text("zavorra")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(.orange.opacity(0.7))
+                }
+            } else {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(.green)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Kart Hero Card

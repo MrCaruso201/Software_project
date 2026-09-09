@@ -127,12 +127,21 @@ struct RaceMessage: Identifiable, Codable {
     }
 }
 
+// MARK: - Team Member Weight
+
+struct TeamMemberWeight: Codable {
+    let username: String?
+    let weight: Double?
+}
+
 // MARK: - My Kart (User)
 
 struct MyKartResponse: Codable {
     let kartNumber: Int?
     let teamId: String?
     let teamName: String?
+    let weight: Double?
+    let teamMembers: [TeamMemberWeight]
     let penalties: [RacePenalty]
     let messages: [RaceMessage]
     let totalPenaltySeconds: Int
@@ -141,6 +150,8 @@ struct MyKartResponse: Codable {
         case kartNumber = "kart_number"
         case teamId = "team_id"
         case teamName = "team_name"
+        case weight
+        case teamMembers = "team_members"
         case penalties
         case messages
         case totalPenaltySeconds = "total_penalty_seconds"
@@ -150,7 +161,7 @@ struct MyKartResponse: Codable {
     }
 
     init() {
-        kartNumber = nil; teamId = nil; teamName = nil
+        kartNumber = nil; teamId = nil; teamName = nil; weight = nil; teamMembers = []
         penalties = []; messages = []; totalPenaltySeconds = 0
     }
 }

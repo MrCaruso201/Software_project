@@ -78,11 +78,19 @@ class MessageResponse(BaseModel):
 
 # ── My Kart (user) ───────────────────────────────────────────────────────────
 
+class TeamMemberWeight(BaseModel):
+    """Peso e zavorra di un singolo membro del team."""
+    username: Optional[str] = None
+    weight: Optional[float] = None
+
+
 class MyKartResponse(BaseModel):
     """Risposta per l'endpoint /live/{event_id}/my-kart — dati del kart del proprio team."""
     kart_number: Optional[int] = None          # None se il team non ha ancora un kart assegnato
     team_id: Optional[str] = None
     team_name: Optional[str] = None
+    weight: Optional[float] = None
+    team_members: List[TeamMemberWeight] = []  # popolato solo per eventi a squadre
     penalties: List[PenaltyResponse] = []
     messages: List[MessageResponse] = []       # solo messaggi rivolti a questo kart o broadcast
     total_penalty_seconds: int = 0
