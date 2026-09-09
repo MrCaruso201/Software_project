@@ -92,7 +92,9 @@ struct PitWallKartRow: View {
             Text("#\(kartNumber)")
                 .font(.system(size: 24, weight: .black, design: .monospaced))
                 .foregroundColor(.kartAccent)
-                .frame(width: 50, alignment: .leading)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: 80, alignment: .leading)
             
             // Name removed as requested
             

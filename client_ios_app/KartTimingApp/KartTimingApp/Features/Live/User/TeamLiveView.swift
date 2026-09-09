@@ -398,13 +398,24 @@ struct TeamLiveView: View {
                     Divider().background(Color.white.opacity(0.1)).frame(height: 50)
 
                     TimelineView(.periodic(from: .now, by: 1.0)) { _ in
-                        VStack(spacing: 6) {
+                        VStack(spacing: 4) {
                             Text(formatStint(myKart.currentStintDuration))
                                 .font(.system(size: 28, weight: .black, design: .monospaced))
-                                .foregroundColor(myKart.isInPit ? .red : .white)
-                            Text("STINT")
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundColor(.kartDim)
+                                .foregroundColor(.white)
+                            if myKart.isInPit {
+                                Text("PIT")
+                                    .font(.system(size: 11, weight: .black, design: .monospaced))
+                                    .foregroundColor(.red)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(Color.red.opacity(0.15))
+                                    .clipShape(Capsule())
+                                    .overlay(Capsule().stroke(Color.red.opacity(0.5), lineWidth: 1))
+                            } else {
+                                Text("STINT")
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.kartDim)
+                            }
                         }
                         .frame(maxWidth: .infinity)
                     }

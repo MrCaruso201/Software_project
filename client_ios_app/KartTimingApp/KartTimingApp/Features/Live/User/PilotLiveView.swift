@@ -25,10 +25,7 @@ private extension RaceMessage {
     }
 
     var flagColor: Color? {
-        switch messageType {
-        case "checkered_flag": return .black // In the badge, white bg means black text/icon is better, but badge background is based on color.opacity(0.25). We'll handle this in flagBadge itself or return white here and adjust badge. Wait, if we return .white, text will be white on white. Let's return .white and fix badge, or return .black for checkered. Actually, checkered is better as .white and we can handle it in the view, but let's just return .white for now.
-        default: return flagFlashColor
-        }
+        flagFlashColor  // yellow, red, green, white for checkered
     }
 
     var flagLabel: String {
@@ -410,20 +407,36 @@ struct PilotLiveView: View {
 
     @ViewBuilder
     private var stintBadge: some View {
-        TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+        if myKart.isInPit {
             HStack(spacing: 8) {
-                Image(systemName: "stopwatch.fill")
+                Image(systemName: "p.circle.fill")
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(myKart.isInPit ? .red : .kartGreen)
-                Text(formatStint(myKart.currentStintDuration))
+                    .foregroundColor(.red)
+                Text("PIT")
                     .font(.system(size: 22, weight: .heavy, design: .monospaced))
-                    .foregroundColor(myKart.isInPit ? .red : .white)
+                    .foregroundColor(.red)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
-            .background(Color.black.opacity(0.4))
+            .background(Color.red.opacity(0.15))
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 2))
+            .overlay(Capsule().stroke(Color.red.opacity(0.6), lineWidth: 2))
+        } else {
+            TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                HStack(spacing: 8) {
+                    Image(systemName: "stopwatch.fill")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.kartGreen)
+                    Text(formatStint(myKart.currentStintDuration))
+                        .font(.system(size: 22, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.black.opacity(0.4))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 2))
+            }
         }
     }
 

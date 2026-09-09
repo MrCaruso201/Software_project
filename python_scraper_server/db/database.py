@@ -91,6 +91,8 @@ def _apply_migrations() -> None:
         "ALTER TABLE live_kart_assignments ADD COLUMN is_in_pit INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE live_kart_assignments ADD COLUMN stint_elapsed_seconds INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE live_kart_assignments ADD COLUMN stint_last_resume DATETIME",
+        # Race status (separato da event.status per non interferire con il ciclo di vita dell'evento)
+        "ALTER TABLE events ADD COLUMN race_status TEXT NOT NULL DEFAULT 'not_started'",
     ]
     with engine.connect() as conn:
         for stmt in migrations:

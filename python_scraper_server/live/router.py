@@ -130,58 +130,64 @@ def update_event_status(
     if body.session_name is not None:
         event.session_name = body.session_name
 
-    # Notify users if the event is starting
-    if body.status is not None and body.status == "started" and event.status != "started":
+    # Notify users if the event is starting OR re-starting (red flag resume)
+    if body.status is not None and body.status == "started":
         from notifications.router import notify_user
         
-        # 1. Rifiuta (elimina) tutte le iscrizioni non confermate
-        unconfirmed_regs = db.query(EventRegistration).filter(
-            EventRegistration.event_id == event_id,
-            ~EventRegistration.status.in_(["confirmed"])
-        ).all()
+        is_first_start = event.status != "started"
         
-        for reg in unconfirmed_regs:
-            if reg.user_id:
-                # 1.1 Elimina l'eventuale liberatoria associata a questa iscrizione rifiutata
-                db.query(SignedRelease).filter(
-                    SignedRelease.event_id == event_id,
-                    SignedRelease.user_id == reg.user_id
-                ).delete(synchronize_session=False)
+        if is_first_start:
+            # 1. Rifiuta (elimina) tutte le iscrizioni non confermate
+            unconfirmed_regs = db.query(EventRegistration).filter(
+                EventRegistration.event_id == event_id,
+                ~EventRegistration.status.in_(["confirmed"])
+            ).all()
+            
+            for reg in unconfirmed_regs:
+                if reg.user_id:
+                    # 1.1 Elimina l'eventuale liberatoria associata a questa iscrizione rifiutata
+                    db.query(SignedRelease).filter(
+                        SignedRelease.event_id == event_id,
+                        SignedRelease.user_id == reg.user_id
+                    ).delete(synchronize_session=False)
+                    
+                    notify_user(
+                        db=db,
+                        user_id=reg.user_id,
+                        event_id=event_id,
+                        notif_type="registration_deleted",
+                        title="Iscrizione annullata",
+                        message="L'evento è iniziato e la tua iscrizione non è stata confermata in tempo."
+                    )
+                db.delete(reg)
                 
+            # 2. Notifica solo gli iscritti confermati
+            confirmed_registrations = db.query(EventRegistration).filter(
+                EventRegistration.event_id == event_id,
+                EventRegistration.status == "confirmed",
+                EventRegistration.user_id.isnot(None)
+            ).all()
+            
+            for reg in confirmed_registrations:
                 notify_user(
                     db=db,
                     user_id=reg.user_id,
                     event_id=event_id,
-                    notif_type="registration_deleted",
-                    title="Iscrizione annullata",
-                    message="L'evento è iniziato e la tua iscrizione non è stata confermata in tempo."
+                    notif_type="event_started",
+                    title="L'evento è iniziato!",
+                    message=f"L'evento {event.title} è appena iniziato! Apri l'app per seguire il live timing."
                 )
-            db.delete(reg)
-            
-        # 2. Notifica solo gli iscritti confermati
-        confirmed_registrations = db.query(EventRegistration).filter(
-            EventRegistration.event_id == event_id,
-            EventRegistration.status == "confirmed",
-            EventRegistration.user_id.isnot(None)
-        ).all()
         
-        for reg in confirmed_registrations:
-            notify_user(
-                db=db,
-                user_id=reg.user_id,
-                event_id=event_id,
-                notif_type="event_started",
-                title="L'evento è iniziato!",
-                message=f"L'evento {event.title} è appena iniziato! Apri l'app per seguire il live timing."
-            )
-            
-        # 3. Avvia i timer stint per tutti i kart in pista
+        # 3. Avvia (o riavvia) i timer stint — solo kart con assegnazione reale
         now = datetime.now(timezone.utc).replace(tzinfo=None)
-        karts = db.query(LiveKartAssignment).filter(LiveKartAssignment.event_id == event_id).all()
-        for k in karts:
-            if not k.is_in_pit:
-                k.stint_elapsed_seconds = 0
-                k.stint_last_resume = now
+        registered_karts = db.query(LiveKartAssignment).filter(
+            LiveKartAssignment.event_id == event_id,
+            LiveKartAssignment.team_id != "unassigned"
+        ).all()
+        for k in registered_karts:
+            k.is_in_pit = False
+            k.stint_elapsed_seconds = 0
+            k.stint_last_resume = now
 
     if body.status is not None:
         event.status = body.status
@@ -337,7 +343,7 @@ def assign_kart(
         team_name=body.team_name,
         is_in_pit=False,
         stint_elapsed_seconds=0,
-        stint_last_resume=datetime.now(timezone.utc).replace(tzinfo=None) if db.query(Event).filter(Event.id==event_id).first().status == "started" else None
+        stint_last_resume=datetime.now(timezone.utc).replace(tzinfo=None) if db.query(Event).filter(Event.id==event_id).first().race_status == "running" else None
     )
     db.add(assignment)
     db.commit()
@@ -384,32 +390,23 @@ def update_kart_pit_status(
         LiveKartAssignment.kart_number == kart_number
     ).first()
     
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    
     if not assignment:
-        assignment = LiveKartAssignment(
-            event_id=event_id,
-            team_id="unassigned",
-            kart_number=kart_number,
-            team_name=None,
-            is_in_pit=False,
-            stint_elapsed_seconds=0,
-            stint_last_resume=now if event.status == "started" else None
-        )
-        db.add(assignment)
-        db.flush()
-        
+        raise HTTPException(status_code=404, detail="Assegnazione kart non trovata. Assegna prima il kart a un team.")
+    
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    race_is_running = event.race_status == "running"
+    
     if body.is_in_pit and not assignment.is_in_pit:
-        # Entra nei box
-        if assignment.stint_last_resume:
+        # Entra nei box: accumula secondi, ferma il timer
+        if assignment.stint_last_resume and race_is_running:
             delta = int((now - assignment.stint_last_resume).total_seconds())
             assignment.stint_elapsed_seconds += max(0, delta)
         assignment.stint_last_resume = None
         assignment.is_in_pit = True
     elif not body.is_in_pit and assignment.is_in_pit:
-        # Esce dai box (azzeramento)
+        # Esce dai box: azzera stint e riavvia solo se la gara è in corso
         assignment.stint_elapsed_seconds = 0
-        assignment.stint_last_resume = now if event.status == "started" else None
+        assignment.stint_last_resume = now if race_is_running else None
         assignment.is_in_pit = False
         
     db.commit()
@@ -583,7 +580,7 @@ def send_message(
 ):
     """Invia un messaggio live (broadcast o per kart specifico). Solo race_director/admin."""
     _require_director(user_payload)
-    _get_event_or_404(event_id, db)
+    event = _get_event_or_404(event_id, db)
 
     if body.message_type not in VALID_MESSAGE_TYPES:
         raise HTTPException(
@@ -599,20 +596,42 @@ def send_message(
     )
     db.add(message)
     
-    # Handling stint pauses for red flags / checkered flags
+    # Gestione timer stint e race_status in base al tipo di messaggio.
+    # race_status è indipendente da event.status (che gestisce il ciclo di vita dell'evento).
+    # Opera solo sui kart con assegnazione reale (non "unassigned")
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    karts = db.query(LiveKartAssignment).filter(LiveKartAssignment.event_id == event_id).all()
+    karts = db.query(LiveKartAssignment).filter(
+        LiveKartAssignment.event_id == event_id,
+        LiveKartAssignment.team_id != "unassigned"
+    ).all()
+    
+    is_gara_iniziata = (
+        body.message_type == "custom" and body.text.strip().lower() == "gara iniziata"
+    )
     
     if body.message_type in ("red_flag", "checkered_flag"):
+        # Ferma tutti i timer — stint_last_resume = None garantisce che il timer iOS si fermi
         for k in karts:
             if k.stint_last_resume:
                 delta = int((now - k.stint_last_resume).total_seconds())
                 k.stint_elapsed_seconds += max(0, delta)
-                k.stint_last_resume = None
-    elif body.message_type == "green_flag" or (body.message_type == "custom" and body.text.strip().lower() == "gara iniziata"):
+            k.stint_last_resume = None
+        # Aggiorna race_status senza toccare event.status
+        event.race_status = "paused" if body.message_type == "red_flag" else "stopped"
+    elif body.message_type == "green_flag":
+        if event.race_status != "stopped":
+            # Riprende i timer dal punto in cui erano (NO reset) solo se non è stopped
+            for k in karts:
+                if not k.is_in_pit and k.stint_last_resume is None:
+                    k.stint_last_resume = now
+            event.race_status = "running"
+    elif is_gara_iniziata:
+        # Porta TUTTI i kart in pista, azzera e avvia i timer da zero
         for k in karts:
-            if not k.is_in_pit:
-                k.stint_last_resume = now
+            k.is_in_pit = False
+            k.stint_elapsed_seconds = 0
+            k.stint_last_resume = now
+        event.race_status = "running"
 
     db.commit()
     db.refresh(message)
