@@ -500,21 +500,21 @@ struct UserAnalisiDetailView: View {
     private var circuitiContent: some View {
         VStack(spacing: 0) {
             // ── Selettore circuito nativo iOS ──────────────────────────────
-            if !viewModel.circuitStats.isEmpty {
+            if !viewModel.allKartodromi.isEmpty {
                 circuitPickerBar
             }
 
             Group {
-                if viewModel.circuitStats.isEmpty {
+                if viewModel.allKartodromi.isEmpty {
                     VStack(spacing: 16) {
                         Spacer()
                         Image(systemName: "map.slash")
                             .font(.system(size: 44))
                             .foregroundColor(.kartDim.opacity(0.4))
-                        Text("Nessun circuito visitato")
+                        Text("Nessun circuito disponibile")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.kartDim)
-                        Text("I dati appariranno dopo le prime gare")
+                        Text("Nessun kartodromo registrato nel sistema")
                             .font(.system(size: 12))
                             .foregroundColor(.kartDim.opacity(0.6))
                             .multilineTextAlignment(.center)
@@ -561,8 +561,8 @@ struct UserAnalisiDetailView: View {
 
             Picker("Circuito", selection: $selectedCircuitName) {
                 Text("Tutti i circuiti").tag(String?.none)
-                ForEach(viewModel.circuitStats) { stat in
-                    Text(stat.circuitName).tag(Optional(stat.circuitName))
+                ForEach(viewModel.allKartodromi) { k in
+                    Text(k.nome).tag(Optional(k.nome))
                 }
             }
             .pickerStyle(.menu)

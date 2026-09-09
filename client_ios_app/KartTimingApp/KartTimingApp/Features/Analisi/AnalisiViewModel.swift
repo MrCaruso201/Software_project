@@ -105,7 +105,9 @@ class AnalisiViewModel: ObservableObject {
     }).count }
 
     var bestOfficialPosition: Int? {
-        myResults.compactMap { $0.position }.min()
+        pastConfirmedEvents
+            .compactMap { result(for: $0.event.id)?.position }
+            .min()
     }
 
     // ── Accesso risultati singolo evento ──────────────────────────────────────

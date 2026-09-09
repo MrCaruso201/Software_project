@@ -219,17 +219,18 @@ struct AnalisiView: View {
             }
 
             // ── Selettore circuito nativo iOS ──────────────────────────────
-            if !viewModel.circuitStats.isEmpty {
+            if !viewModel.allKartodromi.isEmpty {
                 circuitPickerBar
             }
 
             Group {
-                if viewModel.circuitStats.isEmpty {
-                    emptyState(icon: "map.slash", message: "Nessun circuito visitato",
-                               sub: "I dati appariranno dopo le prime gare")
+                if viewModel.allKartodromi.isEmpty {
+                    emptyState(icon: "map.slash", message: "Nessun circuito disponibile",
+                               sub: "Nessun kartodromo registrato nel sistema")
                 } else if filteredCircuitStats.isEmpty {
-                    emptyState(icon: "map.slash", message: "Nessun dato per questo circuito",
-                               sub: "Seleziona un altro circuito o aggiungi un tempo")
+                    emptyState(icon: "flag.slash",
+                               message: selectedCircuitName != nil ? "Nessun dato per questo circuito" : "Nessun dato",
+                               sub: selectedCircuitName != nil ? "Aggiungi il tuo primo tempo con il pulsante in alto" : "I dati appariranno dopo le prime gare")
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
@@ -258,8 +259,8 @@ struct AnalisiView: View {
 
             Picker("Circuito", selection: $selectedCircuitName) {
                 Text("Tutti i circuiti").tag(String?.none)
-                ForEach(viewModel.circuitStats) { stat in
-                    Text(stat.circuitName).tag(Optional(stat.circuitName))
+                ForEach(viewModel.allKartodromi) { k in
+                    Text(k.nome).tag(Optional(k.nome))
                 }
             }
             .pickerStyle(.menu)
