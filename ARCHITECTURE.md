@@ -99,7 +99,7 @@ L'applicazione mobile è scritta in SwiftUI utilizzando l'architettura **MVVM**.
 ### `App/` - Entry point
 
 - **`KartTimingAppApp.swift`**: L'avvio dell'applicazione. Sceglie se mostrare la dashboard o la schermata di login.
-- **`AppEnvironment.swift`**: Oggetto di stato globale usato per smistare comportamenti di navigazione profonda (come toccare una notifica che apre i dettagli di una gara).
+- **`AppEnvironment.swift`**: Definizione dell'environment utilizzato (develop o production), develop assume che esista un serve locale, production cerca il server sul productionBaseURL. Questo permette di collegarsi anche via internet al server, sul server è installato tailscale e l'URL pubblico viene servito tramite Tailscale Funnel per gestire la connessione sicura https sulla porta 8000 (stessa usata dal server locale).
 
 ### `Auth/` - Autenticazione Client-side
 
@@ -125,7 +125,7 @@ Raggruppa le funzionalità principali nei vari tab/percorsi.
 - **`AnalisiView.swift` / `AnalisiViewModel.swift`**: Schermata e logica per l'esplorazione dei risultati di gare concluse.
 - **`EventResultModels.swift`**: Strutture dati di supporto alle statistiche.
 
-#### `Features/Events/` - Gestione Gare
+#### `Features/Events/` - Gestione Eventi
 
 - **`EventiView.swift` / `EventiViewModel.swift`**: Elenco delle gare imminenti e chiamate di rete.
 - **`EventDetailView.swift` / `EventDetailContentView.swift`**: Dettaglio della singola gara con lista partecipanti.
