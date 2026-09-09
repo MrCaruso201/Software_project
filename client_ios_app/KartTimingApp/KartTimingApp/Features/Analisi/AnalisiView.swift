@@ -10,6 +10,7 @@ struct AnalisiView: View {
 
     @State private var selectedSegment: Int = 0
     @State private var showAddCircuitTimeSheet = false
+    @State private var selectedCircuitName: String? = nil
 
     // MARK: – Role check
     private var isAdminOrDirector: Bool {
@@ -191,6 +192,12 @@ struct AnalisiView: View {
 
     // MARK: ─── Circuiti ───────────────────────────────────────────────────────
 
+    /// Circuiti filtrati in base alla selezione corrente
+    private var filteredCircuitStats: [CircuitStat] {
+        guard let name = selectedCircuitName else { return viewModel.circuitStats }
+        return viewModel.circuitStats.filter { $0.circuitName == name }
+    }
+
     private var circuitiContent: some View {
         VStack(spacing: 0) {
             if !viewModel.isReadOnly {
@@ -210,15 +217,23 @@ struct AnalisiView: View {
                 }
                 .padding(16)
             }
-            
+
+            // ── Selettore circuito nativo iOS ──────────────────────────────
+            if !viewModel.circuitStats.isEmpty {
+                circuitPickerBar
+            }
+
             Group {
                 if viewModel.circuitStats.isEmpty {
                     emptyState(icon: "map.slash", message: "Nessun circuito visitato",
                                sub: "I dati appariranno dopo le prime gare")
+                } else if filteredCircuitStats.isEmpty {
+                    emptyState(icon: "map.slash", message: "Nessun dato per questo circuito",
+                               sub: "Seleziona un altro circuito o aggiungi un tempo")
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
-                            ForEach(viewModel.circuitStats) { stat in
+                            ForEach(filteredCircuitStats) { stat in
                                 CircuitCard(stat: stat)
                             }
                         }
@@ -232,6 +247,40 @@ struct AnalisiView: View {
             AddCircuitTimeSheet(viewModel: viewModel, server: server)
                 .environmentObject(authState)
         }
+    }
+
+    /// Selettore circuito nativo con Picker stile .menu
+    private var circuitPickerBar: some View {
+        HStack {
+            Image(systemName: "mappin.and.ellipse")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.kartAccent)
+
+            Picker("Circuito", selection: $selectedCircuitName) {
+                Text("Tutti i circuiti").tag(String?.none)
+                ForEach(viewModel.circuitStats) { stat in
+                    Text(stat.circuitName).tag(Optional(stat.circuitName))
+                }
+            }
+            .pickerStyle(.menu)
+            .accentColor(.kartAccent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer()
+
+            if selectedCircuitName != nil {
+                Button {
+                    withAnimation { selectedCircuitName = nil }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.kartDim)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.kartPanel.opacity(0.6))
     }
 
     // MARK: – Shared helpers

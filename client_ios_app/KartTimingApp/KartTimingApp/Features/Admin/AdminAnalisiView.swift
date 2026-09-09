@@ -293,6 +293,7 @@ struct UserAnalisiDetailView: View {
 
     @StateObject private var viewModel = AnalisiViewModel()
     @State private var selectedSegment: Int = 0
+    @State private var selectedCircuitName: String? = nil
 
     var body: some View {
         ZStack {
@@ -491,35 +492,97 @@ struct UserAnalisiDetailView: View {
 
     // MARK: - Circuiti (sola lettura, senza pulsante aggiungi)
 
+    private var filteredCircuitStats: [CircuitStat] {
+        guard let name = selectedCircuitName else { return viewModel.circuitStats }
+        return viewModel.circuitStats.filter { $0.circuitName == name }
+    }
+
     private var circuitiContent: some View {
-        Group {
-            if viewModel.circuitStats.isEmpty {
-                VStack(spacing: 16) {
-                    Spacer()
-                    Image(systemName: "map.slash")
-                        .font(.system(size: 44))
-                        .foregroundColor(.kartDim.opacity(0.4))
-                    Text("Nessun circuito visitato")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.kartDim)
-                    Text("I dati appariranno dopo le prime gare")
-                        .font(.system(size: 12))
-                        .foregroundColor(.kartDim.opacity(0.6))
-                        .multilineTextAlignment(.center)
-                    Spacer()
-                }
-                .padding(32)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(viewModel.circuitStats) { stat in
-                            CircuitCard(stat: stat)
-                        }
+        VStack(spacing: 0) {
+            // ── Selettore circuito nativo iOS ──────────────────────────────
+            if !viewModel.circuitStats.isEmpty {
+                circuitPickerBar
+            }
+
+            Group {
+                if viewModel.circuitStats.isEmpty {
+                    VStack(spacing: 16) {
+                        Spacer()
+                        Image(systemName: "map.slash")
+                            .font(.system(size: 44))
+                            .foregroundColor(.kartDim.opacity(0.4))
+                        Text("Nessun circuito visitato")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.kartDim)
+                        Text("I dati appariranno dopo le prime gare")
+                            .font(.system(size: 12))
+                            .foregroundColor(.kartDim.opacity(0.6))
+                            .multilineTextAlignment(.center)
+                        Spacer()
                     }
-                    .padding(16)
-                    .padding(.bottom, 30)
+                    .padding(32)
+                } else if filteredCircuitStats.isEmpty {
+                    VStack(spacing: 16) {
+                        Spacer()
+                        Image(systemName: "map.slash")
+                            .font(.system(size: 44))
+                            .foregroundColor(.kartDim.opacity(0.4))
+                        Text("Nessun dato per questo circuito")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.kartDim)
+                        Text("Seleziona un altro circuito")
+                            .font(.system(size: 12))
+                            .foregroundColor(.kartDim.opacity(0.6))
+                            .multilineTextAlignment(.center)
+                        Spacer()
+                    }
+                    .padding(32)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredCircuitStats) { stat in
+                                CircuitCard(stat: stat)
+                            }
+                        }
+                        .padding(16)
+                        .padding(.bottom, 30)
+                    }
                 }
             }
         }
+    }
+
+    /// Selettore circuito nativo con Picker stile .menu
+    private var circuitPickerBar: some View {
+        HStack {
+            Image(systemName: "mappin.and.ellipse")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.kartAccent)
+
+            Picker("Circuito", selection: $selectedCircuitName) {
+                Text("Tutti i circuiti").tag(String?.none)
+                ForEach(viewModel.circuitStats) { stat in
+                    Text(stat.circuitName).tag(Optional(stat.circuitName))
+                }
+            }
+            .pickerStyle(.menu)
+            .accentColor(.kartAccent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer()
+
+            if selectedCircuitName != nil {
+                Button {
+                    withAnimation { selectedCircuitName = nil }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.kartDim)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.kartPanel.opacity(0.6))
     }
 }
