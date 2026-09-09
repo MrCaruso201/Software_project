@@ -1,3 +1,19 @@
+'''
+Modulo services/pdf_generator.py — generazione PDF liberatoria.
+
+Funzioni:
+  generate_release_pdf(event_title, event_date, event_location, release_text,
+                        first_name, last_name, codice_fiscale="", birth_date="",
+                        residence="", signature_base64="") → bytes
+      Genera il PDF della liberatoria firmata: intestazione evento, testo della
+      liberatoria, dati anagrafici del dichiarante e immagine della firma
+      (decodificata da base64). Usata da:
+        - POST /events/{event_id}/release-form/preview
+        - POST /events/{event_id}/release-form/sign (indirettamente, per generare
+          il PDF da salvare/mostrare dopo la firma)
+
+'''
+
 import io
 import base64
 from datetime import datetime

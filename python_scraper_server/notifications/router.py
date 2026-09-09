@@ -1,3 +1,19 @@
+'''
+Router FastAPI per le notifiche.
+
+Endpoints:
+
+  GET    /notifications/me                         → lista notifiche dell'utente loggato; elimina automaticamente
+                                                       quelle relative a eventi già passati da almeno un giorno
+                                                       (utente autenticato)
+  POST   /notifications/{notification_id}/read      → segna una notifica come letta (utente autenticato,
+                                                       solo se la notifica appartiene all'utente)
+  DELETE /notifications/me                          → elimina tutte le notifiche dell'utente loggato
+                                                       (utente autenticato)
+  DELETE /notifications/{notification_id}           → elimina una singola notifica (utente autenticato,
+                                                       solo se la notifica appartiene all'utente)
+'''
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List

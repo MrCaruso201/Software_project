@@ -1,16 +1,37 @@
 """
-Router Live Race Management
+Router FastAPI per il live timing (gare in corso).
 
-Gestisce la sessione di gara in tempo reale:
-  - Cambio stato evento (scheduled → started → finished)
-  - Assegnazione kart ai team
-  - Penalità per kart
-  - Messaggi live (broadcast o per kart specifico)
-  - Endpoint utente per vedere i propri dati live
+Endpoints:
 
-Permessi:
-  - race_director / admin → possono scrivere (assegnare kart, penalità, messaggi, cambiare stato)
-  - tutti gli utenti autenticati → possono leggere
+── Stato evento ─────────────────────────────────────────────────────
+  PATCH  /events/{event_id}/status                    → aggiorna stato evento (scheduled/started/finished) e session_name;
+                                                          se passa a "started" elimina le iscrizioni non confermate e notifica
+                                                          gli iscritti confermati (richiede ruolo race_director o superiore)
+
+── Kart Assignments ─────────────────────────────────────────────────
+  GET    /live/{event_id}/karts                        → lista kart assegnati (manuali + match automatico da live timing),
+                                                          con penalità totali per kart (utente autenticato)
+  POST   /live/{event_id}/karts                        → assegna un numero kart a un team (race_director o superiore)
+  DELETE /live/{event_id}/karts/{kart_number}           → rimuove assegnazione kart (race_director o superiore)
+
+── Penalità ──────────────────────────────────────────────────────────
+  GET    /live/penalty-types                            → lista tipi di penalità attivi configurati (utente autenticato)
+  GET    /live/{event_id}/penalties                     → lista penalità evento, filtrabile per kart_number (utente autenticato)
+  POST   /live/{event_id}/penalties                     → assegna penalità a un kart, con eventuale auto-penalità
+                                                          se supera la soglia di warning (race_director o superiore)
+  DELETE /live/{event_id}/penalties/{penalty_id}         → cancella una penalità (race_director o superiore)
+
+── Messaggi live ─────────────────────────────────────────────────────
+  GET    /live/{event_id}/messages                      → lista messaggi live, filtrabile per kart_number
+                                                          (broadcast + messaggi per quel kart) (utente autenticato)
+  POST   /live/{event_id}/messages                       → invia messaggio live (broadcast o per kart specifico)
+                                                          (race_director o superiore)
+  DELETE /live/{event_id}/messages/{message_id}          → cancella un messaggio live (race_director o superiore)
+
+── Kart dell'utente ──────────────────────────────────────────────────
+  GET    /live/{event_id}/my-kart                       → info sul kart del team dell'utente corrente: numero kart,
+                                                          penalità ricevute, messaggi rivolti al kart o broadcast
+                                                          (utente autenticato)
 """
 
 from typing import List, Optional

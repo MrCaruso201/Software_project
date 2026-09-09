@@ -1,3 +1,58 @@
+'''
+Router FastAPI per gli eventi.
+
+Endpoints:
+
+── Eventi (CRUD base) ──────────────────────────────────────────────
+  POST   /events/                                              → crea evento (⚠️ nessun controllo di autenticazione/ruolo)
+  GET    /events/                                               → lista eventi (⚠️ pubblico, nessuna autenticazione richiesta)
+  GET    /events/{event_id}                                     → dettaglio evento (⚠️ pubblico, nessuna autenticazione richiesta)
+  PATCH  /events/{event_id}                                     → modifica evento (⚠️ pubblico, nessuna autenticazione richiesta)
+  DELETE /events/{event_id}                                     → elimina evento (⚠️ pubblico, nessuna autenticazione richiesta)
+
+── Iscrizioni utente ────────────────────────────────────────────────
+  POST   /events/{event_id}/register                            → iscrizione a un evento (utente autenticato)
+  DELETE /events/{event_id}/register                             → annulla la propria iscrizione (utente autenticato)
+  DELETE /events/{event_id}/registrations/me/leave               → un membro (non leader) abbandona il team (utente autenticato)
+  GET    /events/registrations/me                                → lista proprie iscrizioni (utente autenticato)
+  GET    /events/registrations/user/{target_user_id}             → iscrizioni di un utente specifico (richiede ruolo race_director o superiore)
+
+── Team (utente) ─────────────────────────────────────────────────────
+  GET    /events/{event_id}/registrations/team/{team_id}         → dettaglio team (membro del team o race_director/admin)
+  PUT    /events/{event_id}/registrations/team/{team_id}         → modifica team (capogruppo o race_director/admin)
+
+── Vista admin: iscrizioni ────────────────────────────────────────────
+  GET    /events/{event_id}/registrations                        → lista flat iscrizioni evento (richiede ruolo race_director o superiore)
+  GET    /events/{event_id}/registrations/teams                  → lista iscrizioni raggruppate per team (richiede ruolo race_director o superiore)
+
+── Admin: gestione iscrizioni singole ─────────────────────────────────
+  PATCH  /events/{event_id}/registrations/{registration_id}                    → aggiorna iscrizione, es. peso (race_director+)
+  PATCH  /events/{event_id}/registrations/{registration_id}/confirm            → conferma iscrizione (race_director+)
+  PATCH  /events/{event_id}/registrations/{registration_id}/unconfirm          → rimuove conferma (race_director+)
+  PATCH  /events/{event_id}/registrations/{registration_id}/accept_waitlist    → accetta da lista d'attesa (race_director+)
+  PATCH  /events/{event_id}/registrations/{registration_id}/move_to_waitlist   → sposta in lista d'attesa (race_director+)
+  DELETE /events/{event_id}/registrations/{registration_id}                    → elimina iscrizione (race_director+)
+
+── Admin: gestione iscrizioni per team ─────────────────────────────────
+  PATCH  /events/{event_id}/registrations/team/{team_id}/confirm              → conferma team (race_director+)
+  PATCH  /events/{event_id}/registrations/team/{team_id}/unconfirm            → rimuove conferma team (race_director+)
+  PATCH  /events/{event_id}/registrations/team/{team_id}/accept_waitlist      → accetta team da lista d'attesa (race_director+)
+  PATCH  /events/{event_id}/registrations/team/{team_id}/move_to_waitlist     → sposta team in lista d'attesa (race_director+)
+  DELETE /events/{event_id}/registrations/team/{team_id}                     → elimina team dall'evento (race_director+)
+
+── Admin: iscrizione manuale ───────────────────────────────────────────
+  POST   /events/{event_id}/admin_register/individual                         → iscrive manualmente un individuo (race_director+)
+  POST   /events/{event_id}/admin_register/team                               → iscrive manualmente un team (race_director+)
+  GET    /events/{event_id}/admin_register/unassigned                         → lista iscritti non assegnati a un team (race_director+)
+  POST   /events/{event_id}/admin_register/teams/{team_id}/assign             → assegna iscritti non assegnati a un team esistente (race_director+)
+  POST   /events/{event_id}/admin_register/teams/create_from_individuals      → crea un nuovo team da iscritti individuali (race_director+)
+
+── Liberatoria (release form) ──────────────────────────────────────────
+  POST   /events/{event_id}/release-form/preview                → genera PDF anteprima liberatoria (utente autenticato)
+  POST   /events/{event_id}/release-form/sign                    → firma la liberatoria (utente autenticato, deve essere iscritto)
+  GET    /events/{event_id}/release-form/mine                    → recupera la propria liberatoria firmata (utente autenticato)
+'''
+
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, status, Response
