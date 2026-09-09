@@ -29,147 +29,156 @@ class LiveViewModel: ObservableObject {
     private var eventId: Int = 0
     private var pollingTask: Task<Void, Never>?
     private let pollingInterval: TimeInterval = 5
+    
+    private var lastFetchedData: [String: Data] = [:]
+
+    private var timingManager: KartTimingManager?
+    private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Init / Setup
 
-    func configure(serverURL: URL?, token: String?, eventId: Int) {
+    func configure(serverURL: URL?, token: String?, eventId: Int, timingManager: KartTimingManager? = nil) {
         self.serverURL = serverURL
         self.token = token
         self.eventId = eventId
+        self.timingManager = timingManager
+        
+        timingManager?.$lastEventUpdate
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                Task { await self?.fetchAll() }
+            }
+            .store(in: &cancellables)
     }
 
-    // MARK: - Polling
+    // MARK: - Legacy Polling (Removed)
 
     func startPolling() {
-        stopPolling()
-        pollingTask = Task {
-            while !Task.isCancelled {
-                await fetchAll()
-                try? await Task.sleep(nanoseconds: UInt64(pollingInterval * 1_000_000_000))
-            }
-        }
+        Task { await fetchAll() }
     }
 
     func stopPolling() {
-        pollingTask?.cancel()
-        pollingTask = nil
+        cancellables.removeAll()
     }
+
 
     // MARK: - Fetch All (director)
 
+    private func fetchRawData(path: String) async -> Data? {
+        guard let url = endpoint(path), let token = token else { return nil }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        do {
+            let (data, _) = try await NetworkService.shared.data(for: req)
+            return data
+        } catch {
+            return nil
+        }
+    }
+
     func fetchAll() async {
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.fetchEvent() }
-            group.addTask { await self.fetchKartAssignments() }
-            group.addTask { await self.fetchPenaltyTypes() }
-            group.addTask { await self.fetchPenalties() }
-            group.addTask { await self.fetchMessages() }
-            group.addTask { await self.fetchRegisteredTeams() }
-            group.addTask { await self.fetchRegisteredIndividuals() }
-            group.addTask { await self.fetchResults() }
-        }
-    }
-
-    // MARK: - Fetch Event
-    
-    func fetchEvent() async {
-        guard let url = endpoint("/events/\(eventId)"),
-              let token = token else { return }
-        do {
-            var req = URLRequest(url: url)
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await NetworkService.shared.data(for: req)
-            let decoded = try JSONDecoder().decode(RaceEvent.self, from: data)
-            DispatchQueue.main.async {
-                self.currentSessionName = decoded.sessionName
+        async let eventData = fetchRawData(path: "/events/\(eventId)")
+        async let kartsData = fetchRawData(path: "/live/\(eventId)/karts")
+        async let typesData = fetchRawData(path: "/live/penalty-types")
+        async let penaltiesData = fetchRawData(path: "/live/\(eventId)/penalties")
+        async let messagesData = fetchRawData(path: "/live/\(eventId)/messages")
+        async let teamsData = fetchRawData(path: "/events/\(eventId)/registrations/teams")
+        async let individualsData = fetchRawData(path: "/events/\(eventId)/registrations")
+        async let resultsData = fetchRawData(path: "/events/\(eventId)/results")
+        async let myKartData = fetchRawData(path: "/live/\(eventId)/my-kart")
+        
+        let (eventD, kartsD, typesD, penaltiesD, messagesD, teamsD, individualsD, resultsD, myKartD) = await (
+            eventData, kartsData, typesData, penaltiesData, messagesData, teamsData, individualsData, resultsData, myKartData
+        )
+        
+        // Assegnazione in blocco (batch update su main thread) per evitare scatti in UI
+        let decoder = JSONDecoder()
+        
+        if let d = eventD, d != lastFetchedData["event"] {
+            lastFetchedData["event"] = d
+            if let dec = try? decoder.decode(RaceEvent.self, from: d) {
+                self.currentSessionName = dec.sessionName
             }
-        } catch {
-            print("Error fetching event details:", error)
+        }
+        
+        if let d = kartsD, d != lastFetchedData["karts"] {
+            lastFetchedData["karts"] = d
+            if let dec = try? decoder.decode([LiveKartAssignment].self, from: d) {
+                self.kartAssignments = dec
+            }
+        }
+        
+        if let d = myKartD, d != lastFetchedData["mykart"] {
+            lastFetchedData["mykart"] = d
+            if let dec = try? decoder.decode(MyKartResponse.self, from: d) {
+                self.myKart = dec
+            } else {
+                self.myKart = MyKartResponse()
+            }
+        }
+        
+        if let d = typesD, d != lastFetchedData["types"] {
+            lastFetchedData["types"] = d
+            if let dec = try? decoder.decode([PenaltyType].self, from: d) {
+                self.penaltyTypes = dec
+            }
+        }
+        
+        if let d = penaltiesD, d != lastFetchedData["penalties"] {
+            lastFetchedData["penalties"] = d
+            if let dec = try? decoder.decode([RacePenalty].self, from: d) {
+                self.penalties = dec
+            }
+        }
+        
+        if let d = messagesD, d != lastFetchedData["messages"] {
+            lastFetchedData["messages"] = d
+            if let dec = try? decoder.decode([RaceMessage].self, from: d) {
+                self.messages = dec
+                syncRaceTimesFromMessages(dec)
+            }
+        }
+        
+        if let d = teamsD, d != lastFetchedData["teams"] {
+            lastFetchedData["teams"] = d
+            if let dec = try? decoder.decode([TeamRegistrationResponse].self, from: d) {
+                self.registeredTeams = dec
+            }
+        }
+        
+        if let d = individualsD, d != lastFetchedData["individuals"] {
+            lastFetchedData["individuals"] = d
+            if let dec = try? decoder.decode([EventRegistrationWithUserResponse].self, from: d) {
+                self.registeredIndividuals = dec
+            }
+        }
+        
+        if let d = resultsD, d != lastFetchedData["results"] {
+            lastFetchedData["results"] = d
+            if let dec = try? decoder.decode([EventResult].self, from: d) {
+                self.eventResults = dec
+            }
         }
     }
-
-    // MARK: - Fetch Results
     
-    private func fetchResults() async {
-        guard let url = endpoint("/events/\(eventId)/results"),
-              let token = token else { return }
-        do {
-            var req = URLRequest(url: url)
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await NetworkService.shared.data(for: req)
-            let decoded = try JSONDecoder().decode([EventResult].self, from: data)
-            DispatchQueue.main.async { self.eventResults = decoded }
-        } catch {
-            print("Error fetching results:", error)
+    // Alias temporanei per funzioni richiamate singolarmente da altri file
+    func fetchEvent() async { await fetchAll() }
+    func fetchMyKart() async { 
+        if let d = await fetchRawData(path: "/live/\(eventId)/my-kart"), d != lastFetchedData["mykart"] {
+            lastFetchedData["mykart"] = d
+            if let dec = try? JSONDecoder().decode(MyKartResponse.self, from: d) {
+                self.myKart = dec
+            }
         }
     }
-
-    // MARK: - Fetch My Kart (user)
-
-    func fetchMyKart() async {
-        guard let url = endpoint("/live/\(eventId)/my-kart"),
-              let token = token else { return }
-        do {
-            var req = URLRequest(url: url)
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await NetworkService.shared.data(for: req)
-            let decoded = try JSONDecoder().decode(MyKartResponse.self, from: data)
-            self.myKart = decoded
-        } catch {
-            // Silenzioso: in caso di errore mostra dati vuoti
-            self.myKart = MyKartResponse()
-        }
-    }
+    private func fetchResults() async { await fetchAll() }
+    private func fetchKartAssignments() async { await fetchAll() }
 
     func startPollingMyKart() {
-        stopPolling()
-        pollingTask = Task {
-            while !Task.isCancelled {
-                await fetchEvent()
-                await fetchMyKart()
-                await fetchMessages()   // necessario per syncRaceTimesFromMessages → timer
-                await fetchPenalties()
-                await fetchResults()
-                try? await Task.sleep(nanoseconds: UInt64(pollingInterval * 1_000_000_000))
-            }
+        Task {
+            await fetchAll()
         }
-    }
-
-    // MARK: - Registered Teams
-    
-    private func fetchRegisteredTeams() async {
-        guard let url = endpoint("/events/\(eventId)/registrations/teams"),
-              let token = token else { return }
-        do {
-            var req = URLRequest(url: url)
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await NetworkService.shared.data(for: req)
-            self.registeredTeams = try JSONDecoder().decode([TeamRegistrationResponse].self, from: data)
-        } catch { }
-    }
-
-    private func fetchRegisteredIndividuals() async {
-        guard let url = endpoint("/events/\(eventId)/registrations"),
-              let token = token else { return }
-        do {
-            var req = URLRequest(url: url)
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await NetworkService.shared.data(for: req)
-            self.registeredIndividuals = try JSONDecoder().decode([EventRegistrationWithUserResponse].self, from: data)
-        } catch { }
-    }
-
-    // MARK: - Kart Assignments
-
-    private func fetchKartAssignments() async {
-        guard let url = endpoint("/live/\(eventId)/karts"),
-              let token = token else { return }
-        do {
-            var req = URLRequest(url: url)
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await NetworkService.shared.data(for: req)
-            self.kartAssignments = try JSONDecoder().decode([LiveKartAssignment].self, from: data)
-        } catch { }
     }
 
     func assignKart(teamId: String, kartNumber: Int, teamName: String?) async throws {
@@ -240,29 +249,9 @@ class LiveViewModel: ObservableObject {
         await fetchAll()
     }
 
+    // Rimosso fetch individuale
+    
     // MARK: - Penalties
-
-    private func fetchPenaltyTypes() async {
-        guard let url = endpoint("/live/penalty-types"),
-              let token = token else { return }
-        do {
-            var req = URLRequest(url: url)
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await NetworkService.shared.data(for: req)
-            self.penaltyTypes = try JSONDecoder().decode([PenaltyType].self, from: data)
-        } catch { }
-    }
-
-    private func fetchPenalties() async {
-        guard let url = endpoint("/live/\(eventId)/penalties"),
-              let token = token else { return }
-        do {
-            var req = URLRequest(url: url)
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await NetworkService.shared.data(for: req)
-            self.penalties = try JSONDecoder().decode([RacePenalty].self, from: data)
-        } catch { }
-    }
 
     func addPenalty(kartNumber: Int, type: PenaltyType, seconds: Int?, note: String?) async throws {
         guard let url = endpoint("/live/\(eventId)/penalties"),
@@ -294,22 +283,6 @@ class LiveViewModel: ObservableObject {
     }
 
     // MARK: - Messages
-
-    private func fetchMessages() async {
-        guard let url = endpoint("/live/\(eventId)/messages"),
-              let token = token else { return }
-        do {
-            var req = URLRequest(url: url)
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await NetworkService.shared.data(for: req)
-            let decoded = try JSONDecoder().decode([RaceMessage].self, from: data)
-            self.messages = decoded
-            // Ricalcola raceStartTime e raceEndTime dai messaggi del server
-            syncRaceTimesFromMessages(decoded)
-        } catch { }
-    }
-
-    /// Ricava raceStartTime e raceEndTime dai messaggi broadcast in ordine cronologico.
     /// - "Gara Iniziata" (custom) → imposta raceStartTime, azzera raceEndTime
     /// - "checkered_flag" → imposta raceEndTime
     private func syncRaceTimesFromMessages(_ msgs: [RaceMessage]) {

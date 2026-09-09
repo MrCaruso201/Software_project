@@ -8,6 +8,7 @@ class KartTimingManager: ObservableObject {
     @Published var isScrapingActive: Bool = false
     @Published var errorMessage: String? = nil
     @Published var showError: Bool = false
+    @Published var lastEventUpdate: Date? = nil
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var currentServer: DiscoveredServer?
@@ -103,17 +104,24 @@ class KartTimingManager: ObservableObject {
                     self.showError = true
                 }
 
+            case "event_update":
+                self.lastEventUpdate = Date()
+
             default:
                 break
             }
         }
     }
 
-    func sendCommand(_ command: String, extra: [String: String] = [:]) {
-        var payload: [String: String] = ["command": command]
+    func sendCommand(_ command: String, extra: [String: Any] = [:]) {
+        var payload: [String: Any] = ["command": command]
         payload.merge(extra) { _, new in new }
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let text = String(data: data, encoding: .utf8) else { return }
         webSocketTask?.send(.string(text)) { _ in }
+    }
+
+    func subscribeToEvent(_ eventId: Int) {
+        sendCommand("subscribe_event", extra: ["event_id": eventId])
     }
 }

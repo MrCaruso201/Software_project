@@ -35,7 +35,7 @@ Endpoints:
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from db.database import get_db
@@ -54,6 +54,7 @@ from live.schemas import (
 import json
 from datetime import datetime, timezone
 from scraper.storage import json_path_for
+from ws.manager import broadcast_to_event
 
 router = APIRouter(tags=["live"])
 
@@ -110,6 +111,7 @@ def _read_live_timing(url: str) -> dict:
 def update_event_status(
     event_id: int,
     body: EventStatusUpdate,
+    background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -193,6 +195,7 @@ def update_event_status(
         event.status = body.status
     db.commit()
     db.refresh(event)
+    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
     return {"event_id": event_id, "status": event.status, "session_name": event.session_name}
 
 
@@ -308,6 +311,7 @@ def get_kart_assignments(
 def assign_kart(
     event_id: int,
     body: KartAssignmentCreate,
+    background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -348,6 +352,7 @@ def assign_kart(
     db.add(assignment)
     db.commit()
     db.refresh(assignment)
+    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
     r = KartAssignmentResponse.model_validate(assignment)
     r.total_penalty_seconds = 0
     return r
@@ -357,6 +362,7 @@ def assign_kart(
 def remove_kart_assignment(
     event_id: int,
     kart_number: int,
+    background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -370,6 +376,7 @@ def remove_kart_assignment(
         raise HTTPException(status_code=404, detail="Assegnazione non trovata")
     db.delete(assignment)
     db.commit()
+    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
     return None
 
 
@@ -378,6 +385,7 @@ def update_kart_pit_status(
     event_id: int,
     kart_number: int,
     body: KartPitUpdate,
+    background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -412,6 +420,7 @@ def update_kart_pit_status(
     db.commit()
     db.refresh(assignment)
     
+    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
     r = KartAssignmentResponse.model_validate(assignment)
     r.total_penalty_seconds = _penalty_seconds_by_kart(event_id, db).get(kart_number, 0)
     return r
@@ -457,6 +466,7 @@ def get_penalties(
 def add_penalty(
     event_id: int,
     body: PenaltyCreate,
+    background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -514,6 +524,7 @@ def add_penalty(
                 db.add(auto_penalty)
                 db.commit()
 
+    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
     return penalty
 
 
@@ -522,6 +533,7 @@ def add_penalty(
 def delete_penalty(
     event_id: int,
     penalty_id: int,
+    background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -535,6 +547,7 @@ def delete_penalty(
         raise HTTPException(status_code=404, detail="Penalità non trovata")
     db.delete(penalty)
     db.commit()
+    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
     return None
 
 
@@ -575,6 +588,7 @@ def get_messages(
 def send_message(
     event_id: int,
     body: MessageCreate,
+    background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -635,6 +649,7 @@ def send_message(
 
     db.commit()
     db.refresh(message)
+    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
     return message
 
 
@@ -642,6 +657,7 @@ def send_message(
 def delete_message(
     event_id: int,
     message_id: int,
+    background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -655,6 +671,7 @@ def delete_message(
         raise HTTPException(status_code=404, detail="Messaggio non trovato")
     db.delete(msg)
     db.commit()
+    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
     return None
 
 

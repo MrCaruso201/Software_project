@@ -19,6 +19,9 @@ from scraper.session import ScraperSession, get_or_create_session, sessions
 # Mappa: WebSocket attivo -> URL che sta osservando
 client_url: Dict[WebSocket, str] = {}
 
+# Mappa: WebSocket attivo -> ID Evento che sta osservando
+client_event: Dict[WebSocket, int] = {}
+
 
 # ---------------------------------------------------------------------------
 # Broadcast
@@ -35,6 +38,19 @@ async def broadcast_to_url(url: str, message: dict) -> None:
             await ws.send_text(data)
         except Exception:
             client_url.pop(ws, None)
+            client_event.pop(ws, None)
+
+async def broadcast_to_event(event_id: int, message: dict) -> None:
+    """Invia il messaggio solo ai client iscritti a questo evento."""
+    data = json.dumps(message, ensure_ascii=False)
+    for ws, watched_event in list(client_event.items()):
+        if watched_event != event_id:
+            continue
+        try:
+            await ws.send_text(data)
+        except Exception:
+            client_url.pop(ws, None)
+            client_event.pop(ws, None)
 
 
 # ---------------------------------------------------------------------------
@@ -65,9 +81,14 @@ def subscribe_client(
 
 def unsubscribe_client(ws: WebSocket) -> None:
     """Rimuove il client dalla mappa e decrementa il contatore della sessione."""
+    client_event.pop(ws, None)
     url = client_url.pop(ws, None)
     if url is None:
         return
     session = sessions.get(url)
     if session:
         session.remove_subscriber()
+
+def subscribe_client_to_event(ws: WebSocket, event_id: int) -> None:
+    """Associa un client a un determinato evento."""
+    client_event[ws] = event_id

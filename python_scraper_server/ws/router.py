@@ -101,6 +101,16 @@ async def websocket_endpoint(websocket: WebSocket):
                     "role":     user_role,
                 }))
 
+            # ------------------------------------------------------------------
+            # Comando: subscribe_event
+            # ------------------------------------------------------------------
+            elif command == "subscribe_event":
+                event_id = msg.get("event_id")
+                if isinstance(event_id, int):
+                    from ws.manager import subscribe_client_to_event
+                    subscribe_client_to_event(websocket, event_id)
+                    print(f"🔗 Client iscritto all'evento {event_id}")
+
             else:
                 print(f"Comando sconosciuto: {command}")
 

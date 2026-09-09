@@ -35,7 +35,8 @@ struct LiveRootView: View {
             viewModel.configure(
                 serverURL: server.httpURL,
                 token: authState.currentToken,
-                eventId: event.id
+                eventId: event.id,
+                timingManager: timingManager
             )
             if isDirector {
                 viewModel.startPolling()
@@ -63,6 +64,7 @@ struct LiveRootView: View {
                     timingManager.connect(to: server)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         timingManager.sendCommand("set_url", extra: ["url": matched.url])
+                        timingManager.subscribeToEvent(event.id)
                     }
                 } else {
                     trackLoadError = "Impossibile trovare l'URL per la pista: \(event.location)"
