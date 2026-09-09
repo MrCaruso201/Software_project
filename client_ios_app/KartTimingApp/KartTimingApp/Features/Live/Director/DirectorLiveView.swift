@@ -35,10 +35,15 @@ struct DirectorLiveView: View {
                     .tabItem { Label("Gestione LIVE", systemImage: "exclamationmark.triangle.fill") }
                     .tag(2)
 
-                // ── Tab 4: Messaggi ───────────────────────────────────
+                // ── Tab 4: Pit Stop ───────────────────────────────────
+                PitWallLiveView(viewModel: viewModel)
+                    .tabItem { Label("Pit Stop", systemImage: "stopwatch.fill") }
+                    .tag(3)
+
+                // ── Tab 5: Messaggi ───────────────────────────────────
                 MessaggiView(viewModel: viewModel)
                     .tabItem { Label("Messaggi", systemImage: "bubble.left.and.bubble.right.fill") }
-                    .tag(3)
+                    .tag(4)
             }
             .tint(.kartAccent)
             .navigationTitle(viewModel.currentSessionName ?? event.title)

@@ -203,6 +203,23 @@ class LiveViewModel: ObservableObject {
         await fetchAll()
     }
 
+    func togglePitStatus(kartNumber: Int, isInPit: Bool) async throws {
+        guard let url = endpoint("/live/\(eventId)/karts/\(kartNumber)/pit"),
+              let token = token else { throw URLError(.badURL) }
+        var req = URLRequest(url: url)
+        req.httpMethod = "PATCH"
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["is_in_pit": isInPit]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await NetworkService.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
+            let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore aggiornamento pit"
+            throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+        }
+        await fetchAll()
+    }
+
     func updateRegistrationWeight(registrationId: Int, weight: Double) async throws {
         guard let url = endpoint("/events/\(eventId)/registrations/\(registrationId)"),
               let token = token else { throw URLError(.badURL) }

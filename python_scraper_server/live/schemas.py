@@ -19,9 +19,17 @@ class KartAssignmentResponse(BaseModel):
     created_at: datetime
     # Penalità totali calcolate (secondi), 0 se nessuna
     total_penalty_seconds: int = 0
+    
+    # Stint e pit
+    is_in_pit: bool = False
+    stint_elapsed_seconds: int = 0
+    stint_last_resume: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+class KartPitUpdate(BaseModel):
+    is_in_pit: bool
 
 
 # ── Race Penalty ─────────────────────────────────────────────────────────────
@@ -94,6 +102,10 @@ class MyKartResponse(BaseModel):
     penalties: List[PenaltyResponse] = []
     messages: List[MessageResponse] = []       # solo messaggi rivolti a questo kart o broadcast
     total_penalty_seconds: int = 0
+    
+    is_in_pit: bool = False
+    stint_elapsed_seconds: int = 0
+    stint_last_resume: Optional[datetime] = None
 
 
 # ── Event Status Update ──────────────────────────────────────────────────────

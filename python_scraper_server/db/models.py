@@ -195,6 +195,9 @@ class LiveKartAssignment(Base):
     team_id     = Column(String, nullable=False)       # UUID team (da EventRegistration.team_id)
     kart_number = Column(Integer, nullable=False)      # numero kart fisico assegnato al team
     team_name   = Column(String, nullable=True)        # nome squadra (denormalizzato per comodità)
+    is_in_pit   = Column(Boolean, default=False, nullable=False)
+    stint_elapsed_seconds = Column(Integer, default=0, nullable=False)
+    stint_last_resume = Column(DateTime, nullable=True)
     created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (

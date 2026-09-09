@@ -681,6 +681,7 @@ struct ClassificaLiveView: View {
         let totalCount = kartPenaltiesList.count
         let totalSec = parsedKart > 0 ? viewModel.totalPenaltySeconds(for: parsedKart) : 0
         let hasBlackFlag = kartPenaltiesList.contains(where: { $0.penaltyType == "black_flag" })
+        let isInPit = viewModel.kartAssignments.first(where: { $0.kartNumber == parsedKart })?.isInPit ?? false
 
         ZStack {
             RoundedRectangle(cornerRadius: 12)
@@ -722,7 +723,18 @@ struct ClassificaLiveView: View {
                                     .tracking(2)
                             }
                             
-                            // Badges Penalità
+                            // Badges Penalità e Pit
+                            if isInPit {
+                                Text("PIT")
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 2)
+                                    .background(Color.blue)
+                                    .cornerRadius(4)
+                                    .padding(.leading, 4)
+                            }
+
                             if hasBlackFlag {
                                 Text("DSQ")
                                     .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -731,7 +743,7 @@ struct ClassificaLiveView: View {
                                     .padding(.vertical, 2)
                                     .background(Color.red)
                                     .cornerRadius(4)
-                                    .padding(.leading, 4)
+                                    .padding(.leading, isInPit ? 2 : 4)
                             } else if actualPenaltiesCount > 0 {
                                 HStack(spacing: 4) {
                                     Text("+\(totalSec)s")
@@ -742,7 +754,7 @@ struct ClassificaLiveView: View {
                                         .background(Color.orange)
                                         .cornerRadius(4)
                                 }
-                                .padding(.leading, 4)
+                                .padding(.leading, isInPit ? 2 : 4)
                             }
                         }
 

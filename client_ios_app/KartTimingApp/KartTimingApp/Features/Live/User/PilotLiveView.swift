@@ -154,7 +154,10 @@ struct PilotLiveView: View {
                             flagBadge
                         }
                         Spacer()
-                        penaltyBadge
+                        VStack(alignment: .trailing, spacing: 12) {
+                            penaltyBadge
+                            stintBadge
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
@@ -401,6 +404,35 @@ struct PilotLiveView: View {
             .clipShape(Capsule())
             .overlay(Capsule().stroke(Color.orange.opacity(0.6), lineWidth: 2))
         }
+    }
+
+    // MARK: - Stint Badge
+
+    @ViewBuilder
+    private var stintBadge: some View {
+        TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+            HStack(spacing: 8) {
+                Image(systemName: "stopwatch.fill")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(myKart.isInPit ? .red : .kartGreen)
+                Text(formatStint(myKart.currentStintDuration))
+                    .font(.system(size: 22, weight: .heavy, design: .monospaced))
+                    .foregroundColor(myKart.isInPit ? .red : .white)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.4))
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 2))
+        }
+    }
+
+    private func formatStint(_ interval: TimeInterval) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.minute, .second]
+        formatter.unitsStyle = .positional
+        formatter.zeroFormattingBehavior = .pad
+        return formatter.string(from: interval) ?? "00:00"
     }
 
     // MARK: - Flash Logic

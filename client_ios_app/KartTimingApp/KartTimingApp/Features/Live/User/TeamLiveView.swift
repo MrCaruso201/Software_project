@@ -377,29 +377,43 @@ struct TeamLiveView: View {
                 
                 Divider().background(Color.white.opacity(0.1))
 
-                // NUMERO KART E PENALITÀ
-                HStack(spacing: 20) {
+                // NUMERO KART, STINT E PENALITÀ
+                HStack(spacing: 10) {
                     VStack(spacing: 6) {
                         if let kart = myKart.kartNumber {
                             Text("#\(kart)")
-                                .font(.system(size: 56, weight: .black, design: .monospaced))
+                                .font(.system(size: 36, weight: .black, design: .monospaced))
                                 .foregroundColor(.kartAccent)
                         } else {
                             Text("—")
-                                .font(.system(size: 56, weight: .black, design: .monospaced))
+                                .font(.system(size: 36, weight: .black, design: .monospaced))
                                 .foregroundColor(.kartDim)
                         }
-                        Text("NUMERO KART")
+                        Text("KART")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartDim)
                     }
                     .frame(maxWidth: .infinity)
 
-                    Divider().background(Color.white.opacity(0.1)).frame(height: 70)
+                    Divider().background(Color.white.opacity(0.1)).frame(height: 50)
+
+                    TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                        VStack(spacing: 6) {
+                            Text(formatStint(myKart.currentStintDuration))
+                                .font(.system(size: 28, weight: .black, design: .monospaced))
+                                .foregroundColor(myKart.isInPit ? .red : .white)
+                            Text("STINT")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundColor(.kartDim)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+
+                    Divider().background(Color.white.opacity(0.1)).frame(height: 50)
 
                     VStack(spacing: 6) {
                         Text("+\(myKart.totalPenaltySeconds)s")
-                            .font(.system(size: 56, weight: .black, design: .monospaced))
+                            .font(.system(size: 36, weight: .black, design: .monospaced))
                             .foregroundColor(myKart.totalPenaltySeconds > 0 ? .orange : .kartDim)
                         Text("PENALITÀ")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -413,6 +427,14 @@ struct TeamLiveView: View {
         .background(Color.kartPanel)
         .cornerRadius(14)
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.06), lineWidth: 1))
+    }
+
+    private func formatStint(_ interval: TimeInterval) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.minute, .second]
+        formatter.unitsStyle = .positional
+        formatter.zeroFormattingBehavior = .pad
+        return formatter.string(from: interval) ?? "00:00"
     }
 
     // MARK: - Penalties Card

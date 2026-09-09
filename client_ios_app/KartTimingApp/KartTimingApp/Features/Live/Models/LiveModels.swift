@@ -10,6 +10,9 @@ struct LiveKartAssignment: Identifiable, Codable {
     let teamName: String?
     let createdAt: String
     let totalPenaltySeconds: Int
+    let isInPit: Bool
+    let stintElapsedSeconds: Int
+    let stintLastResume: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -19,6 +22,27 @@ struct LiveKartAssignment: Identifiable, Codable {
         case teamName = "team_name"
         case createdAt = "created_at"
         case totalPenaltySeconds = "total_penalty_seconds"
+        case isInPit = "is_in_pit"
+        case stintElapsedSeconds = "stint_elapsed_seconds"
+        case stintLastResume = "stint_last_resume"
+    }
+
+    var parsedStintLastResume: Date? {
+        guard let ds = stintLastResume else { return nil }
+        let df = DateFormatter()
+        df.timeZone = TimeZone(abbreviation: "UTC")
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        if let d = df.date(from: ds) { return d }
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        return df.date(from: ds)
+    }
+    
+    var currentStintDuration: TimeInterval {
+        var total = Double(stintElapsedSeconds)
+        if let resumeDate = parsedStintLastResume, !isInPit {
+            total += Date().timeIntervalSince(resumeDate)
+        }
+        return max(0, total)
     }
 }
 
@@ -145,6 +169,9 @@ struct MyKartResponse: Codable {
     let penalties: [RacePenalty]
     let messages: [RaceMessage]
     let totalPenaltySeconds: Int
+    let isInPit: Bool
+    let stintElapsedSeconds: Int
+    let stintLastResume: String?
 
     enum CodingKeys: String, CodingKey {
         case kartNumber = "kart_number"
@@ -155,6 +182,9 @@ struct MyKartResponse: Codable {
         case penalties
         case messages
         case totalPenaltySeconds = "total_penalty_seconds"
+        case isInPit = "is_in_pit"
+        case stintElapsedSeconds = "stint_elapsed_seconds"
+        case stintLastResume = "stint_last_resume"
     }
     var actualPenalties: [RacePenalty] {
         penalties.filter { !$0.isWarning }
@@ -163,6 +193,25 @@ struct MyKartResponse: Codable {
     init() {
         kartNumber = nil; teamId = nil; teamName = nil; weight = nil; teamMembers = []
         penalties = []; messages = []; totalPenaltySeconds = 0
+        isInPit = false; stintElapsedSeconds = 0; stintLastResume = nil
+    }
+
+    var parsedStintLastResume: Date? {
+        guard let ds = stintLastResume else { return nil }
+        let df = DateFormatter()
+        df.timeZone = TimeZone(abbreviation: "UTC")
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        if let d = df.date(from: ds) { return d }
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        return df.date(from: ds)
+    }
+    
+    var currentStintDuration: TimeInterval {
+        var total = Double(stintElapsedSeconds)
+        if let resumeDate = parsedStintLastResume, !isInPit {
+            total += Date().timeIntervalSince(resumeDate)
+        }
+        return max(0, total)
     }
 }
 

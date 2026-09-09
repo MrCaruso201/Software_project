@@ -49,7 +49,7 @@ from live.schemas import (
     KartAssignmentCreate, KartAssignmentResponse,
     PenaltyCreate, PenaltyResponse, PenaltyTypeResponse,
     MessageCreate, MessageResponse,
-    MyKartResponse, EventStatusUpdate
+    MyKartResponse, EventStatusUpdate, KartPitUpdate
 )
 import json
 from datetime import datetime, timezone
@@ -174,6 +174,14 @@ def update_event_status(
                 title="L'evento è iniziato!",
                 message=f"L'evento {event.title} è appena iniziato! Apri l'app per seguire il live timing."
             )
+            
+        # 3. Avvia i timer stint per tutti i kart in pista
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        karts = db.query(LiveKartAssignment).filter(LiveKartAssignment.event_id == event_id).all()
+        for k in karts:
+            if not k.is_in_pit:
+                k.stint_elapsed_seconds = 0
+                k.stint_last_resume = now
 
     if body.status is not None:
         event.status = body.status
@@ -326,7 +334,10 @@ def assign_kart(
         event_id=event_id,
         team_id=body.team_id,
         kart_number=body.kart_number,
-        team_name=body.team_name
+        team_name=body.team_name,
+        is_in_pit=False,
+        stint_elapsed_seconds=0,
+        stint_last_resume=datetime.now(timezone.utc).replace(tzinfo=None) if db.query(Event).filter(Event.id==event_id).first().status == "started" else None
     )
     db.add(assignment)
     db.commit()
@@ -355,6 +366,58 @@ def remove_kart_assignment(
     db.commit()
     return None
 
+
+@router.patch("/live/{event_id}/karts/{kart_number}/pit", response_model=KartAssignmentResponse)
+def update_kart_pit_status(
+    event_id: int,
+    kart_number: int,
+    body: KartPitUpdate,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Aggiorna lo stato pit (in box o in pista) di un kart. Solo race_director/admin."""
+    _require_director(user_payload)
+    event = _get_event_or_404(event_id, db)
+    
+    assignment = db.query(LiveKartAssignment).filter(
+        LiveKartAssignment.event_id == event_id,
+        LiveKartAssignment.kart_number == kart_number
+    ).first()
+    
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    
+    if not assignment:
+        assignment = LiveKartAssignment(
+            event_id=event_id,
+            team_id="unassigned",
+            kart_number=kart_number,
+            team_name=None,
+            is_in_pit=False,
+            stint_elapsed_seconds=0,
+            stint_last_resume=now if event.status == "started" else None
+        )
+        db.add(assignment)
+        db.flush()
+        
+    if body.is_in_pit and not assignment.is_in_pit:
+        # Entra nei box
+        if assignment.stint_last_resume:
+            delta = int((now - assignment.stint_last_resume).total_seconds())
+            assignment.stint_elapsed_seconds += max(0, delta)
+        assignment.stint_last_resume = None
+        assignment.is_in_pit = True
+    elif not body.is_in_pit and assignment.is_in_pit:
+        # Esce dai box (azzeramento)
+        assignment.stint_elapsed_seconds = 0
+        assignment.stint_last_resume = now if event.status == "started" else None
+        assignment.is_in_pit = False
+        
+    db.commit()
+    db.refresh(assignment)
+    
+    r = KartAssignmentResponse.model_validate(assignment)
+    r.total_penalty_seconds = _penalty_seconds_by_kart(event_id, db).get(kart_number, 0)
+    return r
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Penalties
@@ -535,6 +598,22 @@ def send_message(
         text=body.text
     )
     db.add(message)
+    
+    # Handling stint pauses for red flags / checkered flags
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    karts = db.query(LiveKartAssignment).filter(LiveKartAssignment.event_id == event_id).all()
+    
+    if body.message_type in ("red_flag", "checkered_flag"):
+        for k in karts:
+            if k.stint_last_resume:
+                delta = int((now - k.stint_last_resume).total_seconds())
+                k.stint_elapsed_seconds += max(0, delta)
+                k.stint_last_resume = None
+    elif body.message_type == "green_flag" or (body.message_type == "custom" and body.text.strip().lower() == "gara iniziata"):
+        for k in karts:
+            if not k.is_in_pit:
+                k.stint_last_resume = now
+
     db.commit()
     db.refresh(message)
     return message
@@ -695,5 +774,8 @@ def get_my_kart(
         messages=[MessageResponse.model_validate(m) for m in messages],
         total_penalty_seconds=total_seconds,
         weight=registration.weight,
-        team_members=team_members
+        team_members=team_members,
+        is_in_pit=assignment.is_in_pit if assignment else False,
+        stint_elapsed_seconds=assignment.stint_elapsed_seconds if assignment else 0,
+        stint_last_resume=assignment.stint_last_resume if assignment else None
     )
