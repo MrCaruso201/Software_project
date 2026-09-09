@@ -26,6 +26,10 @@ struct UserLiveView: View {
                     TeamLiveView(event: event, viewModel: viewModel)
                         .tabItem { Label("Team View", systemImage: "person.3.fill") }
                 }
+
+                // ── Tab 3: Messaggi ────────────────────────────────────
+                UserMessaggiView(viewModel: viewModel)
+                    .tabItem { Label("Messaggi", systemImage: "bubble.left.and.bubble.right.fill") }
             }
             .tint(.kartAccent)
             .navigationTitle(viewModel.currentSessionName ?? event.title)

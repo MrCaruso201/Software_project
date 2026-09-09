@@ -28,8 +28,7 @@ struct TeamLiveView: View {
                         kartHeroCard
                         if event?.weightLimit != nil { weightCard }
                         if !myKart.penalties.isEmpty { penaltiesCard }
-                        if !myKart.messages.isEmpty { messagesCard }
-                        if myKart.penalties.isEmpty && myKart.messages.isEmpty && activeFlag == nil { allClearCard }
+                        if myKart.penalties.isEmpty && activeFlag == nil { allClearCard }
                     }
                     .padding(16)
                     .padding(.bottom, 30)
