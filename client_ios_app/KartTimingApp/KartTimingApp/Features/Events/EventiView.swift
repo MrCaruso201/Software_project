@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct EventiView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let server: DiscoveredServer
     @EnvironmentObject var authState: AuthState
     @StateObject private var viewModel = EventiViewModel()
@@ -451,6 +452,8 @@ struct EventiView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(Color.kartPanel.opacity(0.95))
+                .transition(.opacity)
+                .buttonStyle(KartPressButtonStyle())
             }
         }
         .cornerRadius(12)
@@ -461,7 +464,7 @@ struct EventiView: View {
         .padding(.horizontal, 16)
         .contentShape(Rectangle())
         .onTapGesture {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.9)) {
                 if isExpanded {
                     expandedEventId = nil
                 } else {

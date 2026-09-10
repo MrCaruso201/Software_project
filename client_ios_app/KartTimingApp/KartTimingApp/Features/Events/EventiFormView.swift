@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct EventiFormView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) var dismiss
     let server: DiscoveredServer
     let authState: AuthState
@@ -314,21 +315,23 @@ struct EventiFormView: View {
                             .font(.system(size: 14, weight: .semibold))
                         Spacer()
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartOnSuccess)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.green.opacity(0.85))
-                            .shadow(color: Color.green.opacity(0.4), radius: 10, x: 0, y: 4)
+                            .fill(Color.kartSuccess)
+                            .shadow(color: Color.kartSuccess.opacity(0.2), radius: 10, x: 0, y: 4)
                     )
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                     Spacer()
                 }
             }
         }
+        .buttonStyle(KartPressButtonStyle())
+        .sensoryFeedback(.success, trigger: showSavedBanner) { _, saved in saved }
         .alert("Elimina Evento", isPresented: $showDeleteConfirm) {
             Button("Elimina", role: .destructive) { deleteEvent() }
             Button("Annulla", role: .cancel) { }
@@ -518,9 +521,9 @@ struct EventiFormView: View {
                 isSaving = false
                 if success {
                     if suppressDismissOnSave {
-                        withAnimation(.spring(response: 0.4)) { showSavedBanner = true }
+                        withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.9)) { showSavedBanner = true }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                            withAnimation { showSavedBanner = false }
+                            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { showSavedBanner = false }
                             // Aggiorna i dati dopo che il banner è scomparso
                             onSaved?()
                         }

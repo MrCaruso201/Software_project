@@ -352,8 +352,13 @@ struct AdminEventRegistrationsView: View {
             
             Divider().background(Color.kartBorder(opacity: 0.08))
             
-            // Le azioni passano su più righe quando lo spazio è limitato.
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
+            // Tre azioni restano affiancate; quattro mantengono la disposizione adattiva.
+            LazyVGrid(
+                columns: team.overallStatus == "waitlist" || team.overallStatus == "confirmed"
+                    ? Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8), count: 3)
+                    : [GridItem(.adaptive(minimum: 140), spacing: 8)],
+                spacing: 8
+            ) {
                 if team.overallStatus == "waitlist" {
                     Button {
                         acceptWaitlistTeam(teamId: team.teamId)
@@ -369,7 +374,7 @@ struct AdminEventRegistrationsView: View {
                         .foregroundColor(.kartOnSuccess)
                         .cornerRadius(7)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(KartPressButtonStyle())
                 } else if team.overallStatus != "confirmed" {
                     Button {
                         confirmTeam(teamId: team.teamId)
@@ -385,7 +390,7 @@ struct AdminEventRegistrationsView: View {
                         .foregroundColor(.kartOnSuccess)
                         .cornerRadius(7)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(KartPressButtonStyle())
                     
                     Button {
                         moveToWaitlistTeam(teamId: team.teamId)
@@ -401,7 +406,7 @@ struct AdminEventRegistrationsView: View {
                         .foregroundColor(.white)
                         .cornerRadius(7)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(KartPressButtonStyle())
                 } else if team.overallStatus == "confirmed" {
                     Button {
                         unconfirmTeam(teamId: team.teamId)
@@ -417,7 +422,7 @@ struct AdminEventRegistrationsView: View {
                         .foregroundColor(.kartOnWarning)
                         .cornerRadius(7)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(KartPressButtonStyle())
                 }
                 
                 Button {
@@ -434,7 +439,7 @@ struct AdminEventRegistrationsView: View {
                     .foregroundColor(.kartForeground)
                     .cornerRadius(7)
                 }
-                .buttonStyle(PlainButtonStyle())
+                .buttonStyle(KartPressButtonStyle())
                 
                 Button {
                     deleteTeam(teamId: team.teamId)
@@ -450,8 +455,10 @@ struct AdminEventRegistrationsView: View {
                     .foregroundColor(.white)
                     .cornerRadius(7)
                 }
-                .buttonStyle(PlainButtonStyle())
+                .buttonStyle(KartPressButtonStyle())
             }
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(Color.kartPanel.opacity(0.4))
@@ -577,7 +584,7 @@ struct AdminEventRegistrationsView: View {
             }
 
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
+            HStack(spacing: 8) {
                 if reg.status == "waitlist" && reg.teamId == nil && isTeamEvent {
                     Button {
                         registrationToAssign = reg
@@ -590,7 +597,7 @@ struct AdminEventRegistrationsView: View {
                             .foregroundColor(.white)
                             .cornerRadius(6)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(KartPressButtonStyle())
                 }
                 
                 if !(isTeamEvent && reg.teamId == nil) {
@@ -606,7 +613,7 @@ struct AdminEventRegistrationsView: View {
                                 .foregroundColor(.kartOnSuccess)
                                 .cornerRadius(6)
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(KartPressButtonStyle())
                     } else if reg.status != "confirmed" {
                         Button {
                             confirmIndividual(registrationId: reg.id)
@@ -619,7 +626,7 @@ struct AdminEventRegistrationsView: View {
                                 .foregroundColor(.kartOnSuccess)
                                 .cornerRadius(6)
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(KartPressButtonStyle())
                         
                         Button {
                             moveToWaitlistIndividual(registrationId: reg.id)
@@ -632,7 +639,7 @@ struct AdminEventRegistrationsView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(6)
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(KartPressButtonStyle())
                     } else if reg.status == "confirmed" {
                         Button {
                             unconfirmIndividual(registrationId: reg.id)
@@ -645,7 +652,7 @@ struct AdminEventRegistrationsView: View {
                                 .foregroundColor(.kartOnWarning)
                                 .cornerRadius(6)
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(KartPressButtonStyle())
                     }
                 }
                 
@@ -660,8 +667,10 @@ struct AdminEventRegistrationsView: View {
                             .foregroundColor(.white)
                             .cornerRadius(6)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(KartPressButtonStyle())
             }
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
             .padding(.top, 4)
         }
         .padding(14)
@@ -982,7 +991,7 @@ struct AdminTeamSelectionSheet: View {
                                                     .cornerRadius(6)
                                             }
                                         }
-                                        .buttonStyle(PlainButtonStyle())
+                                        .buttonStyle(KartPressButtonStyle())
                                         .disabled(isAssigning)
                                     }
                                     .padding(.vertical, 6)

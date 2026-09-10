@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AdminReleaseFormSheetView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let server: DiscoveredServer
     @ObservedObject var viewModel: EventiViewModel
     let event: RaceEvent
@@ -42,9 +43,12 @@ struct AdminReleaseFormSheetView: View {
                             
                             HStack {
                                 if let msg = saveMessage {
-                                    Text(msg)
-                                        .font(.caption)
-                                        .foregroundColor(msg.contains("Errore") ? .kartRed : .green)
+                                    Label(msg, systemImage: msg.contains("Errore") ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(msg.contains("Errore") ? .kartRed : .kartSuccess)
+                                        .padding(8)
+                                        .background(Color.kartPanel, in: RoundedRectangle(cornerRadius: 8))
+                                        .transition(.opacity)
                                 }
                                 Spacer()
                                 HStack(spacing: 12) {
@@ -152,6 +156,11 @@ struct AdminReleaseFormSheetView: View {
                     }
                     .padding()
                 }
+            }
+            .buttonStyle(KartPressButtonStyle())
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: saveMessage)
+            .sensoryFeedback(.success, trigger: saveMessage) { _, message in
+                message == "Salvato con successo!"
             }
             .navigationTitle("Gestione Liberatoria")
             .navigationBarTitleDisplayMode(.inline)
