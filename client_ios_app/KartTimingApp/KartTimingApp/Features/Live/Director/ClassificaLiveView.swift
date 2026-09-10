@@ -130,7 +130,7 @@ struct ClassificaLiveView: View {
                                 Text("Carica CSV")
                             }
                             .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.black)
+                            .foregroundColor(.white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
                             .background(Color.kartAccent)

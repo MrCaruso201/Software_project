@@ -243,7 +243,7 @@ struct EventiFormView: View {
                             HStack(spacing: 10) {
                                 if isSaving {
                                     ProgressView()
-                                        .tint(isFormValid ? .black : .kartDim)
+                                        .tint(isFormValid ? .kartOnSuccess : .kartDim)
                                         .scaleEffect(0.85)
                                 } else {
                                     Image(systemName: "checkmark.circle.fill")
@@ -253,17 +253,17 @@ struct EventiFormView: View {
                                 }
                                 Spacer()
                             }
-                            .foregroundColor(isFormValid ? .black : .kartDim)
+                            .foregroundColor(isFormValid ? .kartOnSuccess : .kartDim)
                             .padding(.horizontal, 18)
                             .padding(.vertical, 16)
                             .frame(maxWidth: .infinity)
                             .background(
                                 isFormValid
-                                    ? Color.kartAccent
+                                    ? Color.kartSuccess
                                     : Color.kartForeground.opacity(0.08)
                             )
                             .cornerRadius(14)
-                            .shadow(color: isFormValid ? Color.kartAccent.opacity(0.35) : .clear,
+                            .shadow(color: isFormValid ? Color.kartSuccess.opacity(0.35) : .clear,
                                     radius: 10, x: 0, y: 4)
                         }
                         .disabled(!isFormValid || isSaving)

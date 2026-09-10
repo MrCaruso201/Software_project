@@ -90,7 +90,7 @@ struct ChangePasswordView: View {
                         HStack(spacing: 10) {
                             if isLoading {
                                 ProgressView()
-                                    .tint(.black)
+                                    .tint(.kartDim)
                                     .scaleEffect(0.9)
                             } else {
                                 Image(systemName: "checkmark.shield.fill")
@@ -99,22 +99,13 @@ struct ChangePasswordView: View {
                             Text(isLoading ? "Salvataggio…" : "Aggiorna password")
                                 .font(.system(size: 16, weight: .bold))
                         }
-                        .foregroundColor(.black)
+                        .foregroundColor(formIsValid && !isLoading ? .white : .kartDim)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 18)
-                        .background(
-                            formIsValid && !isLoading
-                                ? LinearGradient(
-                                    colors: [Color(red: 1.0, green: 0.82, blue: 0.0),
-                                             Color(red: 1.0, green: 0.65, blue: 0.0)],
-                                    startPoint: .leading, endPoint: .trailing)
-                                : LinearGradient(
-                                    colors: [Color.kartPanel, Color.kartPanel],
-                                    startPoint: .leading, endPoint: .trailing)
-                        )
-                        .cornerRadius(16)
+                        .background(formIsValid && !isLoading ? Color.kartAction : Color.kartPanel)
+                        .cornerRadius(12)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1)
                         )
                     }

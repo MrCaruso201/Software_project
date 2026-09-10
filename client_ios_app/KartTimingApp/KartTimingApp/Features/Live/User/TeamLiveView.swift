@@ -246,17 +246,17 @@ struct TeamLiveView: View {
                 } else if !bothKnown {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.kartBallastAmber)
+                            .foregroundColor(.kartWarning)
                         Text("Peso mancante: impossibile calcolare")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.kartBallastAmber)
+                            .foregroundColor(.kartWarning)
                     }
                     .padding(.vertical, 6)
                 } else if delta == 0 {
                     HStack(spacing: 10) {
                         Image(systemName: "equal.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundColor(.kartBallastSuccess)
+                            .foregroundColor(.kartSuccess)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Nessun cambio zavorra")
                                 .font(.system(size: 14, weight: .bold))
@@ -273,11 +273,11 @@ struct TeamLiveView: View {
                     HStack(spacing: 10) {
                         Image(systemName: isAdding ? "plus.circle.fill" : "minus.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundColor(.kartBallastAmber)
+                            .foregroundColor(.kartWarning)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(isAdding ? "Aggiungi \(abs(delta)) kg" : "Togli \(abs(delta)) kg")
                                 .font(.system(size: 16, weight: .black, design: .monospaced))
-                                .foregroundColor(.kartBallastAmber)
+                                .foregroundColor(.kartWarning)
                             Text(isAdding ? "Aggiungere zavorra al kart" : "Rimuovere zavorra dal kart")
                                 .font(.system(size: 11))
                                 .foregroundColor(.kartDim)
@@ -309,8 +309,8 @@ struct TeamLiveView: View {
         }()
 
         let accentColor: Color = {
-            if weight == nil { return .kartBallastAmber }
-            return requiredWeight > 0 ? .kartBallastAmber : .kartBallastSuccess
+            if weight == nil { return .kartWarning }
+            return requiredWeight > 0 ? .kartWarning : .kartSuccess
         }()
 
         return HStack(spacing: 12) {
@@ -339,12 +339,12 @@ struct TeamLiveView: View {
             if weight == nil {
                 Text("?")
                     .font(.system(size: 15, weight: .black, design: .monospaced))
-                    .foregroundColor(.kartBallastAmber)
+                    .foregroundColor(.kartWarning)
             } else if requiredWeight > 0 {
                 VStack(alignment: .trailing, spacing: 1) {
                     Text("+\(requiredWeight) kg")
                         .font(.system(size: 15, weight: .black, design: .monospaced))
-                        .foregroundColor(.kartBallastAmber)
+                        .foregroundColor(.kartWarning)
                     Text("zavorra")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
                         .foregroundColor(.kartSecondaryText(opacity: 0.65))
@@ -352,7 +352,7 @@ struct TeamLiveView: View {
             } else {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundColor(.kartBallastSuccess)
+                    .foregroundColor(.kartSuccess)
             }
         }
         .padding(.horizontal, 14)
@@ -559,14 +559,14 @@ struct TeamLiveView: View {
             HStack(spacing: 6) {
                 Image(systemName: "megaphone.fill")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.cyan)
+                    .foregroundColor(.kartInfo)
                 Text("MESSAGGI DAL DIRETTORE")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.cyan)
+                    .foregroundColor(.kartInfo)
                 Spacer()
             }
             .padding(14)
-            .background(Color.cyan.opacity(0.08))
+            .background(Color.kartInfo.opacity(0.08))
 
             VStack(spacing: 0) {
                 ForEach(myKart.messages.reversed()) { msg in
@@ -576,28 +576,20 @@ struct TeamLiveView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartMessageBorder(.cyan, opacity: 0.2), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartMessageBorder(.kartInfo, opacity: 0.2), lineWidth: 1))
     }
 
     private func userMessageRow(_ msg: RaceMessage) -> some View {
         let isCheckered = msg.messageType == "checkered_flag"
-        let color: Color = {
-            switch msg.messageType {
-            case "yellow_flag": return .yellow
-            case "red_flag":    return .red
-            case "green_flag":  return .green
-            case "checkered_flag": return .white
-            default:            return .cyan
-            }
-        }()
+        let color = Color.kartRaceMessage(msg.messageType)
 
         return HStack(alignment: .top, spacing: 12) {
             if isCheckered {
                 Image(systemName: "flag.checkered.2.crossed")
                     .font(.system(size: 10))
-                    .foregroundColor(.black)
+                    .foregroundColor(.kartForeground)
                     .frame(width: 18, height: 18)
-                    .background(Color.white)
+                    .background(Color.kartForeground.opacity(0.08))
                     .clipShape(Circle())
             } else {
                 Circle()
@@ -639,7 +631,7 @@ struct TeamLiveView: View {
         VStack(spacing: 12) {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 40))
-                .foregroundColor(.green)
+                .foregroundColor(.kartSuccess)
             Text("Tutto OK!")
                 .font(.system(size: 15, weight: .bold))
                 .foregroundColor(.kartForeground)
@@ -694,13 +686,13 @@ struct TeamLiveView: View {
         VStack(spacing: 16) {
             Image(systemName: "number.circle")
                 .font(.system(size: 52))
-                .foregroundColor(.kartDim.opacity(0.4))
+                .foregroundColor(.kartDim)
             Text("Nessun kart assegnato")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(.kartDim)
             Text("Il Race Director non ha ancora assegnato un kart alla tua squadra.")
                 .font(.system(size: 12))
-                .foregroundColor(.kartDim.opacity(0.6))
+                .foregroundColor(.kartDim)
                 .multilineTextAlignment(.center)
         }
         .padding(32)

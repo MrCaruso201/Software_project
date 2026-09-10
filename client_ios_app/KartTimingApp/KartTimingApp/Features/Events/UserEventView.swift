@@ -60,8 +60,8 @@ struct UserEventView: View {
         return "NON ISCRITTO"
     }
     private var registrationBadgeColor: Color {
-        if isPending   { return .yellow }
-        if isConfirmed { return .green }
+        if isPending   { return .kartWarning }
+        if isConfirmed { return .kartSuccess }
         if isWaitlist  { return .purple }
         return .gray
     }
@@ -329,10 +329,10 @@ struct UserEventView: View {
                         Text(deadlinePassed ? "Mettiti in Lista d'Attesa" : "Iscriviti")
                             .font(.system(size: 15, weight: .bold))
                     }
-                    .foregroundColor(deadlinePassed ? .white : .black)
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(deadlinePassed ? Color.purple : Color.kartAccent)
+                    .background(Color.kartAction)
                     .cornerRadius(12)
                 }
             }
@@ -341,13 +341,13 @@ struct UserEventView: View {
                 Button {
                     activeSheet = .editTeam(registration)
                 } label: {
-                    actionLabel("Modifica Squadra", icon: "pencil.circle.fill", bg: .orange)
+                    actionLabel("Modifica Squadra", icon: "pencil.circle.fill", bg: .kartPanel)
                 }
             } else if event.isTeamEvent && !registration.isTeamLeader {
                 Button {
                     activeSheet = .viewTeam(registration)
                 } label: {
-                    actionLabel("Vedi Squadra", icon: "person.3.fill", bg: .blue.opacity(0.8))
+                    actionLabel("Vedi Squadra", icon: "person.3.fill", bg: .kartPanel)
                 }
             } else {
                 Button {
@@ -357,7 +357,7 @@ struct UserEventView: View {
                         ) { _, _ in refreshRegistrations() }
                     }
                 } label: {
-                    actionLabel("Annulla Iscrizione", icon: "xmark.circle.fill", bg: .kartRed)
+                    actionLabel("Annulla Iscrizione", icon: "xmark.circle.fill", bg: .kartRed.opacity(0.08), destructive: true)
                 }
             }
         } else if isConfirmed {
@@ -365,13 +365,13 @@ struct UserEventView: View {
                 Button {
                     activeSheet = .editTeam(registration)
                 } label: {
-                    actionLabel("Confermata • Modifica Squadra", icon: "checkmark.circle.fill", bg: .green)
+                    actionLabel("Modifica Squadra", icon: "pencil.circle.fill", bg: .kartPanel)
                 }
             } else if let registration = reg, event.isTeamEvent, !registration.isTeamLeader {
                 Button {
                     activeSheet = .viewTeam(registration)
                 } label: {
-                    actionLabel("Confermata • Vedi Squadra", icon: "checkmark.circle.fill", bg: .green)
+                    actionLabel("Vedi Squadra", icon: "person.3.fill", bg: .kartPanel)
                 }
             } else {
                 HStack(spacing: 8) {
@@ -379,10 +379,10 @@ struct UserEventView: View {
                     Text("Iscrizione Confermata")
                         .font(.system(size: 15, weight: .bold))
                 }
-                .foregroundColor(.white)
+                .foregroundColor(.kartSuccess)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color.green)
+                .background(Color.kartSuccess.opacity(0.12))
                 .cornerRadius(12)
             }
         } else if isWaitlist {
@@ -390,13 +390,13 @@ struct UserEventView: View {
                 Button {
                     activeSheet = .editTeam(registration)
                 } label: {
-                    actionLabel("In Attesa • Modifica Squadra", icon: "clock.fill", bg: .purple)
+                    actionLabel("Modifica Squadra", icon: "pencil.circle.fill", bg: .kartPanel)
                 }
             } else if let registration = reg, event.isTeamEvent, !registration.isTeamLeader {
                 Button {
                     activeSheet = .viewTeam(registration)
                 } label: {
-                    actionLabel("In Attesa • Vedi Squadra", icon: "clock.fill", bg: .purple)
+                    actionLabel("Vedi Squadra", icon: "person.3.fill", bg: .kartPanel)
                 }
             }
         }
@@ -404,17 +404,18 @@ struct UserEventView: View {
 
     // MARK: - Helpers
 
-    private func actionLabel(_ text: String, icon: String, bg: Color) -> some View {
+    private func actionLabel(_ text: String, icon: String, bg: Color, destructive: Bool = false) -> some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
             Text(text)
                 .font(.system(size: 15, weight: .bold))
         }
-        .foregroundColor(.white)
+        .foregroundColor(destructive ? .kartRed : .kartForeground)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
         .background(bg)
         .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1))
     }
 
     private func deadlineBanner(icon: String, text: String, bg: Color, stroke: Color, fg: Color) -> some View {

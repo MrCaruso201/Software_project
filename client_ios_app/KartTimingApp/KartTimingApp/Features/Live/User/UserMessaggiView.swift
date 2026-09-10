@@ -72,7 +72,7 @@ struct UserMessaggiView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "bubble.left.and.bubble.right")
                             .font(.system(size: 40))
-                            .foregroundColor(.kartDim.opacity(0.4))
+                            .foregroundColor(.kartDim)
                         Text("Nessun messaggio o penalità")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.kartDim)
@@ -105,13 +105,7 @@ struct UserMessageRow: View {
     let message: RaceMessage
 
     private var accentColor: Color {
-        switch message.messageType {
-        case "yellow_flag": return .yellow
-        case "red_flag":    return .red
-        case "green_flag":  return .green
-        case "checkered_flag": return Color(white: 0.9)
-        default:            return .cyan
-        }
+        Color.kartRaceMessage(message.messageType)
     }
 
     var body: some View {

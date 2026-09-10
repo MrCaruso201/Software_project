@@ -52,7 +52,7 @@ struct AdminAddRegistrationSheetView: View {
                         } label: {
                             if isSaving {
                                 ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .black))
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 14)
                                     .background(Color.kartAccent)
@@ -63,7 +63,7 @@ struct AdminAddRegistrationSheetView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 14)
                                     .background(Color.kartAccent)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(.white)
                                     .cornerRadius(10)
                             }
                         }

@@ -429,7 +429,7 @@ private struct RegistrationButton: View {
         Button(action: action) {
             HStack {
                 if isLoading {
-                    ProgressView().tint(isDeadlinePassed ? .kartForeground : .black).padding(.trailing, 5)
+                    ProgressView().tint(.kartDim).padding(.trailing, 5)
                 }
                 Image(systemName: isDeadlinePassed
                     ? "clock.badge.exclamationmark.fill"
@@ -443,15 +443,9 @@ private struct RegistrationButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(isEnabled
-                ? (isDeadlinePassed ? Color.purple : Color.kartAccent)
-                : Color.gray.opacity(0.4)
-            )
-            .foregroundColor(isEnabled
-                ? (isDeadlinePassed ? .white : .black)
-                : .white
-            )
-            .cornerRadius(10)
+            .background(isEnabled && !isLoading ? Color.kartAction : Color.kartPanel)
+            .foregroundColor(isEnabled && !isLoading ? .white : .kartDim)
+            .cornerRadius(12)
         }
         .disabled(!isEnabled || isLoading)
     }

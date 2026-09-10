@@ -76,19 +76,39 @@ struct EventiView: View {
                     Spacer()
                 } else if let errorMessage = viewModel.errorMessage {
                     Spacer()
-                    Text(errorMessage)
-                        .foregroundColor(.kartRed)
-                        .multilineTextAlignment(.center)
-                        .padding()
+                    VStack(spacing: 12) {
+                        Image(systemName: "wifi.exclamationmark")
+                            .font(.system(size: 36))
+                            .foregroundColor(.kartRed)
+                        Text("Impossibile caricare gli eventi")
+                            .font(.headline)
+                            .foregroundColor(.kartForeground)
+                        Text(errorMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.kartDim)
+                            .multilineTextAlignment(.center)
+                        Button("Riprova") {
+                            viewModel.fetchEvents(serverURL: server.httpURL, forceRefresh: true)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.kartInfoAction)
+                    }
+                    .padding(24)
                     Spacer()
                 } else if filteredEvents.isEmpty {
                     Spacer()
                     Image(systemName: "calendar.badge.exclamationmark")
                         .font(.system(size: 40))
                         .foregroundColor(.kartDim)
-                    Text("Nessun evento trovato")
+                    Text(searchText.trimmingCharacters(in: .whitespaces).isEmpty ? "Nessun evento disponibile" : "Nessun risultato per questa ricerca")
                         .foregroundColor(.kartDim)
                         .padding(.top, 8)
+                    if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                        Button("Azzera ricerca") { searchText = "" }
+                            .buttonStyle(.bordered)
+                            .tint(.kartInfo)
+                            .padding(.top, 12)
+                    }
                     Spacer()
                 } else {
                     ScrollView {
@@ -150,6 +170,15 @@ struct EventiView: View {
                         .foregroundColor(.black)
                         .multilineTextAlignment(.center)
                         .disableAutocorrection(true)
+                    if !searchText.isEmpty {
+                        Button { searchText = "" } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.black.opacity(0.65))
+                                .padding(4)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Cancella ricerca")
+                    }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
@@ -251,6 +280,44 @@ struct EventiView: View {
         .padding(.horizontal, 16)
     }
     
+    private func eventDate(_ event: RaceEvent) -> some View {
+        Label {
+            Text(event.formattedDate)
+        } icon: {
+            Image(systemName: "calendar").foregroundColor(.kartAccent)
+        }
+    }
+
+    private func eventLocation(_ event: RaceEvent) -> some View {
+        Label {
+            Text(event.location)
+        } icon: {
+            Image(systemName: "mappin.and.ellipse").foregroundColor(.kartAccent)
+        }
+    }
+
+    private func compactRegistrationBadge(_ status: String) -> some View {
+        let label: String
+        let icon: String
+        let color: Color
+        switch status {
+        case "confirmed":
+            (label, icon, color) = ("Confermata", "checkmark.circle.fill", .kartSuccess)
+        case "waitlist":
+            (label, icon, color) = ("Lista d’attesa", "clock.fill", .purple)
+        case "pending_payment":
+            (label, icon, color) = ("In attesa pagamento", "exclamationmark.circle.fill", .kartWarning)
+        default:
+            (label, icon, color) = ("Iscritto", "person.crop.circle", .kartDim)
+        }
+        return Label(label, systemImage: icon)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.12), in: Capsule())
+    }
+
     // ── Event Row ─────────────────────────────────────────────────────────────
     private func eventRow(_ event: RaceEvent, isPast: Bool) -> some View {
         let isExpanded = expandedEventId == event.id
@@ -263,20 +330,23 @@ struct EventiView: View {
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.kartForeground)
                     
-                    HStack(spacing: 12) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "calendar")
-                                .foregroundColor(.kartAccent)
-                            Text(event.formattedDate)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 12) {
+                            eventDate(event)
+                            eventLocation(event)
                         }
-                        HStack(spacing: 4) {
-                            Image(systemName: "mappin.and.ellipse")
-                                .foregroundColor(.kartAccent)
-                            Text(event.location)
+                        VStack(alignment: .leading, spacing: 4) {
+                            eventDate(event)
+                            eventLocation(event)
                         }
                     }
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.kartDim)
+
+                    if !isExpanded && authState.currentUser?.role.canManageUsers != true,
+                       let status = viewModel.userRegistrations[event.id]?.status {
+                        compactRegistrationBadge(status)
+                    }
                 }
                 Spacer()
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
@@ -310,9 +380,9 @@ struct EventiView: View {
                     if !isAdmin, let regStatus = reg?.status {
                         let (badgeLabel, badgeColor): (String, Color) = {
                             switch regStatus {
-                            case "confirmed":       return ("✓ Iscrizione Confermata", .green)
+                            case "confirmed":       return ("✓ Iscrizione Confermata", .kartSuccess)
                             case "waitlist":        return ("⏳ In Lista d'Attesa", .purple)
-                            case "pending_payment": return ("⚠ In Attesa Pagamento", .yellow)
+                            case "pending_payment": return ("⚠ In Attesa Pagamento", .kartWarning)
                             default:                return ("Iscritto", .gray)
                             }
                         }()
@@ -338,7 +408,7 @@ struct EventiView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 11)
                                 .background(Color.kartAccent)
-                                .foregroundColor(.black)
+                                .foregroundColor(.white)
                                 .cornerRadius(8)
                             }
                             
@@ -355,7 +425,7 @@ struct EventiView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 11)
                                     .background(Color.kartAccent)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(.white)
                                     .cornerRadius(8)
                                 }
                             }
@@ -373,7 +443,7 @@ struct EventiView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 11)
                             .background(Color.kartAccent)
-                            .foregroundColor(.black)
+                            .foregroundColor(.white)
                             .cornerRadius(8)
                         }
                     }

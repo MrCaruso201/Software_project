@@ -24,7 +24,7 @@ struct AdminEventGestioneView: View {
     // MARK: - Computed Properties for UI
     private var actionButtonText: String { isStarted ? "Termina Evento" : "Avvia Evento" }
     private var actionButtonIcon: String { isStarted ? "stop.circle.fill" : "play.circle.fill" }
-    private var actionButtonColor: Color { isStarted ? .red : .black }
+    private var actionButtonColor: Color { isStarted ? .red : .white }
     private var actionButtonPendingStatus: String { isStarted ? "finished" : "started" }
     private var uploadButtonText: String { hasFinalResults ? "Sostituisci i risultati CSV" : "Carica i risultati CSV" }
 
@@ -48,7 +48,7 @@ struct AdminEventGestioneView: View {
                             // Badge stato
                             Text(isStarted ? "LIVE" : isFinished ? "TERMINATA" : "PROGRAMMATA")
                                 .font(.system(size: 10, weight: .black, design: .monospaced))
-                                .foregroundColor(isStarted ? .black : isFinished ? .kartDim : .kartAccent)
+                                .foregroundColor(isStarted ? .white : isFinished ? .kartDim : .kartAccent)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(isStarted ? Color.kartAccent : Color.kartPanel)
@@ -151,7 +151,7 @@ struct AdminEventGestioneView: View {
                                             .font(.system(size: 15, weight: .bold))
                                         Spacer()
                                     }
-                                    .foregroundColor(.black)
+                                    .foregroundColor(.white)
                                     .padding(.horizontal, 18)
                                     .padding(.vertical, 16)
                                     .frame(maxWidth: .infinity)
@@ -233,7 +233,7 @@ struct AdminEventGestioneView: View {
             }
             Spacer()
         }
-        .foregroundColor(.orange)
+        .foregroundColor(.kartWarning)
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity)

@@ -262,7 +262,7 @@ struct AdminEventRegistrationsView: View {
                             if team.members.count < maxP && team.acceptsExtraPilots {
                                 Text("• ACCETTA EXTRA")
                                     .font(.system(size: 9, weight: .bold))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(.kartSuccess)
                             }
                         }
                     }
@@ -285,9 +285,9 @@ struct AdminEventRegistrationsView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(team.overallStatus == "confirmed"
-                                    ? Color.green.opacity(0.2)
-                                    : Color.orange.opacity(0.2))
-                        .foregroundColor(team.overallStatus == "confirmed" ? .green : .orange)
+                                    ? Color.kartSuccess.opacity(0.2)
+                                    : Color.kartWarning.opacity(0.2))
+                        .foregroundColor(team.overallStatus == "confirmed" ? .kartSuccess : .kartWarning)
                         .cornerRadius(5)
                 }
             }
@@ -332,9 +332,9 @@ struct AdminEventRegistrationsView: View {
                         if member.hasSignedRelease == true {
                             Image(systemName: "signature")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.green)
+                                .foregroundColor(.kartSuccess)
                                 .padding(4)
-                                .background(Color.green.opacity(0.2))
+                                .background(Color.kartSuccess.opacity(0.2))
                                 .clipShape(Circle())
                         }
                     }
@@ -352,8 +352,8 @@ struct AdminEventRegistrationsView: View {
             
             Divider().background(Color.kartBorder(opacity: 0.08))
             
-            // ── Azioni admin ───────────────────────────────────────
-            HStack(spacing: 8) {
+            // Le azioni passano su più righe quando lo spazio è limitato.
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
                 if team.overallStatus == "waitlist" {
                     Button {
                         acceptWaitlistTeam(teamId: team.teamId)
@@ -365,8 +365,8 @@ struct AdminEventRegistrationsView: View {
                         .font(.system(size: 12, weight: .bold))
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
+                        .background(Color.kartSuccess)
+                        .foregroundColor(.kartOnSuccess)
                         .cornerRadius(7)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -381,8 +381,8 @@ struct AdminEventRegistrationsView: View {
                         .font(.system(size: 11, weight: .bold))
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
-                        .background(Color.green)
-                        .foregroundColor(.white)
+                        .background(Color.kartSuccess)
+                        .foregroundColor(.kartOnSuccess)
                         .cornerRadius(7)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -413,8 +413,8 @@ struct AdminEventRegistrationsView: View {
                         .font(.system(size: 11, weight: .bold))
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
-                        .background(Color.orange)
-                        .foregroundColor(.white)
+                        .background(Color.kartWarning)
+                        .foregroundColor(.kartOnWarning)
                         .cornerRadius(7)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -430,8 +430,8 @@ struct AdminEventRegistrationsView: View {
                     .font(.system(size: 11, weight: .bold))
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
+                    .background(Color.kartForeground.opacity(0.06))
+                    .foregroundColor(.kartForeground)
                     .cornerRadius(7)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -461,7 +461,7 @@ struct AdminEventRegistrationsView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(
                     team.overallStatus == "confirmed"
-                        ? Color.green.opacity(0.2)
+                        ? Color.kartSuccess.opacity(0.2)
                         : Color.kartForeground.opacity(0.07),
                     lineWidth: 1
                 )
@@ -537,9 +537,9 @@ struct AdminEventRegistrationsView: View {
                         if reg.hasSignedRelease == true {
                             Image(systemName: "signature")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.green)
+                                .foregroundColor(.kartSuccess)
                                 .padding(4)
-                                .background(Color.green.opacity(0.2))
+                                .background(Color.kartSuccess.opacity(0.2))
                                 .clipShape(Circle())
                         }
                     }
@@ -563,21 +563,21 @@ struct AdminEventRegistrationsView: View {
                     Text("Confermata")
                         .font(.caption).bold()
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.green.opacity(0.2))
-                        .foregroundColor(.green)
+                        .background(Color.kartSuccess.opacity(0.2))
+                        .foregroundColor(.kartSuccess)
                         .cornerRadius(4)
                 } else {
                     Text("Attesa Pag.")
                         .font(.caption).bold()
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.orange.opacity(0.2))
-                        .foregroundColor(.orange)
+                        .background(Color.kartWarning.opacity(0.2))
+                        .foregroundColor(.kartWarning)
                         .cornerRadius(4)
                 }
             }
 
 
-            HStack(spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
                 if reg.status == "waitlist" && reg.teamId == nil && isTeamEvent {
                     Button {
                         registrationToAssign = reg
@@ -586,7 +586,7 @@ struct AdminEventRegistrationsView: View {
                             .font(.system(size: 12, weight: .bold))
                             .padding(.vertical, 6)
                             .frame(maxWidth: .infinity)
-                            .background(Color.blue)
+                            .background(Color.kartInfoAction)
                             .foregroundColor(.white)
                             .cornerRadius(6)
                     }
@@ -602,8 +602,8 @@ struct AdminEventRegistrationsView: View {
                                 .font(.system(size: 12, weight: .bold))
                                 .padding(.vertical, 6)
                                 .frame(maxWidth: .infinity)
-                                .background(Color.blue)
-                                .foregroundColor(.white)
+                                .background(Color.kartSuccess)
+                                .foregroundColor(.kartOnSuccess)
                                 .cornerRadius(6)
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -615,8 +615,8 @@ struct AdminEventRegistrationsView: View {
                                 .font(.system(size: 11, weight: .bold))
                                 .padding(.vertical, 6)
                                 .frame(maxWidth: .infinity)
-                                .background(Color.green)
-                                .foregroundColor(.white)
+                                .background(Color.kartSuccess)
+                                .foregroundColor(.kartOnSuccess)
                                 .cornerRadius(6)
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -641,8 +641,8 @@ struct AdminEventRegistrationsView: View {
                                 .font(.system(size: 11, weight: .bold))
                                 .padding(.vertical, 6)
                                 .frame(maxWidth: .infinity)
-                                .background(Color.orange)
-                                .foregroundColor(.white)
+                                .background(Color.kartWarning)
+                                .foregroundColor(.kartOnWarning)
                                 .cornerRadius(6)
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -930,7 +930,7 @@ struct AdminTeamSelectionSheet: View {
                         VStack(spacing: 12) {
                             Image(systemName: "exclamationmark.triangle")
                                 .font(.system(size: 40))
-                                .foregroundColor(.orange)
+                                .foregroundColor(.kartWarning)
                             Text("Nessuna squadra disponibile.")
                                 .foregroundColor(.kartForeground)
                                 .font(.headline)
@@ -971,13 +971,13 @@ struct AdminTeamSelectionSheet: View {
                                             if isAssigning {
                                                 ProgressView().tint(.white)
                                                     .frame(width: 70, height: 30)
-                                                    .background(Color.blue)
+                                                    .background(Color.kartInfoAction)
                                                     .cornerRadius(6)
                                             } else {
                                                 Text("Scegli")
                                                     .font(.system(size: 13, weight: .bold))
                                                     .frame(width: 70, height: 30)
-                                                    .background(Color.blue)
+                                                    .background(Color.kartInfoAction)
                                                     .foregroundColor(.white)
                                                     .cornerRadius(6)
                                             }
@@ -1104,7 +1104,7 @@ struct AdminCreateTeamFormSheet: View {
                         .listRowBackground(
                             (teamName.trimmingCharacters(in: .whitespaces).isEmpty || isCreating)
                                 ? Color.gray
-                                : Color.blue
+                                : Color.kartInfoAction
                         )
                     }
                 }

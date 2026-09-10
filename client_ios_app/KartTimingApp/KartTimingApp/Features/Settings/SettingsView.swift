@@ -23,19 +23,19 @@ struct SettingsView: View {
                             Image(systemName: "person.crop.circle.badge.checkmark")
                                 .font(.title3)
                             Text("Informazioni Personali")
-                                .font(.title2.weight(.bold))
+                                .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundColor(.kartForeground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 18)
                         .background(Color.kartPanel)
-                        .cornerRadius(16)
+                        .cornerRadius(12)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
                         )
                     }
-                    .padding(.horizontal, 30)
+                    .padding(.horizontal, 16)
 
                     // ── Cambia Password ──────────────────────────────────────
                     NavigationLink {
@@ -46,19 +46,19 @@ struct SettingsView: View {
                             Image(systemName: "lock.rotation")
                                 .font(.title3)
                             Text("Cambia password")
-                                .font(.title2.weight(.bold))
+                                .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundColor(.kartForeground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 18)
                         .background(Color.kartPanel)
-                        .cornerRadius(16)
+                        .cornerRadius(12)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
                         )
                     }
-                    .padding(.horizontal, 30)
+                    .padding(.horizontal, 16)
 
                     // ── Area Admin ───────────────────────────────────────────
                     if authState.currentUser?.role.canManageUsers == true {
@@ -70,19 +70,19 @@ struct SettingsView: View {
                                 Image(systemName: "person.2.fill")
                                     .font(.title3)
                                 Text("Gestisci Utenti")
-                                    .font(.title2.weight(.bold))
+                                    .font(.system(size: 16, weight: .semibold))
                             }
                             .foregroundColor(.kartForeground)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
                             .background(Color.kartPanel)
-                            .cornerRadius(16)
+                            .cornerRadius(12)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 16)
+                                RoundedRectangle(cornerRadius: 12)
                                     .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
                             )
                         }
-                        .padding(.horizontal, 30)
+                        .padding(.horizontal, 16)
 
                         NavigationLink {
                             AdminKartodromoView(server: appEnv.server(token: authState.currentToken ?? ""))
@@ -92,19 +92,19 @@ struct SettingsView: View {
                                 Image(systemName: "flag.checkered.2.crossed")
                                     .font(.title3)
                                 Text("Circuiti")
-                                    .font(.title2.weight(.bold))
+                                    .font(.system(size: 16, weight: .semibold))
                             }
                             .foregroundColor(.kartForeground)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
                             .background(Color.kartPanel)
-                            .cornerRadius(16)
+                            .cornerRadius(12)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 16)
+                                RoundedRectangle(cornerRadius: 12)
                                     .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
                             )
                         }
-                        .padding(.horizontal, 30)
+                        .padding(.horizontal, 16)
                     }
 
                     // ── Logout ───────────────────────────────────────────────
@@ -115,20 +115,20 @@ struct SettingsView: View {
                             Image(systemName: "rectangle.portrait.and.arrow.right")
                                 .font(.title3)
                             Text("Logout")
-                                .font(.title2.weight(.bold))
+                                .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundColor(.kartRed)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 18)
                         .background(Color.kartRed.opacity(0.08))
                         .background(Color.kartPanel)
-                        .cornerRadius(16)
+                        .cornerRadius(12)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.kartRed.opacity(0.25), lineWidth: 1)
                         )
                     }
-                    .padding(.horizontal, 30)
+                    .padding(.horizontal, 16)
 
                 }
                 .padding(.vertical, 24)
@@ -156,12 +156,12 @@ struct SettingsView: View {
         }
         .padding(18)
         .background(Color.kartPanel)
-        .cornerRadius(16)
+        .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
         )
-        .padding(.horizontal, 30)
+        .padding(.horizontal, 16)
     }
 
 }

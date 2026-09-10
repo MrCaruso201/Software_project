@@ -121,13 +121,13 @@ struct KartAssignmentView: View {
         VStack(spacing: 16) {
             Image(systemName: event.isTeamEvent ? "person.3.fill" : "person.fill")
                 .font(.system(size: 44))
-                .foregroundColor(.kartDim.opacity(0.4))
+                .foregroundColor(.kartDim)
             Text(event.isTeamEvent ? "Nessuna squadra iscritta" : "Nessun pilota iscritto")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.kartDim)
             Text("Le iscrizioni appariranno qui.")
                 .font(.system(size: 12))
-                .foregroundColor(.kartDim.opacity(0.6))
+                .foregroundColor(.kartDim)
         }
         .padding(40)
     }

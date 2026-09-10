@@ -35,28 +35,45 @@ extension Color {
     static let kartGreen   = Color(red: 0.13, green: 0.76, blue: 0.37)
     static let kartRed     = Color(red: 0.93, green: 0.27, blue: 0.27)
     static let kartDim     = adaptive(light: UIColor.black.withAlphaComponent(0.68),
-                                      dark: UIColor.white.withAlphaComponent(0.35))
+                                      dark: UIColor.white.withAlphaComponent(0.65))
 
-    // Zavorra: ambra per le azioni e verde per gli stati corretti.
-    // Tonalità più scure in modalità chiara per mantenere leggibili i valori.
-    static let kartBallastAmber = adaptive(
-        light: UIColor(red: 0.55, green: 0.32, blue: 0.04, alpha: 1),
+    // Colori semantici per avvisi e conferme su superfici adattive.
+    // Tema chiaro: colori dei controlli finestra macOS, giallo #FFBD2E e verde #28C840.
+    static let kartWarning = adaptive(
+        light: UIColor(red: 255.0 / 255, green: 189.0 / 255, blue: 46.0 / 255, alpha: 1),
         dark: UIColor(red: 0.91, green: 0.68, blue: 0.30, alpha: 1)
     )
-    static let kartBallastSuccess = adaptive(
-        light: UIColor(red: 0.16, green: 0.43, blue: 0.28, alpha: 1),
-        dark: UIColor(red: 0.40, green: 0.76, blue: 0.53, alpha: 1)
+    static let kartSuccess = adaptive(
+        light: UIColor(red: 40.0 / 255, green: 200.0 / 255, blue: 64.0 / 255, alpha: 1),
+        dark: UIColor(red: 0.08, green: 0.78, blue: 0.32, alpha: 1)
     )
 
     // Testi, bordi e superfici neutre seguono il tema di sistema.
     static let kartForeground = adaptive(light: .black, dark: .white)
     static let kartInset = adaptive(light: .white, dark: .black)
 
-    // In modalità chiara riprende il giallo del selettore piste in Timing.
-    static let kartWarningText = adaptive(
-        light: UIColor(red: 1.0, green: 0.82, blue: 0.0, alpha: 1),
-        dark: UIColor(Color.yellow)
+    static let kartOnSuccess = adaptive(light: UIColor(white: 0.20, alpha: 1), dark: .black)
+    static let kartOnWarning = adaptive(light: UIColor(white: 0.20, alpha: 1), dark: .black)
+    static let kartInfoAction = Color(red: 0.02, green: 0.32, blue: 0.72)
+
+    static let kartWarningText = kartWarning
+    static let kartInfo = adaptive(
+        light: UIColor(red: 0.02, green: 0.32, blue: 0.72, alpha: 1),
+        dark: UIColor(red: 0.12, green: 0.52, blue: 1.0, alpha: 1)
     )
+    // Sfondo delle azioni primarie, con testo bianco in entrambi i temi.
+    static let kartAction = Color(red: 0.75, green: 0.10, blue: 0.16)
+
+    static func kartRaceMessage(_ type: String) -> Color {
+        switch type {
+        case "yellow_flag": return .kartWarning
+        case "red_flag": return .kartRed
+        case "green_flag": return .kartSuccess
+        case "checkered_flag": return .kartForeground
+        default: return .kartInfo
+        }
+    }
+
     // Testi delle penalità leggibili anche sull’intestazione gialla.
     static let kartPenaltyText = adaptive(
         light: UIColor(red: 0.22, green: 0.18, blue: 0.08, alpha: 1),
@@ -93,7 +110,7 @@ extension Color {
 
     static func kartSecondaryText(opacity: Double) -> Color {
         adaptive(light: UIColor.black.withAlphaComponent(CGFloat(max(opacity, 0.65))),
-                 dark: UIColor.white.withAlphaComponent(CGFloat(opacity)))
+                 dark: UIColor.white.withAlphaComponent(CGFloat(max(opacity, 0.65))))
     }
 
     private static func adaptive(light: UIColor, dark: UIColor) -> Color {

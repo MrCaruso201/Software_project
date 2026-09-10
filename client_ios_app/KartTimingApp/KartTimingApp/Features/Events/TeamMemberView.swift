@@ -140,13 +140,13 @@ struct TeamMemberView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "signature")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.green)
+                            .foregroundColor(.kartSuccess)
                             .padding(4)
-                            .background(Color.green.opacity(0.2))
+                            .background(Color.kartSuccess.opacity(0.2))
                             .clipShape(Circle())
                         Text("Liberatoria firmata")
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(.green)
+                            .foregroundColor(.kartSuccess)
                     }
                 }
                 if let email = member.email {
@@ -169,9 +169,9 @@ struct TeamMemberView: View {
     private func statusBadge(_ status: String) -> some View {
         let (label, color): (String, Color) = {
             switch status {
-            case "confirmed":   return ("OK", .green)
+            case "confirmed":   return ("OK", .kartSuccess)
             case "waitlist":    return ("Attesa", .purple)
-            default:            return ("Pend.", .orange)
+            default:            return ("Pend.", .kartWarning)
             }
         }()
         Text(label)

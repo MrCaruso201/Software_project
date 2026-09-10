@@ -212,9 +212,9 @@ struct UploadResultsView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green).font(.system(size: 18))
+                    .foregroundColor(.kartSuccess).font(.system(size: 18))
                 Text("\(count) risultat\(count == 1 ? "o" : "i") importat\(count == 1 ? "o" : "i") con successo")
-                    .font(.system(size: 14, weight: .bold)).foregroundColor(.green)
+                    .font(.system(size: 14, weight: .bold)).foregroundColor(.kartSuccess)
             }
             .padding(.horizontal, 14).padding(.top, 12)
 

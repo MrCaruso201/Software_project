@@ -69,7 +69,7 @@ struct NotificationsPanelView: View {
         VStack(spacing: 20) {
             Image(systemName: "bell.slash.fill")
                 .font(.system(size: 52))
-                .foregroundColor(.kartDim.opacity(0.5))
+                .foregroundColor(.kartDim)
             Text("Nessuna notifica")
                 .font(.title3)
                 .fontWeight(.semibold)
@@ -91,14 +91,14 @@ struct NotificationRowView: View {
 
     private var iconColor: Color {
         switch notification.type {
-        case .pendingPayment: return .orange
+        case .pendingPayment: return .kartWarning
         case .waitlist:       return .purple
         case .upcomingEvent:  return Color(red: 1.0, green: 0.8, blue: 0.0)
         case .newEvent:       return .green
         case .adminAction(let serverNotif, _):
             switch serverNotif.type {
             case "registration_accepted", "registration_confirmed": return .green
-            case "registration_unconfirmed": return .orange
+            case "registration_unconfirmed": return .kartWarning
             case "moved_to_waitlist": return .purple
             case "registration_deleted", "release_rejected": return .red
             default: return .blue
@@ -142,7 +142,7 @@ struct NotificationRowView: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Text(relativeTime)
                         .font(.system(size: 11))
-                        .foregroundColor(.kartDim.opacity(0.7))
+                        .foregroundColor(.kartDim)
                         .padding(.top, 2)
                 }
 
@@ -157,11 +157,12 @@ struct NotificationRowView: View {
                 }
             }
             .padding(14)
-            .background(
-                notification.isRead
-                    ? Color.kartPanel
-                    : Color.kartPanel.opacity(0.9)
-            )
+            .background {
+                Color.kartPanel
+                if !notification.isRead {
+                    iconColor.opacity(0.08)
+                }
+            }
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)

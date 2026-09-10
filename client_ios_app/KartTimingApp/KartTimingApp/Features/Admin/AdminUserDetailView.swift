@@ -91,7 +91,7 @@ struct AdminUserDetailView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "flag.slash")
                         .font(.system(size: 36))
-                        .foregroundColor(.kartDim.opacity(0.4))
+                        .foregroundColor(.kartDim)
                     Text("Nessuna iscrizione futura")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.kartDim)
@@ -167,7 +167,7 @@ struct AdminUserDetailView: View {
                 if reg.hasSignedRelease == true {
                     Label("Liberatoria Firmata", systemImage: "signature")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.green)
+                        .foregroundColor(.kartSuccess)
                 }
             }
             Spacer()
@@ -193,8 +193,8 @@ struct AdminUserDetailView: View {
     
     private func statusColor(_ status: String) -> Color {
         switch status {
-        case "confirmed":       return .green
-        case "pending_payment": return .orange
+        case "confirmed":       return .kartSuccess
+        case "pending_payment": return .kartWarning
         case "waitlist":        return .purple
         default:                return .kartDim
         }

@@ -114,7 +114,7 @@ struct AdminKartodromoView: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.orange)
+                        .foregroundColor(.kartWarning)
                 }
             }
         }
@@ -176,7 +176,7 @@ struct AdminKartodromoView: View {
                         if !k.luogo.isEmpty {
                             HStack(spacing: 4) {
                                 Image(systemName: "mappin.and.ellipse")
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(.kartWarning)
                                 Text(k.luogo)
                             }
                         }
@@ -201,7 +201,7 @@ struct AdminKartodromoView: View {
                     // URL timing
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "link")
-                            .foregroundColor(.orange)
+                            .foregroundColor(.kartWarning)
                             .font(.system(size: 12))
                         Text(k.url)
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
@@ -213,7 +213,7 @@ struct AdminKartodromoView: View {
                     if !k.sitoWeb.isEmpty {
                         HStack(alignment: .top, spacing: 6) {
                             Image(systemName: "globe")
-                                .foregroundColor(.orange)
+                                .foregroundColor(.kartWarning)
                                 .font(.system(size: 12))
                             Text(k.sitoWeb)
                                 .font(.system(size: 11, weight: .medium, design: .monospaced))

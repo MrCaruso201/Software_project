@@ -300,13 +300,13 @@ struct AnalisiView: View {
             Spacer()
             Image(systemName: icon)
                 .font(.system(size: 44))
-                .foregroundColor(.kartDim.opacity(0.4))
+                .foregroundColor(.kartDim)
             Text(message)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.kartDim)
             Text(sub)
                 .font(.system(size: 12))
-                .foregroundColor(.kartDim.opacity(0.6))
+                .foregroundColor(.kartDim)
                 .multilineTextAlignment(.center)
             Spacer()
         }
@@ -505,7 +505,7 @@ struct CircuitCard: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label)
                 .font(.system(size: 8, weight: .bold, design: .monospaced))
-                .foregroundColor(.kartDim.opacity(0.7))
+                .foregroundColor(.kartDim)
             Text(value)
                 .font(.system(size: 14, weight: .bold, design: .monospaced))
                 .foregroundColor(accent)
@@ -630,13 +630,13 @@ struct ClassificationSheet: View {
                     VStack(spacing: 14) {
                         Image(systemName: "trophy.slash")
                             .font(.system(size: 44))
-                            .foregroundColor(.kartDim.opacity(0.35))
+                            .foregroundColor(.kartDim)
                         Text("Classifica non ancora pubblicata")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.kartDim)
                         Text("L'admin pubblicherà i risultati dopo la gara")
                             .font(.system(size: 12))
-                            .foregroundColor(.kartDim.opacity(0.6))
+                            .foregroundColor(.kartDim)
                             .multilineTextAlignment(.center)
                     }
                     .padding(32)
@@ -982,7 +982,7 @@ struct AddCircuitTimeSheet: View {
                         // Save button
                         Button(action: save) {
                             if isSaving {
-                                ProgressView().tint(.black)
+                                ProgressView().tint(canSave ? .white : .kartDim)
                             } else {
                                 Text("Salva tempo")
                                     .font(.system(size: 16, weight: .bold))
@@ -991,7 +991,7 @@ struct AddCircuitTimeSheet: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
                         .background(!canSave ? Color.kartDim.opacity(0.3) : Color.kartAccent)
-                        .foregroundColor(!canSave ? .kartDim : .black)
+                        .foregroundColor(!canSave ? .kartDim : .white)
                         .cornerRadius(12)
                         .disabled(!canSave || isSaving)
 

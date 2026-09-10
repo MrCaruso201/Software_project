@@ -154,7 +154,7 @@ struct ReleaseFormSignView: View {
                     
                     Button(action: submitSignature) {
                         if isSigning {
-                            ProgressView().tint(.black)
+                            ProgressView().tint(.white)
                         } else {
                             Text("Conferma e Invia")
                                 .font(.system(size: 14, weight: .bold))
@@ -163,7 +163,7 @@ struct ReleaseFormSignView: View {
                     }
                     .padding(.vertical, 14)
                     .background(Color.kartAccent)
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
                     .cornerRadius(12)
                     .disabled(isSigning)
                 }

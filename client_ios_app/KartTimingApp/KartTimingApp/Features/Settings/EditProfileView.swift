@@ -85,7 +85,7 @@ struct EditProfileView: View {
                                     .overlay(
                                         Image(systemName: "camera.fill")
                                             .font(.system(size: 12))
-                                            .foregroundColor(.black)
+                                            .foregroundColor(.white)
                                     )
                                     .offset(x: 28, y: 28)
                             }
@@ -157,7 +157,7 @@ struct EditProfileView: View {
                             HStack(spacing: 10) {
                                 if isLoading {
                                     ProgressView()
-                                        .tint(.black)
+                                        .tint(.kartDim)
                                         .scaleEffect(0.9)
                                 } else {
                                     Image(systemName: "checkmark.shield.fill")
@@ -166,22 +166,13 @@ struct EditProfileView: View {
                                 Text(isLoading ? "Salvataggio…" : "Salva Profilo")
                                     .font(.system(size: 16, weight: .bold))
                             }
-                            .foregroundColor(.black)
+                            .foregroundColor(!isLoading ? .white : .kartDim)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
-                            .background(
-                                !isLoading
-                                    ? LinearGradient(
-                                        colors: [Color.kartAccent,
-                                                 Color(red: 1.0, green: 0.65, blue: 0.0)],
-                                        startPoint: .leading, endPoint: .trailing)
-                                    : LinearGradient(
-                                        colors: [Color.kartPanel, Color.kartPanel],
-                                        startPoint: .leading, endPoint: .trailing)
-                            )
-                            .cornerRadius(16)
+                            .background(!isLoading ? Color.kartAction : Color.kartPanel)
+                            .cornerRadius(12)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 16)
+                                RoundedRectangle(cornerRadius: 12)
                                     .stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1)
                             )
                         }

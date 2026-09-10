@@ -350,7 +350,7 @@ struct DevModeToggle: View {
                         Text("\(host):\(port)")
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
                     }
-                    .foregroundColor(.orange.opacity(0.8))
+                    .foregroundColor(.kartWarning)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(Color.orange.opacity(0.12))
@@ -405,7 +405,7 @@ struct ServerSelectionView: View {
                                     Spacer()
                                     if AppEnvironment.shared.selectedLocalHost == server.host {
                                         Image(systemName: "checkmark")
-                                            .foregroundColor(.orange)
+                                            .foregroundColor(.kartWarning)
                                     }
                                 }
                             }
@@ -425,7 +425,7 @@ struct ServerSelectionView: View {
                         isEnabled = false
                         isPresented = false
                     }
-                    .foregroundColor(.orange)
+                    .foregroundColor(.kartWarning)
                 }
             }
         }

@@ -26,7 +26,9 @@ private extension RaceMessage {
     }
 
     var flagColor: Color? {
-        flagFlashColor  // yellow, red, green, white for checkered
+        // Il badge segue il tema; il flash conserva il colore della bandiera.
+        if messageType == "checkered_flag" { return .kartForeground }
+        return flagFlashColor
     }
 
     var flagLabel: String {
@@ -580,13 +582,13 @@ struct PilotLiveView: View {
         VStack(spacing: 16) {
             Image(systemName: "person.slash")
                 .font(.system(size: 52))
-                .foregroundColor(.kartDim.opacity(0.4))
+                .foregroundColor(.kartDim)
             Text("Kart non ancora assegnato")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(.kartDim)
             Text("Attendi che il Race Director assegni un numero kart alla tua squadra.")
                 .font(.system(size: 12))
-                .foregroundColor(.kartDim.opacity(0.6))
+                .foregroundColor(.kartDim)
                 .multilineTextAlignment(.center)
         }
         .padding(32)

@@ -65,7 +65,7 @@ struct AdminReleaseFormSheetView: View {
                                     
                                     Button(action: saveReleaseForm) {
                                         if isSaving {
-                                            ProgressView().tint(.black)
+                                            ProgressView().tint(.white)
                                         } else {
                                             Text("Salva Testo")
                                                 .font(.system(size: 13, weight: .bold))
@@ -74,7 +74,7 @@ struct AdminReleaseFormSheetView: View {
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
                                     .background(Color.kartAccent)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(.white)
                                     .cornerRadius(8)
                                     .disabled(isSaving)
                                 }

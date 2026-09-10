@@ -69,7 +69,7 @@ struct PilotView: View {
                         } label: {
                             Text("Conferma")
                                 .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.black)
+                                .foregroundColor(.white)
                                 .frame(maxWidth: 350)
                                 .padding(.vertical, 14)
                                 .background(pilotName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : Color.kartAccent)

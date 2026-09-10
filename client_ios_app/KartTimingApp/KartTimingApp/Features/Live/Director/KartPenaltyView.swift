@@ -429,14 +429,14 @@ struct KartPenaltyView: View {
             Button(action: confirmPenalty) {
                 HStack {
                     if isLoading {
-                        ProgressView().tint(.black).scaleEffect(0.8)
+                        ProgressView().tint(.white).scaleEffect(0.8)
                     } else {
                         Image(systemName: selectedType?.systemIcon ?? "exclamationmark.triangle.fill")
                         Text("Assegna \"\(selectedType?.name ?? "Sanzione")\"")
                             .font(.system(size: 15, weight: .bold))
                     }
                 }
-                .foregroundColor(.black)
+                .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(Color.kartAccent)
