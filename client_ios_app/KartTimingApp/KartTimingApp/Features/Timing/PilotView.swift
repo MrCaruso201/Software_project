@@ -98,6 +98,8 @@ struct PilotView: View {
         }
         .toolbar(.hidden, for: .tabBar)
         .onAppear {
+            // Mantiene accesa la dashboard durante la guida.
+            UIApplication.shared.isIdleTimerDisabled = true
             // Forza orientamento landscape FISSO (solo destra, non ruota a 180°)
             AppDelegate.orientationLock = .landscapeRight
             UIDevice.current.setValue(
@@ -112,6 +114,8 @@ struct PilotView: View {
             }
         }
         .onDisappear {
+            // Riabilita il blocco automatico quando si esce dalla vista pilota.
+            UIApplication.shared.isIdleTimerDisabled = false
             // Ripristina portrait
             AppDelegate.orientationLock = .portrait
             UIDevice.current.setValue(

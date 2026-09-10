@@ -217,6 +217,8 @@ struct PilotLiveView: View {
         }
         // ── Orientation lock (identico a PilotView) ────────────────────────
         .onAppear {
+            // Mantiene accesa la dashboard durante la guida.
+            UIApplication.shared.isIdleTimerDisabled = true
             checkForNewBlueFlags()
             checkForNewDropPosition()
             checkForNewTextMessage(messages: myKart.messages)
@@ -238,6 +240,8 @@ struct PilotLiveView: View {
             }
         }
         .onDisappear {
+            // Riabilita il blocco automatico quando si esce dalla vista pilota.
+            UIApplication.shared.isIdleTimerDisabled = false
             AppDelegate.orientationLock = .portrait
             UIDevice.current.setValue(
                 UIInterfaceOrientation.portrait.rawValue,
