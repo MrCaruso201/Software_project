@@ -135,6 +135,6 @@ struct KartPressButtonStyle: ButtonStyle {
         configuration.label
             .opacity(configuration.isPressed && isEnabled ? 0.78 : 1)
             .scaleEffect(configuration.isPressed && isEnabled && !reduceMotion ? 0.98 : 1)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.08), value: configuration.isPressed)
     }
 }

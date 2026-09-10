@@ -49,6 +49,7 @@ struct AdminReleaseFormSheetView: View {
                                         .padding(8)
                                         .background(Color.kartPanel, in: RoundedRectangle(cornerRadius: 8))
                                         .transition(.opacity)
+                                        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: saveMessage)
                                 }
                                 Spacer()
                                 HStack(spacing: 12) {
@@ -158,7 +159,6 @@ struct AdminReleaseFormSheetView: View {
                 }
             }
             .buttonStyle(KartPressButtonStyle())
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: saveMessage)
             .sensoryFeedback(.success, trigger: saveMessage) { _, message in
                 message == "Salvato con successo!"
             }

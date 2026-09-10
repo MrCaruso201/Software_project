@@ -358,6 +358,11 @@ struct EventiView: View {
             .padding(.vertical, 14)
             .background(Color.kartPanel)
             
+            .contentShape(Rectangle())
+            .onTapGesture {
+                expandedEventId = isExpanded ? nil : event.id
+            }
+
             // Corpo espanso
             if isExpanded {
                 Divider().background(Color.kartBorder(opacity: 0.1))
@@ -462,16 +467,7 @@ struct EventiView: View {
                 .stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1)
         )
         .padding(.horizontal, 16)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.9)) {
-                if isExpanded {
-                    expandedEventId = nil
-                } else {
-                    expandedEventId = event.id
-                }
-            }
-        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isExpanded)
     }
     
     private func detailText(label: String, value: String) -> some View {
