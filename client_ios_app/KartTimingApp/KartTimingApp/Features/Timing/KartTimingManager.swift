@@ -9,6 +9,13 @@ class KartTimingManager: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var showError: Bool = false
     @Published var lastEventUpdate: Date? = nil
+    let flagUpdates = PassthroughSubject<FlagUpdate, Never>()
+    struct FlagUpdate {
+        let eventId: Int
+        let change: String
+        let kartsChanged: Bool
+        let requestId: String?
+    }
     let pitUpdates = PassthroughSubject<PitUpdate, Never>()
 
     struct PitUpdate {
@@ -120,7 +127,12 @@ class KartTimingManager: ObservableObject {
                 }
 
             case "event_update":
-                if json["change"] as? String == "pit",
+                if let change = json["change"] as? String, ["messages", "penalties"].contains(change),
+                   let eventId = json["event_id"] as? Int {
+                    self.flagUpdates.send(FlagUpdate(eventId: eventId, change: change,
+                        kartsChanged: json["karts_changed"] as? Bool ?? false,
+                        requestId: json["request_id"] as? String))
+                } else if json["change"] as? String == "pit",
                    let eventId = json["event_id"] as? Int,
                    let kartNumber = json["kart_number"] as? Int {
                     self.pitUpdates.send(PitUpdate(eventId: eventId, kartNumber: kartNumber,

@@ -475,7 +475,8 @@ def add_penalty(
     body: PenaltyCreate,
     background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request_id: Optional[str] = Header(default=None, alias="X-Request-ID", max_length=128)
 ):
     """Assegna una penalità a un kart (e triggera auto-penalità se si supera la soglia di warning). Solo race_director/admin."""
     _require_director(user_payload)
@@ -531,7 +532,11 @@ def add_penalty(
                 db.add(auto_penalty)
                 db.commit()
 
-    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
+    background_tasks.add_task(broadcast_to_event, event_id, {
+        "type": "event_update", "change": "penalties", "event_id": event_id,
+        "karts_changed": True,
+        "request_id": request_id,
+    })
     return penalty
 
 
@@ -542,7 +547,8 @@ def delete_penalty(
     penalty_id: int,
     background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request_id: Optional[str] = Header(default=None, alias="X-Request-ID", max_length=128)
 ):
     """Cancella una penalità. Solo race_director/admin."""
     _require_director(user_payload)
@@ -554,7 +560,11 @@ def delete_penalty(
         raise HTTPException(status_code=404, detail="Penalità non trovata")
     db.delete(penalty)
     db.commit()
-    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
+    background_tasks.add_task(broadcast_to_event, event_id, {
+        "type": "event_update", "change": "penalties", "event_id": event_id,
+        "karts_changed": True,
+        "request_id": request_id,
+    })
     return None
 
 
@@ -597,7 +607,8 @@ def send_message(
     body: MessageCreate,
     background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request_id: Optional[str] = Header(default=None, alias="X-Request-ID", max_length=128)
 ):
     """Invia un messaggio live (broadcast o per kart specifico). Solo race_director/admin."""
     _require_director(user_payload)
@@ -656,7 +667,11 @@ def send_message(
 
     db.commit()
     db.refresh(message)
-    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
+    background_tasks.add_task(broadcast_to_event, event_id, {
+        "type": "event_update", "change": "messages", "event_id": event_id,
+        "karts_changed": body.message_type in ("red_flag", "green_flag", "checkered_flag") or is_gara_iniziata,
+        "request_id": request_id,
+    })
     return message
 
 
@@ -666,7 +681,8 @@ def delete_message(
     message_id: int,
     background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request_id: Optional[str] = Header(default=None, alias="X-Request-ID", max_length=128)
 ):
     """Cancella un messaggio live. Solo race_director/admin."""
     _require_director(user_payload)
@@ -678,7 +694,11 @@ def delete_message(
         raise HTTPException(status_code=404, detail="Messaggio non trovato")
     db.delete(msg)
     db.commit()
-    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
+    background_tasks.add_task(broadcast_to_event, event_id, {
+        "type": "event_update", "change": "messages", "event_id": event_id,
+        "karts_changed": False,
+        "request_id": request_id,
+    })
     return None
 
 

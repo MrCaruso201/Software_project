@@ -34,9 +34,9 @@ class LiveViewModel: ObservableObject {
     private var eventId: Int = 0
     private var refreshTask: Task<Void, Never>?
     private var refreshPending = false
-    private var fullRefreshPending = false
+    private var pendingScopes: Set<String> = []
     private var isDirector = false
-    private var ownPitRequests: [String] = []
+    private var ownMutationRequests: [String] = []
     private var pitVersion = 0
     private var generation = UUID()
     private var penaltyTypesFetchedAt: Date?
@@ -58,7 +58,7 @@ class LiveViewModel: ObservableObject {
         self.isDirector = isDirector
         registeredTeams = []
         registeredIndividuals = []
-        ownPitRequests = []
+        ownMutationRequests = []
         self.timingManager = timingManager
         
         timingManager?.$lastEventUpdate
@@ -75,8 +75,18 @@ class LiveViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] update in
                 guard let self, update.eventId == self.eventId else { return }
-                if let requestId = update.requestId, self.ownPitRequests.contains(requestId) { return }
+                if let requestId = update.requestId, self.ownMutationRequests.contains(requestId) { return }
                 Task { await self.refresh(pitOnly: true) }
+            }
+            .store(in: &cancellables)
+        timingManager?.flagUpdates
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] update in
+                guard let self, update.eventId == self.eventId else { return }
+                if let id = update.requestId, self.ownMutationRequests.contains(id) { return }
+                var scopes: Set<String> = [update.change]
+                if update.kartsChanged { scopes.insert("pit") }
+                Task { await self.refresh(scopes: scopes) }
             }
             .store(in: &cancellables)
     }
@@ -93,7 +103,7 @@ class LiveViewModel: ObservableObject {
         refreshTask?.cancel()
         refreshTask = nil
         refreshPending = false
-        fullRefreshPending = false
+        pendingScopes = []
     }
 
 
@@ -116,7 +126,11 @@ class LiveViewModel: ObservableObject {
     func fetchAll() async { await refresh(pitOnly: false) }
 
     private func refresh(pitOnly: Bool) async {
-        fullRefreshPending = fullRefreshPending || !pitOnly
+        await refresh(scopes: pitOnly ? ["pit"] : ["full"])
+    }
+
+    private func refresh(scopes: Set<String>) async {
+        pendingScopes.formUnion(scopes)
         if let refreshTask {
             refreshPending = true
             await refreshTask.value
@@ -127,9 +141,9 @@ class LiveViewModel: ObservableObject {
             guard let self else { return }
             repeat {
                 self.refreshPending = false
-                let fullRefresh = self.fullRefreshPending
-                self.fullRefreshPending = false
-                await self.fetchSnapshot(generation: currentGeneration, pitOnly: !fullRefresh)
+                let scopes = self.pendingScopes
+                self.pendingScopes = []
+                await self.fetchSnapshot(generation: currentGeneration, scopes: scopes)
             } while self.refreshPending && !Task.isCancelled && self.generation == currentGeneration
         }
         refreshTask = task
@@ -143,17 +157,21 @@ class LiveViewModel: ObservableObject {
         return await fetchRawData(path: "/live/penalty-types")
     }
 
-    private func fetchSnapshot(generation: UUID, pitOnly: Bool) async {
+    private func fetchSnapshot(generation: UUID, scopes: Set<String>) async {
         let version = pitVersion
         let director = isDirector
-        async let eventData = fetchRawData(path: "/events/\(eventId)", enabled: !pitOnly)
-        async let kartsData = fetchRawData(path: "/live/\(eventId)/karts")
-        async let typesData = fetchPenaltyTypesIfNeeded(enabled: !pitOnly && director)
-        async let penaltiesData = fetchRawData(path: "/live/\(eventId)/penalties", enabled: !pitOnly)
-        async let messagesData = fetchRawData(path: "/live/\(eventId)/messages", enabled: !pitOnly)
-        async let teamsData = fetchRawData(path: "/events/\(eventId)/registrations/teams", enabled: !pitOnly && director)
-        async let individualsData = fetchRawData(path: "/events/\(eventId)/registrations", enabled: !pitOnly && director)
-        async let resultsData = fetchRawData(path: "/events/\(eventId)/results", enabled: !pitOnly)
+        let full = scopes.contains("full")
+        let karts = full || scopes.contains("pit") || scopes.contains("penalties")
+        let penalties = full || scopes.contains("penalties")
+        let messages = full || scopes.contains("messages")
+        async let eventData = fetchRawData(path: "/events/\(eventId)", enabled: full)
+        async let kartsData = fetchRawData(path: "/live/\(eventId)/karts", enabled: karts)
+        async let typesData = fetchPenaltyTypesIfNeeded(enabled: full && director)
+        async let penaltiesData = fetchRawData(path: "/live/\(eventId)/penalties", enabled: penalties)
+        async let messagesData = fetchRawData(path: "/live/\(eventId)/messages", enabled: messages)
+        async let teamsData = fetchRawData(path: "/events/\(eventId)/registrations/teams", enabled: full && director)
+        async let individualsData = fetchRawData(path: "/events/\(eventId)/registrations", enabled: full && director)
+        async let resultsData = fetchRawData(path: "/events/\(eventId)/results", enabled: full)
         async let myKartData = fetchRawData(path: "/live/\(eventId)/my-kart", enabled: !director)
         
         let (eventD, kartsD, typesD, penaltiesD, messagesD, teamsD, individualsD, resultsD, myKartD) = await (
@@ -183,7 +201,7 @@ class LiveViewModel: ObservableObject {
             lastFetchedData["event"] = eventD
             self.currentSessionName = value.sessionName
         }
-        if version != pitVersion { refreshPending = true }
+        if version != pitVersion { refreshPending = true; pendingScopes.insert("pit") }
         if let value = snapshot.karts, version == pitVersion {
             lastFetchedData["karts"] = kartsD
             self.kartAssignments = value
@@ -268,8 +286,8 @@ class LiveViewModel: ObservableObject {
               let token else { throw URLError(.badURL) }
         let currentGeneration = generation
         let requestId = UUID().uuidString
-        ownPitRequests.append(requestId)
-        if ownPitRequests.count > 128 { ownPitRequests.removeFirst() }
+        ownMutationRequests.append(requestId)
+        if ownMutationRequests.count > 128 { ownMutationRequests.removeFirst() }
         var req = URLRequest(url: url)
         req.httpMethod = "PATCH"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -334,12 +352,7 @@ class LiveViewModel: ObservableObject {
         if let s = seconds { body["seconds"] = s }
         if let n = note, !n.isEmpty { body["note"] = n }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await NetworkService.shared.data(for: req)
-        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
-            let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
-            throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
-        }
-        await fetchAll()
+        try await performFlagMutation(req, scopes: ["penalties"])
     }
 
     func deletePenalty(id: Int) async throws {
@@ -348,8 +361,35 @@ class LiveViewModel: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        _ = try await NetworkService.shared.data(for: req)
-        await fetchAll()
+        try await performFlagMutation(req, scopes: ["penalties"])
+    }
+
+    private static func messageScopes(type: String, text: String) -> Set<String> {
+        let changesTimers = ["red_flag", "green_flag", "checkered_flag"].contains(type)
+            || (type == "custom" && text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "gara iniziata")
+        return changesTimers ? ["messages", "pit"] : ["messages"]
+    }
+
+    private func performFlagMutation(_ request: URLRequest, scopes: Set<String>) async throws {
+        let currentGeneration = generation
+        let id = UUID().uuidString
+        ownMutationRequests.append(id)
+        if ownMutationRequests.count > 128 { ownMutationRequests.removeFirst() }
+        var request = request
+        request.setValue(id, forHTTPHeaderField: "X-Request-ID")
+        do {
+            let (data, response) = try await NetworkService.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+            guard (200..<300).contains(http.statusCode) else {
+                let message = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore aggiornamento live"
+                throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: message])
+            }
+        } catch {
+            if generation == currentGeneration { await refresh(scopes: scopes) }
+            throw error
+        }
+        // Fetch authoritative state, including penalties automatically created by the server.
+        if generation == currentGeneration { await refresh(scopes: scopes) }
     }
 
     // MARK: - Messages
@@ -393,12 +433,7 @@ class LiveViewModel: ObservableObject {
         var body: [String: Any] = ["message_type": type.rawValue, "text": text]
         if let k = targetKart { body["target_kart"] = k }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await NetworkService.shared.data(for: req)
-        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
-            let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore"
-            throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
-        }
-        await fetchAll()
+        try await performFlagMutation(req, scopes: Self.messageScopes(type: type.rawValue, text: text))
     }
 
     func deleteMessage(id: Int) async throws {
@@ -407,8 +442,7 @@ class LiveViewModel: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        _ = try await NetworkService.shared.data(for: req)
-        await fetchAll()
+        try await performFlagMutation(req, scopes: ["messages"])
     }
 
     // MARK: - Event Status
