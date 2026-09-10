@@ -6,11 +6,11 @@ import Combine
 class AnalisiViewModel: ObservableObject {
 
     // ── Dati grezzi ──────────────────────────────────────────────────────────
-    @Published var myResults:      [EventResult]                 = []
-    @Published var registrations:  [EventRegistrationResponse]   = []
-    @Published var events:         [RaceEvent]                   = []
-    @Published var allKartodromi:  [Kartodromo]                  = []
-    @Published var kartodromiResults: [KartodromoResultResponse] = []
+    @Published var myResults:      [EventResult]                 = [] { didSet { invalidateDerivedData() } }
+    @Published var registrations:  [EventRegistrationResponse]   = [] { didSet { invalidateDerivedData() } }
+    @Published var events:         [RaceEvent]                   = [] { didSet { invalidateDerivedData() } }
+    @Published var allKartodromi:  [Kartodromo]                  = [] { didSet { invalidateDerivedData() } }
+    @Published var kartodromiResults: [KartodromoResultResponse] = [] { didSet { invalidateDerivedData() } }
     
     @Published var isLoading:      Bool                          = true
     @Published var errorMessage:   String?                       = nil
@@ -20,6 +20,28 @@ class AnalisiViewModel: ObservableObject {
     /// Classifiche complete di singoli eventi (fetched on-demand)
     @Published var classifications: [Int: [EventResult]]         = [:]
 
+    private var cachedPast: [(event: RaceEvent, reg: EventRegistrationResponse)]?
+    private var cachedUpcoming: [(event: RaceEvent, reg: EventRegistrationResponse)]?
+    private var cachedStats: [CircuitStat]?
+    private var nextDateBoundary: Date?
+    private var dateCache: [String: Date] = [:]
+
+    private func invalidateDerivedData() {
+        cachedPast = nil
+        cachedUpcoming = nil
+        cachedStats = nil
+        nextDateBoundary = nil
+    }
+
+    private func validateDateBoundary() {
+        if let boundary = nextDateBoundary, Date() >= boundary { invalidateDerivedData() }
+        if nextDateBoundary == nil {
+            let now = Date()
+            nextDateBoundary = events.compactMap { parseDate(from: $0.eventDate) }.filter { $0 > now }.min()
+                ?? .distantFuture
+        }
+    }
+
     // ── Computed helpers ─────────────────────────────────────────────────────
 
     private var confirmedRegistrations: [EventRegistrationResponse] {
@@ -28,9 +50,12 @@ class AnalisiViewModel: ObservableObject {
 
     /// Gare passate a cui l'utente era iscritto (confirmed), ordinate per data desc
     var pastConfirmedEvents: [(event: RaceEvent, reg: EventRegistrationResponse)] {
+        validateDateBoundary()
+        if let cachedPast { return cachedPast }
         let now = Date()
-        return confirmedRegistrations.compactMap { reg -> (RaceEvent, EventRegistrationResponse)? in
-            guard let event = events.first(where: { $0.id == reg.eventId }),
+        let eventsByID = Dictionary(events.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let result = confirmedRegistrations.compactMap { reg -> (event: RaceEvent, reg: EventRegistrationResponse)? in
+            guard let event = eventsByID[reg.eventId],
                   let date  = parseDate(from: event.eventDate) else { return nil }
             guard date < now || event.status == "finished" else { return nil }
             return (event, reg)
@@ -39,13 +64,18 @@ class AnalisiViewModel: ObservableObject {
             (parseDate(from: a.event.eventDate) ?? .distantPast) >
             (parseDate(from: b.event.eventDate) ?? .distantPast)
         }
+        cachedPast = result
+        return result
     }
 
     /// Prossimi eventi confermati, ordinati per data asc
     var upcomingConfirmedEvents: [(event: RaceEvent, reg: EventRegistrationResponse)] {
+        validateDateBoundary()
+        if let cachedUpcoming { return cachedUpcoming }
         let now = Date()
-        return confirmedRegistrations.compactMap { reg -> (RaceEvent, EventRegistrationResponse)? in
-            guard let event = events.first(where: { $0.id == reg.eventId }),
+        let eventsByID = Dictionary(events.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let result = confirmedRegistrations.compactMap { reg -> (event: RaceEvent, reg: EventRegistrationResponse)? in
+            guard let event = eventsByID[reg.eventId],
                   let date  = parseDate(from: event.eventDate) else { return nil }
             guard date > now && event.status != "finished" else { return nil }
             return (event, reg)
@@ -54,10 +84,14 @@ class AnalisiViewModel: ObservableObject {
             (parseDate(from: a.event.eventDate) ?? .distantFuture) <
             (parseDate(from: b.event.eventDate) ?? .distantFuture)
         }
+        cachedUpcoming = result
+        return result
     }
 
     /// Statistiche per circuito, aggregate dai past events e dai risultati kartodromo
     var circuitStats: [CircuitStat] {
+        validateDateBoundary()
+        if let cachedStats { return cachedStats }
         var map: [String: CircuitStat] = [:]
 
         // 1. Inserisci gli eventi passati (escluse gare a squadre)
@@ -94,7 +128,9 @@ class AnalisiViewModel: ObservableObject {
             }
         }
 
-        return map.values.sorted { $0.racesCount > $1.racesCount }
+        let result = map.values.sorted { $0.racesCount > $1.racesCount }
+        cachedStats = result
+        return result
     }
 
     // ── Statistiche di riepilogo ──────────────────────────────────────────────
@@ -296,21 +332,29 @@ class AnalisiViewModel: ObservableObject {
 
     // ── Helpers interni ───────────────────────────────────────────────────────
 
-    private func fetch<T: Decodable>(url: URL, token: String, type: T.Type,
+    private func fetch<T: Decodable & Sendable>(url: URL, token: String, type: T.Type,
                                      completion: @escaping (T?) -> Void) {
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         NetworkService.shared.dataTask(with: req) { data, _, _ in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 guard let data else { completion(nil); return }
-                completion(try? JSONDecoder().decode(T.self, from: data))
+                let decoded = try? await BackgroundJSON.decode(T.self, from: data)
+                completion(decoded)
             }
         }.resume()
     }
 
     func parseDate(from string: String) -> Date? {
+        if let cached = dateCache[string] { return cached }
+        let parsed = decodeDate(string)
+        if let parsed { dateCache[string] = parsed }
+        return parsed
+    }
+
+    private func decodeDate(_ string: String) -> Date? {
         let isoFrac = ISO8601DateFormatter()
         isoFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let d = isoFrac.date(from: string) { return d }

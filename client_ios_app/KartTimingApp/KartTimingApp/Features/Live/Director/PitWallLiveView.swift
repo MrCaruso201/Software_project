@@ -1,13 +1,10 @@
 import SwiftUI
-import Combine
 
 struct PitWallLiveView: View {
     @ObservedObject var viewModel: LiveViewModel
     var event: RaceEvent?
     @EnvironmentObject var manager: KartTimingManager
     
-    @State private var currentTime = Date()
-    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
@@ -16,7 +13,7 @@ struct PitWallLiveView: View {
             VStack {
                 if let timing = manager.timing, !timing.rows.isEmpty {
                     ScrollView {
-                        VStack(spacing: 8) {
+                        LazyVStack(spacing: 8) {
                             if let max = event?.maxStintDuration {
                                 HStack {
                                     Image(systemName: "timer")
@@ -30,7 +27,8 @@ struct PitWallLiveView: View {
                                 .cornerRadius(8)
                             }
                             
-                            ForEach(Array(timing.rows.enumerated()), id: \.offset) { idx, row in
+                            ForEach(timing.displayRows) { item in
+                                let row = item.values
                                 if let kartNumStr = getKartNumber(from: row, headers: timing.headers),
                                    let kartNum = Int(kartNumStr) {
                                     
@@ -40,7 +38,6 @@ struct PitWallLiveView: View {
                                         kartNumber: kartNum,
                                         teamName: name,
                                         viewModel: viewModel,
-                                        currentTime: currentTime,
                                         event: event
                                     )
                                 }
@@ -60,9 +57,6 @@ struct PitWallLiveView: View {
                     }
                 }
             }
-        }
-        .onReceive(timer) { _ in
-            currentTime = Date()
         }
     }
     
@@ -87,7 +81,6 @@ struct PitWallKartRow: View {
     let kartNumber: Int
     let teamName: String
     @ObservedObject var viewModel: LiveViewModel
-    let currentTime: Date
     var event: RaceEvent?
     
     @State private var isUpdating = false
@@ -117,12 +110,8 @@ struct PitWallKartRow: View {
             Spacer()
             
             // Stint Time
-            let duration = currentDuration()
-            Text(formatStint(duration))
-                .font(.system(size: 18, weight: .heavy, design: .monospaced))
-                .foregroundColor(isInPit ? .red : .kartGreen)
-                .frame(width: 70, alignment: .trailing)
-            
+            StintClock(assignment: assignment)
+
             // Switch in pista / in pit
             if isUpdating {
                 ProgressView()
@@ -170,20 +159,27 @@ struct PitWallKartRow: View {
         }
     }
     
-    private func currentDuration() -> TimeInterval {
-        guard let a = assignment else { return 0 }
-        var total = Double(a.stintElapsedSeconds)
-        if let resumeDate = a.parsedStintLastResume, !a.isInPit {
-            total += currentTime.timeIntervalSince(resumeDate)
+}
+
+private struct StintClock: View {
+    let assignment: LiveKartAssignment?
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1, paused: assignment?.isInPit != false)) { context in
+            Text(formattedDuration(at: context.date))
+                .font(.system(size: 18, weight: .heavy, design: .monospaced))
+                .foregroundColor(assignment?.isInPit == true ? .red : .kartGreen)
+                .frame(width: 70, alignment: .trailing)
         }
-        return max(0, total)
     }
-    
-    private func formatStint(_ interval: TimeInterval) -> String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.minute, .second]
-        formatter.unitsStyle = .positional
-        formatter.zeroFormattingBehavior = .pad
-        return formatter.string(from: interval) ?? "00:00"
+
+    private func formattedDuration(at date: Date) -> String {
+        guard let assignment else { return "00:00" }
+        var duration = Double(assignment.stintElapsedSeconds)
+        if !assignment.isInPit, let resume = assignment.parsedStintLastResume {
+            duration += date.timeIntervalSince(resume)
+        }
+        let seconds = Int(max(0, duration))
+        return String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
 }

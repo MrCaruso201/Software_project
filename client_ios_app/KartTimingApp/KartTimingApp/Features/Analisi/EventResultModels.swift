@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - KartodromoResultResponse
 
-struct KartodromoResultResponse: Identifiable, Codable {
+nonisolated struct KartodromoResultResponse: Identifiable, Codable, Sendable {
     let id: Int
     let userId: Int
     let kartodromoId: Int
@@ -36,7 +36,7 @@ struct KartodromoResultResponse: Identifiable, Codable {
 /// Risultato di un pilota in una gara.
 /// `isOfficial = true`  → inserito dall'admin (via CSV)
 /// `isOfficial = false` → auto-dichiarato dal pilota
-struct EventResult: Identifiable, Codable {
+nonisolated struct EventResult: Identifiable, Codable, Sendable {
     let id: Int
     let eventId: Int
     let userId: Int?

@@ -7,7 +7,12 @@ class LiveViewModel: ObservableObject {
     // MARK: - Published State
 
     @Published var kartAssignments: [LiveKartAssignment] = []
-    @Published var penalties: [RacePenalty] = []
+    @Published var penalties: [RacePenalty] = [] {
+        didSet {
+            penaltiesByKart = Dictionary(grouping: penalties, by: \.kartNumber)
+            penaltyTotals = penaltiesByKart.mapValues { $0.reduce(0) { $0 + ($1.seconds ?? 0) } }
+        }
+    }
     @Published var penaltyTypes: [PenaltyType] = []
     @Published var messages: [RaceMessage] = []
     @Published var myKart: MyKartResponse = MyKartResponse()
@@ -27,8 +32,10 @@ class LiveViewModel: ObservableObject {
     private var serverURL: URL?
     private var token: String?
     private var eventId: Int = 0
-    private var pollingTask: Task<Void, Never>?
-    private let pollingInterval: TimeInterval = 5
+    private var refreshTask: Task<Void, Never>?
+    private var refreshPending = false
+    private var generation = UUID()
+    private var penaltyTypesFetchedAt: Date?
     
     private var lastFetchedData: [String: Data] = [:]
 
@@ -38,13 +45,18 @@ class LiveViewModel: ObservableObject {
     // MARK: - Init / Setup
 
     func configure(serverURL: URL?, token: String?, eventId: Int, timingManager: KartTimingManager? = nil) {
+        stopPolling()
+        lastFetchedData.removeAll()
+        penaltyTypesFetchedAt = nil
         self.serverURL = serverURL
         self.token = token
         self.eventId = eventId
         self.timingManager = timingManager
         
         timingManager?.$lastEventUpdate
+            .dropFirst()
             .compactMap { $0 }
+            .debounce(for: .milliseconds(150), scheduler: DispatchQueue.main)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 Task { await self?.fetchAll() }
@@ -60,6 +72,10 @@ class LiveViewModel: ObservableObject {
 
     func stopPolling() {
         cancellables.removeAll()
+        generation = UUID()
+        refreshTask?.cancel()
+        refreshTask = nil
+        refreshPending = false
     }
 
 
@@ -70,7 +86,8 @@ class LiveViewModel: ObservableObject {
         var req = URLRequest(url: url)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         do {
-            let (data, _) = try await NetworkService.shared.data(for: req)
+            let (data, response) = try await NetworkService.shared.data(for: req)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { return nil }
             return data
         } catch {
             return nil
@@ -78,9 +95,33 @@ class LiveViewModel: ObservableObject {
     }
 
     func fetchAll() async {
+        if let refreshTask {
+            refreshPending = true
+            await refreshTask.value
+            return
+        }
+        let currentGeneration = generation
+        let task = Task { [weak self] in
+            guard let self else { return }
+            repeat {
+                self.refreshPending = false
+                await self.fetchSnapshot(generation: currentGeneration)
+            } while self.refreshPending && !Task.isCancelled && self.generation == currentGeneration
+        }
+        refreshTask = task
+        await task.value
+        if generation == currentGeneration { refreshTask = nil }
+    }
+
+    private func fetchPenaltyTypesIfNeeded() async -> Data? {
+        if let fetched = penaltyTypesFetchedAt, Date().timeIntervalSince(fetched) < 300 { return nil }
+        return await fetchRawData(path: "/live/penalty-types")
+    }
+
+    private func fetchSnapshot(generation: UUID) async {
         async let eventData = fetchRawData(path: "/events/\(eventId)")
         async let kartsData = fetchRawData(path: "/live/\(eventId)/karts")
-        async let typesData = fetchRawData(path: "/live/penalty-types")
+        async let typesData = fetchPenaltyTypesIfNeeded()
         async let penaltiesData = fetchRawData(path: "/live/\(eventId)/penalties")
         async let messagesData = fetchRawData(path: "/live/\(eventId)/messages")
         async let teamsData = fetchRawData(path: "/events/\(eventId)/registrations/teams")
@@ -92,86 +133,68 @@ class LiveViewModel: ObservableObject {
             eventData, kartsData, typesData, penaltiesData, messagesData, teamsData, individualsData, resultsData, myKartData
         )
         
-        // Assegnazione in blocco (batch update su main thread) per evitare scatti in UI
-        let decoder = JSONDecoder()
+        guard generation == self.generation, !Task.isCancelled else { return }
         
-        if let d = eventD, d != lastFetchedData["event"] {
-            lastFetchedData["event"] = d
-            if let dec = try? decoder.decode(RaceEvent.self, from: d) {
-                self.currentSessionName = dec.sessionName
-            }
+        let received: [String: Data?] = [
+            "event": eventD,
+            "karts": kartsD,
+            "mykart": myKartD,
+            "types": typesD,
+            "penalties": penaltiesD,
+            "messages": messagesD,
+            "teams": teamsD,
+            "individuals": individualsD,
+            "results": resultsD
+        ]
+        let changed = received.compactMapValues { $0 }.filter { lastFetchedData[$0.key] != $0.value }
+        let snapshot = await LiveSnapshot.decode(changed)
+        guard generation == self.generation, !Task.isCancelled else { return }
+
+        // Publish together after decoding, without suspending between assignments.
+        if let typesD, typesD == lastFetchedData["types"] { penaltyTypesFetchedAt = Date() }
+        if let value = snapshot.event {
+            lastFetchedData["event"] = eventD
+            self.currentSessionName = value.sessionName
         }
-        
-        if let d = kartsD, d != lastFetchedData["karts"] {
-            lastFetchedData["karts"] = d
-            if let dec = try? decoder.decode([LiveKartAssignment].self, from: d) {
-                self.kartAssignments = dec
-            }
+        if let value = snapshot.karts {
+            lastFetchedData["karts"] = kartsD
+            self.kartAssignments = value
         }
-        
-        if let d = myKartD, d != lastFetchedData["mykart"] {
-            lastFetchedData["mykart"] = d
-            if let dec = try? decoder.decode(MyKartResponse.self, from: d) {
-                self.myKart = dec
-            } else {
-                self.myKart = MyKartResponse()
-            }
+        if let value = snapshot.myKart {
+            lastFetchedData["mykart"] = myKartD
+            self.myKart = value
         }
-        
-        if let d = typesD, d != lastFetchedData["types"] {
-            lastFetchedData["types"] = d
-            if let dec = try? decoder.decode([PenaltyType].self, from: d) {
-                self.penaltyTypes = dec
-            }
+        if let value = snapshot.types {
+            lastFetchedData["types"] = typesD
+            self.penaltyTypes = value
+            penaltyTypesFetchedAt = Date()
         }
-        
-        if let d = penaltiesD, d != lastFetchedData["penalties"] {
-            lastFetchedData["penalties"] = d
-            if let dec = try? decoder.decode([RacePenalty].self, from: d) {
-                self.penalties = dec
-            }
+        if let value = snapshot.penalties {
+            lastFetchedData["penalties"] = penaltiesD
+            self.penalties = value
         }
-        
-        if let d = messagesD, d != lastFetchedData["messages"] {
-            lastFetchedData["messages"] = d
-            if let dec = try? decoder.decode([RaceMessage].self, from: d) {
-                self.messages = dec
-                syncRaceTimesFromMessages(dec)
-            }
+        if let value = snapshot.messages {
+            lastFetchedData["messages"] = messagesD
+            self.messages = value
+            syncRaceTimesFromMessages(value)
         }
-        
-        if let d = teamsD, d != lastFetchedData["teams"] {
-            lastFetchedData["teams"] = d
-            if let dec = try? decoder.decode([TeamRegistrationResponse].self, from: d) {
-                self.registeredTeams = dec
-            }
+        if let value = snapshot.teams {
+            lastFetchedData["teams"] = teamsD
+            self.registeredTeams = value
         }
-        
-        if let d = individualsD, d != lastFetchedData["individuals"] {
-            lastFetchedData["individuals"] = d
-            if let dec = try? decoder.decode([EventRegistrationWithUserResponse].self, from: d) {
-                self.registeredIndividuals = dec
-            }
+        if let value = snapshot.individuals {
+            lastFetchedData["individuals"] = individualsD
+            self.registeredIndividuals = value
         }
-        
-        if let d = resultsD, d != lastFetchedData["results"] {
-            lastFetchedData["results"] = d
-            if let dec = try? decoder.decode([EventResult].self, from: d) {
-                self.eventResults = dec
-            }
+        if let value = snapshot.results {
+            lastFetchedData["results"] = resultsD
+            self.eventResults = value
         }
     }
     
     // Alias temporanei per funzioni richiamate singolarmente da altri file
     func fetchEvent() async { await fetchAll() }
-    func fetchMyKart() async { 
-        if let d = await fetchRawData(path: "/live/\(eventId)/my-kart"), d != lastFetchedData["mykart"] {
-            lastFetchedData["mykart"] = d
-            if let dec = try? JSONDecoder().decode(MyKartResponse.self, from: d) {
-                self.myKart = dec
-            }
-        }
-    }
+    func fetchMyKart() async { await fetchAll() }
     private func fetchResults() async { await fetchAll() }
     private func fetchKartAssignments() async { await fetchAll() }
 
@@ -449,14 +472,43 @@ class LiveViewModel: ObservableObject {
     }
 
     /// Restituisce le penalità raggruppate per numero kart
-    var penaltiesByKart: [Int: [RacePenalty]] {
-        Dictionary(grouping: penalties, by: \.kartNumber)
-    }
+    private(set) var penaltiesByKart: [Int: [RacePenalty]] = [:]
+    private var penaltyTotals: [Int: Int] = [:]
 
-    /// Penalità totali in secondi per un determinato kart
     func totalPenaltySeconds(for kartNumber: Int) -> Int {
-        penalties
-            .filter { $0.kartNumber == kartNumber }
-            .reduce(0) { $0 + ($1.seconds ?? 0) }
+        penaltyTotals[kartNumber] ?? 0
+    }
+}
+
+/// Transferable snapshot prepared off the UI executor.
+nonisolated private struct LiveSnapshot: Sendable {
+    var event: RaceEvent?
+    var karts: [LiveKartAssignment]?
+    var myKart: MyKartResponse?
+    var types: [PenaltyType]?
+    var penalties: [RacePenalty]?
+    var messages: [RaceMessage]?
+    var teams: [TeamRegistrationResponse]?
+    var individuals: [EventRegistrationWithUserResponse]?
+    var results: [EventResult]?
+
+    @concurrent
+    static func decode(_ data: [String: Data]) async -> LiveSnapshot {
+        let decoder = JSONDecoder()
+        func decode<T: Decodable>(_ type: T.Type, key: String) -> T? {
+            guard let bytes = data[key] else { return nil }
+            return try? decoder.decode(type, from: bytes)
+        }
+        return LiveSnapshot(
+            event: decode(RaceEvent.self, key: "event"),
+            karts: decode([LiveKartAssignment].self, key: "karts"),
+            myKart: decode(MyKartResponse.self, key: "mykart"),
+            types: decode([PenaltyType].self, key: "types"),
+            penalties: decode([RacePenalty].self, key: "penalties"),
+            messages: decode([RaceMessage].self, key: "messages"),
+            teams: decode([TeamRegistrationResponse].self, key: "teams"),
+            individuals: decode([EventRegistrationWithUserResponse].self, key: "individuals"),
+            results: decode([EventResult].self, key: "results")
+        )
     }
 }

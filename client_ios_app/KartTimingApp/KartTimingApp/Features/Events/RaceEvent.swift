@@ -1,6 +1,6 @@
 import Foundation
 
-struct RaceEvent: Identifiable, Codable {
+nonisolated struct RaceEvent: Identifiable, Codable, Sendable {
     let id: Int
     let title: String
     let eventDate: String
@@ -132,7 +132,7 @@ struct RaceEvent: Identifiable, Codable {
 
 // MARK: - Registration Response (singola iscrizione)
 
-struct EventRegistrationResponse: Codable {
+nonisolated struct EventRegistrationResponse: Codable, Sendable {
     let id: Int
     let userId: Int?
     let eventId: Int
@@ -162,7 +162,7 @@ struct EventRegistrationResponse: Codable {
 
 // MARK: - Registration With User Response (per admin - vista flat)
 
-struct EventRegistrationWithUserResponse: Codable, Identifiable {
+nonisolated struct EventRegistrationWithUserResponse: Codable, Identifiable, Sendable {
     let id: Int
     let userId: Int?
     let eventId: Int
@@ -198,7 +198,7 @@ struct EventRegistrationWithUserResponse: Codable, Identifiable {
 
 // MARK: - Team Registration Response (per admin - vista raggruppata per team)
 
-struct TeamMemberResponse: Codable, Identifiable {
+nonisolated struct TeamMemberResponse: Codable, Identifiable, Sendable {
     let registrationId: Int
     let userId: Int?
     let username: String?
@@ -224,7 +224,7 @@ struct TeamMemberResponse: Codable, Identifiable {
     }
 }
 
-struct TeamRegistrationResponse: Codable, Identifiable {
+nonisolated struct TeamRegistrationResponse: Codable, Identifiable, Sendable {
     let teamId: String
     let teamName: String
     let eventId: Int
@@ -246,7 +246,7 @@ struct TeamRegistrationResponse: Codable, Identifiable {
 
 // MARK: - Signed Release Response (per admin)
 
-struct SignedReleaseResponse: Codable, Identifiable {
+nonisolated struct SignedReleaseResponse: Codable, Identifiable, Sendable {
     let id: Int?
     let userId: Int?
     let username: String?

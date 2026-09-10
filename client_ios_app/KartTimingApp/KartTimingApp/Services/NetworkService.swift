@@ -74,3 +74,11 @@ actor NetworkService {
         return result
     }
 }
+
+/// Runs JSON decoding on the concurrent executor, regardless of the caller's actor.
+nonisolated enum BackgroundJSON {
+    @concurrent
+    static func decode<T: Decodable & Sendable>(_ type: T.Type, from data: Data) async throws -> T {
+        try JSONDecoder().decode(type, from: data)
+    }
+}

@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Modello
 
-struct Kartodromo: Identifiable, Hashable, Codable {
+nonisolated struct Kartodromo: Identifiable, Hashable, Codable, Sendable {
     let id: Int
     let nome: String
     let luogo: String
