@@ -26,6 +26,19 @@ struct TeamLiveView: View {
                             currentFlagCard(flag)
                         }
                         kartHeroCard
+                        
+                        if let maxMinutes = event?.maxStintDuration, !myKart.isInPit {
+                            TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                                let duration = myKart.currentStintDuration
+                                let maxSeconds = TimeInterval(maxMinutes * 60)
+                                if duration >= (maxSeconds - 120) {
+                                    stintWarningMessageCard(isOverTime: duration >= maxSeconds)
+                                } else {
+                                    EmptyView()
+                                }
+                            }
+                        }
+
                         if event?.weightLimit != nil { weightCard }
                         if !myKart.penalties.isEmpty { penaltiesCard }
                         if myKart.penalties.isEmpty && activeFlag == nil { allClearCard }
@@ -398,10 +411,16 @@ struct TeamLiveView: View {
                     Divider().background(Color.white.opacity(0.1)).frame(height: 50)
 
                     TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                        let duration = myKart.currentStintDuration
+                        let maxSeconds = (event?.maxStintDuration ?? 0) * 60
+                        let isOverTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds)
+                        let isWarningTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds - 120) && !isOverTime
+                        let timerColor: Color = isOverTime ? .red : (isWarningTime ? .yellow : .white)
+
                         VStack(spacing: 4) {
-                            Text(formatStint(myKart.currentStintDuration))
+                            Text(formatStint(duration))
                                 .font(.system(size: 28, weight: .black, design: .monospaced))
-                                .foregroundColor(.white)
+                                .foregroundColor(timerColor)
                             HStack(spacing: 6) {
                                 if myKart.isInPit {
                                     Text("PIT")
@@ -683,5 +702,28 @@ struct TeamLiveView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Stint Warning Message
+    
+    private func stintWarningMessageCard(isOverTime: Bool) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "timer")
+                .font(.system(size: 24))
+                .foregroundColor(isOverTime ? .red : .yellow)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(isOverTime ? "LIMITE STINT SUPERATO!" : "LIMITE TEMPO STINT")
+                    .font(.system(size: 14, weight: .black, design: .monospaced))
+                    .foregroundColor(isOverTime ? .red : .yellow)
+                Text(isOverTime ? "Rientrare immediatamente ai box." : "Mancano meno di 2 minuti alla fine.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white)
+            }
+            Spacer()
+        }
+        .padding(16)
+        .background(Color.kartPanel)
+        .cornerRadius(14)
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(isOverTime ? Color.red.opacity(0.5) : Color.yellow.opacity(0.5), lineWidth: 1))
     }
 }

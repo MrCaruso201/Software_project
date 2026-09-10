@@ -64,7 +64,7 @@ struct UserLiveView: View {
                 }
             }
             .navigationDestination(isPresented: $navigateToPilot) {
-                PilotLiveView(viewModel: viewModel)
+                PilotLiveView(viewModel: viewModel, event: event)
             }
         }
     }

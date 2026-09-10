@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Combine
 
 // MARK: - Flag helpers
 
@@ -47,6 +48,7 @@ private extension RaceMessage {
 struct PilotLiveView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: LiveViewModel
+    var event: RaceEvent?
     @EnvironmentObject var authState: AuthState
     @EnvironmentObject var manager: KartTimingManager
 
@@ -66,6 +68,11 @@ struct PilotLiveView: View {
     @State private var showingTextMessage = false
     @State private var currentTextMessage: RaceMessage? = nil
     @State private var processedTextMessageIds: Set<Int> = []
+
+    @State private var showingStintWarningScreen = false
+    @State private var hasShownStintWarningForCurrentStint = false
+
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var hasBlackFlag: Bool {
         myKart.penalties.contains(where: { $0.penaltyType == "black_flag" })
@@ -121,6 +128,8 @@ struct PilotLiveView: View {
                 textMessageState
             } else if showingDropPositionScreen {
                 dropPositionState
+            } else if showingStintWarningScreen {
+                stintWarningState
             } else if showingBlueFlagScreen {
                 blueFlagState
             } else if hasBlackFlag {
@@ -185,6 +194,27 @@ struct PilotLiveView: View {
         .onChange(of: myKart.penalties.count) { _, _ in
             checkForNewBlueFlags()
             checkForNewDropPosition()
+        }
+        .onReceive(timer) { _ in
+            if let maxMinutes = event?.maxStintDuration {
+                let maxSeconds = TimeInterval(maxMinutes * 60)
+                let duration = myKart.currentStintDuration
+                if duration >= (maxSeconds - 120) && duration < maxSeconds && !myKart.isInPit {
+                    if !hasShownStintWarningForCurrentStint {
+                        hasShownStintWarningForCurrentStint = true
+                        withAnimation {
+                            showingStintWarningScreen = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                            withAnimation {
+                                showingStintWarningScreen = false
+                            }
+                        }
+                    }
+                } else if myKart.isInPit || duration < (maxSeconds - 120) {
+                    hasShownStintWarningForCurrentStint = false
+                }
+            }
         }
         // ── Orientation lock (identico a PilotView) ────────────────────────
         .onAppear {
@@ -423,13 +453,23 @@ struct PilotLiveView: View {
             .overlay(Capsule().stroke(Color.red.opacity(0.6), lineWidth: 2))
         } else {
             TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                let duration = myKart.currentStintDuration
+                let maxSeconds = (event?.maxStintDuration ?? 0) * 60
+                
+                let isOverTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds)
+                let isWarningTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds - 120) && !isOverTime
+                
+                let timerColor: Color = isOverTime ? .red : (isWarningTime ? .yellow : .white)
+                let iconColor: Color = isOverTime ? .red : (isWarningTime ? .yellow : .kartGreen)
+                let iconName: String = (isWarningTime || isOverTime) ? "exclamationmark.triangle.fill" : "stopwatch.fill"
+                
                 HStack(spacing: 8) {
-                    Image(systemName: "stopwatch.fill")
+                    Image(systemName: iconName)
                         .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.kartGreen)
-                    Text(formatStint(myKart.currentStintDuration))
+                        .foregroundColor(iconColor)
+                    Text(formatStint(duration))
                         .font(.system(size: 22, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.white)
+                        .foregroundColor(timerColor)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
@@ -716,6 +756,32 @@ struct PilotLiveView: View {
                     .lineLimit(1)
                 
                 Text("BUONA GARA!")
+                    .font(.system(size: 50, weight: .black, design: .monospaced))
+                    .foregroundColor(.black)
+                    .minimumScaleFactor(0.4)
+                    .lineLimit(1)
+            }
+            .padding(40)
+        }
+    }
+
+    // MARK: - Stint Warning State
+
+    private var stintWarningState: some View {
+        ZStack {
+            Color.yellow.ignoresSafeArea()
+            VStack(spacing: 24) {
+                Image(systemName: "timer")
+                    .font(.system(size: 90))
+                    .foregroundColor(.black)
+                
+                Text("LIMITE TEMPO STINT")
+                    .font(.system(size: 60, weight: .black, design: .monospaced))
+                    .foregroundColor(.black)
+                    .minimumScaleFactor(0.4)
+                    .lineLimit(1)
+                
+                Text("MENO DI 2 MINUTI")
                     .font(.system(size: 50, weight: .black, design: .monospaced))
                     .foregroundColor(.black)
                     .minimumScaleFactor(0.4)

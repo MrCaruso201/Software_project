@@ -118,9 +118,20 @@ struct PitWallKartRow: View {
             
             // Stint Time
             let duration = currentDuration()
+            let maxSeconds = (event?.maxStintDuration ?? 0) * 60
+            let isOverTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds)
+            let isWarningTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds - 120) && !isOverTime
+            
+            let color: Color = {
+                if isInPit { return .red }
+                if isOverTime { return .red }
+                if isWarningTime { return .yellow }
+                return .kartGreen
+            }()
+            
             Text(formatStint(duration))
                 .font(.system(size: 18, weight: .heavy, design: .monospaced))
-                .foregroundColor(isInPit ? .red : .kartGreen)
+                .foregroundColor(color)
                 .frame(width: 70, alignment: .trailing)
             
             // Switch in pista / in pit
