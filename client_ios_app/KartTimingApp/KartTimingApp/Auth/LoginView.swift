@@ -229,6 +229,7 @@ struct CustomTextField: View {
     let placeholder: String
     @Binding var text: String
     let icon: String
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -236,6 +237,7 @@ struct CustomTextField: View {
                 .foregroundColor(.kartDim)
                 .frame(width: 20)
             TextField("", text: $text)
+                .focused($isFocused)
                 .foregroundColor(.kartForeground)
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
@@ -243,9 +245,12 @@ struct CustomTextField: View {
                     Text(placeholder).foregroundColor(.kartDim)
                 }
         }
+        .frame(maxWidth: .infinity)
         .padding()
         .background(Color.kartPanel)
         .cornerRadius(12)
+        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .onTapGesture { isFocused = true }
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1))
     }
 }
@@ -254,6 +259,7 @@ struct CustomSecureField: View {
     let placeholder: String
     @Binding var text: String
     let icon: String
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -261,6 +267,7 @@ struct CustomSecureField: View {
                 .foregroundColor(.kartDim)
                 .frame(width: 20)
             SecureField("", text: $text)
+                .focused($isFocused)
                 .foregroundColor(.kartForeground)
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
@@ -268,9 +275,12 @@ struct CustomSecureField: View {
                     Text(placeholder).foregroundColor(.kartDim)
                 }
         }
+        .frame(maxWidth: .infinity)
         .padding()
         .background(Color.kartPanel)
         .cornerRadius(12)
+        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .onTapGesture { isFocused = true }
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1))
     }
 }
