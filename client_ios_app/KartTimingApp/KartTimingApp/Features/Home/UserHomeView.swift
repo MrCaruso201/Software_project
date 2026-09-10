@@ -5,6 +5,8 @@ struct UserHomeView: View {
     @EnvironmentObject var authState: AuthState
     @StateObject private var viewModel = UserHomeViewModel()
     
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var registrationsExpanded = false
     @State private var showNotifications = false
     @State private var liveEventEntry: LiveEventEntry? = nil
 
@@ -331,63 +333,74 @@ struct UserHomeView: View {
     private var myRegistrationsCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             // ── Header ─────────────────────────────────────────────────────
-            HStack(spacing: 8) {
-                Image(systemName: "list.bullet.clipboard.fill")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.kartAccent)
-                Text("LE MIE ISCRIZIONI")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(.kartAccent)
-                Spacer()
-                let upcomingCount = viewModel.registrations.filter { reg in
+            Button {
+                registrationsExpanded.toggle()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "list.bullet.clipboard.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.kartAccent)
+                    Text("LE MIE ISCRIZIONI")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(.kartAccent)
+                    Spacer()
+                    let upcomingCount = viewModel.registrations.filter { reg in
+                        (viewModel.events.first(where: { ev in ev.id == reg.eventId })?.dateObject ?? .distantFuture) >= Date()
+                    }.count
+                    Text("\(upcomingCount)")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(.kartDim)
+                    Image(systemName: registrationsExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.kartAccent)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.kartAccent.opacity(0.08))
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(registrationsExpanded ? "Espanso" : "Compresso")
+
+            if registrationsExpanded {
+                // Filtra solo gli eventi futuri (data >= oggi)
+                let upcomingRegs = viewModel.registrations.filter { reg in
                     (viewModel.events.first(where: { ev in ev.id == reg.eventId })?.dateObject ?? .distantFuture) >= Date()
-                }.count
-                Text("\(upcomingCount)")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(.kartDim)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.kartAccent.opacity(0.08))
-
-            // Filtra solo gli eventi futuri (data >= oggi)
-            let upcomingRegs = viewModel.registrations.filter { reg in
-                (viewModel.events.first(where: { ev in ev.id == reg.eventId })?.dateObject ?? .distantFuture) >= Date()
-            }
-
-            if upcomingRegs.isEmpty {
-                // Stato vuoto
-                VStack(spacing: 12) {
-                    Image(systemName: "flag.slash")
-                        .font(.system(size: 36))
-                        .foregroundColor(.kartDim)
-                    Text("Nessuna iscrizione")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.kartDim)
-                    Text("Iscriviti a un evento dalla sezione \"Eventi\"")
-                        .font(.system(size: 12))
-                        .foregroundColor(.kartDim)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 28)
-            } else {
-                // Lista iscrizioni ordinate per data evento
-                let sorted = upcomingRegs.sorted { r0, r1 in
-                    let d0 = viewModel.events.first(where: { $0.id == r0.eventId })?.dateObject ?? .distantFuture
-                    let d1 = viewModel.events.first(where: { $0.id == r1.eventId })?.dateObject ?? .distantFuture
-                    return d0 < d1
                 }
 
-                VStack(spacing: 0) {
-                    ForEach(Array(sorted.enumerated()), id: \.element.id) { idx, reg in
-                        if let event = viewModel.events.first(where: { $0.id == reg.eventId }) {
-                            registrationRow(reg: reg, event: event)
+                if upcomingRegs.isEmpty {
+                    // Stato vuoto
+                    VStack(spacing: 12) {
+                        Image(systemName: "flag.slash")
+                            .font(.system(size: 36))
+                            .foregroundColor(.kartDim)
+                        Text("Nessuna iscrizione")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.kartDim)
+                        Text("Iscriviti a un evento dalla sezione \"Eventi\"")
+                            .font(.system(size: 12))
+                            .foregroundColor(.kartDim)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 28)
+                } else {
+                    // Lista iscrizioni ordinate per data evento
+                    let sorted = upcomingRegs.sorted { r0, r1 in
+                        let d0 = viewModel.events.first(where: { $0.id == r0.eventId })?.dateObject ?? .distantFuture
+                        let d1 = viewModel.events.first(where: { $0.id == r1.eventId })?.dateObject ?? .distantFuture
+                        return d0 < d1
+                    }
 
-                            if idx < sorted.count - 1 {
-                                Divider()
-                                    .background(Color.kartForeground.opacity(0.06))
-                                    .padding(.leading, 58)
+                    VStack(spacing: 0) {
+                        ForEach(Array(sorted.enumerated()), id: \.element.id) { idx, reg in
+                            if let event = viewModel.events.first(where: { $0.id == reg.eventId }) {
+                                registrationRow(reg: reg, event: event)
+
+                                if idx < sorted.count - 1 {
+                                    Divider()
+                                        .background(Color.kartForeground.opacity(0.06))
+                                        .padding(.leading, 58)
+                                }
                             }
                         }
                     }
@@ -396,6 +409,7 @@ struct UserHomeView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(12)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: registrationsExpanded)
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.06), lineWidth: 1))
     }
 
