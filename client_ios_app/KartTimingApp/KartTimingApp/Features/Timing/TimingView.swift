@@ -2,6 +2,9 @@ import SwiftUI
 
 struct TimingView: View {
     let server: DiscoveredServer
+    var isTabActive: Bool = true
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var isVisible = false
     @EnvironmentObject var authState: AuthState
     @Environment(\.dismiss) private var dismiss
     @StateObject private var manager = KartTimingManager()
@@ -49,6 +52,17 @@ struct TimingView: View {
                 }
             }
         }
+        .onAppear {
+            isVisible = true
+            updateConnection()
+        }
+        .onDisappear {
+            isVisible = false
+            if !navigateToPilot { manager.disconnect() }
+        }
+        .onChange(of: isTabActive) { _, _ in updateConnection() }
+        .onChange(of: scenePhase) { _, _ in updateConnection() }
+        .onChange(of: selectedKartodromo?.id) { _, _ in updateConnection() }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbarColorScheme(.dark, for: .navigationBar)
@@ -113,6 +127,16 @@ struct TimingView: View {
     }
 
 
+    private func updateConnection() {
+        guard isTabActive, scenePhase == .active, isVisible || navigateToPilot,
+              let track = selectedKartodromo else {
+            manager.disconnect()
+            return
+        }
+        if !manager.isConnected { manager.connect(to: server) }
+        manager.sendCommand("set_url", extra: ["url": track.url])
+    }
+
     // ── Track picker sheet ────────────────────────────────────────────────
 
     /// Rimuove la parte tra parentesi dal nome (es. "Ottobiano Motorsport (Ottobiano, PV)" → "Ottobiano Motorsport")
@@ -154,16 +178,7 @@ struct TimingView: View {
                 // Kartodromi filtrati
                 ForEach(filteredKartodromi) { k in
                     Button {
-                        let wasConnected = manager.isConnected
                         selectedKartodromo = k
-                        if !wasConnected {
-                            manager.connect(to: server)
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                manager.sendCommand("set_url", extra: ["url": k.url])
-                            }
-                        } else {
-                            manager.sendCommand("set_url", extra: ["url": k.url])
-                        }
                         showTrackPicker = false
                     } label: {
                         HStack {
@@ -319,8 +334,10 @@ struct TimingView: View {
             .reduce(into: Set<Int>()) { $0.insert($1) }
 
         ScrollView {
-            VStack(spacing: 6) {
-                ForEach(Array(timing.rows.enumerated()), id: \.offset) { idx, row in
+            LazyVStack(spacing: 6) {
+                ForEach(timing.displayRows) { item in
+                    let idx = item.index
+                    let row = item.values
                     kartCard(
                         row: row,
                         headers: h,

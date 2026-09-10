@@ -126,8 +126,9 @@ struct EventiView: View {
                         .padding(.bottom, 30) // spazio per la tab bar
                     }
                     .refreshable {
+                        viewModel.fetchUserRegistrations(serverURL: server.httpURL, token: authState.currentToken, forceRefresh: true)
                         await withCheckedContinuation { continuation in
-                            viewModel.fetchEvents(serverURL: server.httpURL) {
+                            viewModel.fetchEvents(serverURL: server.httpURL, forceRefresh: true) {
                                 continuation.resume()
                             }
                         }

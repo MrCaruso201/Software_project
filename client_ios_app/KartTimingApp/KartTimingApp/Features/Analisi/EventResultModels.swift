@@ -114,8 +114,16 @@ struct CircuitStat: Identifiable {
     let id: String      // nome del circuito (usato come chiave)
     let circuitName: String
     var kartodromoId: Int?
-    var kartodromoResults: [KartodromoResultResponse] = []
-    var entries: [Entry]
+    var kartodromoResults: [KartodromoResultResponse] = [] { didSet { chartCache = ChartCache() } }
+    var entries: [Entry] { didSet { chartCache = ChartCache() } }
+
+    init(id: String, circuitName: String, kartodromoId: Int? = nil, kartodromoResults: [KartodromoResultResponse] = [], entries: [Entry]) {
+        self.id = id
+        self.circuitName = circuitName
+        self.kartodromoId = kartodromoId
+        self.kartodromoResults = kartodromoResults
+        self.entries = entries
+    }
 
     var racesCount: Int   { entries.count }
     var bestEventLapMs: Int?  { entries.compactMap { $0.result?.bestLapMs }.min() }
@@ -127,13 +135,25 @@ struct CircuitStat: Identifiable {
     }
 
     /// Punti per il grafico andamento tempi, ordinati per data
+    private final class ChartCache {
+        var points: [ChartPoint]?
+    }
+    private var chartCache = ChartCache()
+
     var chartPoints: [ChartPoint] {
+        if let points = chartCache.points { return points }
+        let points = makeChartPoints()
+        chartCache.points = points
+        return points
+    }
+
+    private func makeChartPoints() -> [ChartPoint] {
         var points: [ChartPoint] = []
         
         // Punti delle gare
         points.append(contentsOf: entries.compactMap { entry -> ChartPoint? in
             guard let r = entry.result, let ms = r.bestLapMs else { return nil }
-            return ChartPoint(date: entry.eventDate, lapSeconds: Double(ms) / 1000.0,
+            return ChartPoint(id: "event:\(entry.id):\(r.id)", date: entry.eventDate, lapSeconds: Double(ms) / 1000.0,
                               isOfficial: true, eventTitle: entry.eventTitle)
         })
         
@@ -142,11 +162,11 @@ struct CircuitStat: Identifiable {
         formatter.formatOptions = [.withFullDate]
         points.append(contentsOf: kartodromoResults.compactMap { kr -> ChartPoint? in
             guard let date = formatter.date(from: kr.date) else { return nil }
-            return ChartPoint(date: date, lapSeconds: Double(kr.bestLapMs) / 1000.0,
+            return ChartPoint(id: "practice:\(kr.id)", date: date, lapSeconds: Double(kr.bestLapMs) / 1000.0,
                               isOfficial: false, eventTitle: "Prova Libera")
         })
         
-        return points.sorted { $0.date < $1.date }
+        return points.sorted { $0.date == $1.date ? $0.id < $1.id : $0.date < $1.date }
     }
 
     // MARK: – Nested types
@@ -162,7 +182,7 @@ struct CircuitStat: Identifiable {
     }
 
     struct ChartPoint: Identifiable {
-        let id = UUID()
+        let id: String
         let date: Date
         let lapSeconds: Double
         let isOfficial: Bool

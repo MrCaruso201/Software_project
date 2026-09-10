@@ -28,7 +28,7 @@ struct HomeView: View {
                 .tag(HomeTab.eventi)
 
                 NavigationStack {
-                    TimingView(server: appEnv.server(token: authState.currentToken ?? ""))
+                    TimingView(server: appEnv.server(token: authState.currentToken ?? ""), isTabActive: selectedTab == .timing)
                 }
                 .tabItem { Label("Timing", systemImage: "stopwatch.fill") }
                 .tag(HomeTab.timing)

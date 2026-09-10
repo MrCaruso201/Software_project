@@ -1,5 +1,7 @@
 import SwiftUI
 import PhotosUI
+import ImageIO
+import UniformTypeIdentifiers
 
 struct EditProfileView: View {
     @EnvironmentObject var authState: AuthState
@@ -91,11 +93,18 @@ struct EditProfileView: View {
                         .disabled(isUploadingAvatar)
                         .onChange(of: selectedItem) { _, newItem in
                             Task {
-                                if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                                    if let uiImage = UIImage(data: data) {
-                                        avatarImage = Image(uiImage: uiImage)
+                                guard let newItem else { return }
+                                isUploadingAvatar = true
+                                defer { isUploadingAvatar = false }
+                                do {
+                                    guard let data = try await newItem.loadTransferable(type: Data.self) else {
+                                        throw URLError(.cannotDecodeContentData)
                                     }
-                                    await uploadAvatar(data: data)
+                                    let prepared = try await AvatarPreparation.jpeg(from: data)
+                                    if let image = UIImage(data: prepared) { avatarImage = Image(uiImage: image) }
+                                    await uploadAvatar(data: prepared)
+                                } catch {
+                                    errorMessage = error.localizedDescription
                                 }
                             }
                         }
@@ -305,5 +314,25 @@ struct EditProfileView: View {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+}
+
+nonisolated private enum AvatarPreparation {
+    @concurrent
+    static func jpeg(from data: Data) async throws -> Data {
+        guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 512,
+                kCGImageSourceShouldCacheImmediately: true
+              ] as CFDictionary) else { throw URLError(.cannotDecodeContentData) }
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil) else {
+            throw URLError(.cannotCreateFile)
+        }
+        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.82] as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else { throw URLError(.cannotCreateFile) }
+        return output as Data
     }
 }

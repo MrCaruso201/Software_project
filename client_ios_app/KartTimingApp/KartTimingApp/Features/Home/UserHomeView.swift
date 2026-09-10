@@ -40,7 +40,7 @@ struct UserHomeView: View {
                 }
                 .refreshable {
                     await withCheckedContinuation { continuation in
-                        viewModel.fetchData(serverURL: server.httpURL, token: authState.currentToken) {
+                        viewModel.fetchData(serverURL: server.httpURL, token: authState.currentToken, forceRefresh: true) {
                             continuation.resume()
                         }
                     }
