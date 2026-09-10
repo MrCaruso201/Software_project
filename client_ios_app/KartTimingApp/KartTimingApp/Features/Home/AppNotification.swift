@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Server Notification API Model
 
-struct ServerNotification: Codable {
+nonisolated struct ServerNotification: Codable, Sendable {
     let id: Int
     let userId: Int
     let eventId: Int?

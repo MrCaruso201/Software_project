@@ -619,8 +619,10 @@ struct ClassificaLiveView: View {
             .reduce(into: Set<Int>()) { $0.insert($1) }
 
         ScrollView {
-            VStack(spacing: 6) {
-                ForEach(Array(timing.rows.enumerated()), id: \.offset) { idx, row in
+            LazyVStack(spacing: 6) {
+                ForEach(timing.displayRows) { item in
+                    let idx = item.index
+                    let row = item.values
                     kartCard(
                         row: row,
                         headers: h,

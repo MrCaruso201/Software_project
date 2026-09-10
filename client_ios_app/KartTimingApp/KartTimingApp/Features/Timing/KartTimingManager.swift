@@ -9,7 +9,15 @@ class KartTimingManager: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var showError: Bool = false
     @Published var lastEventUpdate: Date? = nil
+    let pitUpdates = PassthroughSubject<PitUpdate, Never>()
 
+    struct PitUpdate {
+        let eventId: Int
+        let kartNumber: Int
+        let requestId: String?
+    }
+
+    private var webSocketSession: URLSession?
     private var webSocketTask: URLSessionWebSocketTask?
     private var currentServer: DiscoveredServer?
 
@@ -18,6 +26,7 @@ class KartTimingManager: ObservableObject {
         currentServer = server
         guard let url = server.wsURL else { return }
         let session = URLSession(configuration: .default)
+        webSocketSession = session
         webSocketTask = session.webSocketTask(with: url)
         webSocketTask?.resume()
         DispatchQueue.main.async { self.isConnected = true }
@@ -29,6 +38,8 @@ class KartTimingManager: ObservableObject {
     func disconnect() {
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
+        webSocketSession?.invalidateAndCancel()
+        webSocketSession = nil
         DispatchQueue.main.async {
             self.isConnected = false
             self.timing = nil
@@ -43,21 +54,24 @@ class KartTimingManager: ObservableObject {
     }
 
     private func listen() {
-        webSocketTask?.receive { [weak self] result in
-            guard let self else { return }
+        guard let socket = webSocketTask else { return }
+        socket.receive { [weak self] result in
+            guard let self, self.webSocketTask === socket else { return }
             switch result {
             case .success(let message):
-                if case .string(let text) = message { self.handleMessage(text) }
+                if case .string(let text) = message { self.handleMessage(text, socket: socket) }
                 self.listen()
             case .failure:
                 let code = self.webSocketTask?.closeCode.rawValue
                 let storedServer = self.currentServer
                 DispatchQueue.main.async {
+                    guard self.webSocketTask === socket else { return }
                     self.isConnected = false
                     if code == 4401, let storedServer {
                         // Token scaduto: prova il refresh e riconnetti con il nuovo token
                         Task {
                             await AuthState.shared.handleTokenExpiry { newToken in
+                                guard self.webSocketTask === socket else { return }
                                 let updatedServer = DiscoveredServer(
                                     name:   storedServer.name,
                                     host:   storedServer.host,
@@ -74,7 +88,7 @@ class KartTimingManager: ObservableObject {
         }
     }
 
-    private func handleMessage(_ text: String) {
+    private func handleMessage(_ text: String, socket: URLSessionWebSocketTask) {
         guard
             let data = text.data(using: .utf8),
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -82,6 +96,7 @@ class KartTimingManager: ObservableObject {
         else { return }
 
         DispatchQueue.main.async {
+            guard self.webSocketTask === socket else { return }
             switch type {
             case "timing_update":
                 let headers = json["headers"] as? [String] ?? []
@@ -105,7 +120,15 @@ class KartTimingManager: ObservableObject {
                 }
 
             case "event_update":
-                self.lastEventUpdate = Date()
+                if json["change"] as? String == "pit",
+                   let eventId = json["event_id"] as? Int,
+                   let kartNumber = json["kart_number"] as? Int {
+                    self.pitUpdates.send(PitUpdate(eventId: eventId, kartNumber: kartNumber,
+                                                   requestId: json["request_id"] as? String))
+                } else {
+                    // Older servers and other changes retain the general refresh path.
+                    self.lastEventUpdate = Date()
+                }
 
             default:
                 break

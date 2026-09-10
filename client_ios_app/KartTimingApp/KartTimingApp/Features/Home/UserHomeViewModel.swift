@@ -25,13 +25,13 @@ class UserHomeViewModel: ObservableObject {
 
     // MARK: - Fetch
 
-    func fetchData(serverURL: URL?, token: String?, completion: (() -> Void)? = nil) {
+    func fetchData(serverURL: URL?, token: String?, forceRefresh: Bool = false, completion: (() -> Void)? = nil) {
         guard let serverURL = serverURL, let token = token else {
-            DispatchQueue.main.async { self.isLoading = false }
+            Task { @MainActor in self.isLoading = false }
             return
         }
 
-        isLoading = true
+        isLoading = profile == nil
         self.currentServerURL = serverURL
         self.currentToken = token
 
@@ -42,9 +42,9 @@ class UserHomeViewModel: ObservableObject {
         var reqMe = URLRequest(url: serverURL.appendingPathComponent("auth/me"))
         reqMe.httpMethod = "GET"
         reqMe.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        NetworkService.shared.dataTask(with: reqMe) { data, _, _ in
-            DispatchQueue.main.async {
-                if let data = data, let p = try? JSONDecoder().decode(UserProfile.self, from: data) {
+        NetworkService.shared.dataTask(with: reqMe, cacheFor: 15, forceRefresh: forceRefresh) { data, _, _ in
+            Task { @MainActor in
+                if let data = data, let p = try? await BackgroundJSON.decode(UserProfile.self, from: data) {
                     self.profile = p
                 }
                 group.leave()
@@ -56,9 +56,9 @@ class UserHomeViewModel: ObservableObject {
         var reqReg = URLRequest(url: serverURL.appendingPathComponent("events/registrations/me"))
         reqReg.httpMethod = "GET"
         reqReg.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        NetworkService.shared.dataTask(with: reqReg) { data, _, _ in
-            DispatchQueue.main.async {
-                if let data = data, let regs = try? JSONDecoder().decode([EventRegistrationResponse].self, from: data) {
+        NetworkService.shared.dataTask(with: reqReg, cacheFor: 15, forceRefresh: forceRefresh) { data, _, _ in
+            Task { @MainActor in
+                if let data = data, let regs = try? await BackgroundJSON.decode([EventRegistrationResponse].self, from: data) {
                     self.registrations = regs
                 }
                 group.leave()
@@ -71,9 +71,9 @@ class UserHomeViewModel: ObservableObject {
         var reqNotif = URLRequest(url: serverURL.appendingPathComponent("notifications/me"))
         reqNotif.httpMethod = "GET"
         reqNotif.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        NetworkService.shared.dataTask(with: reqNotif) { data, _, _ in
-            DispatchQueue.main.async {
-                if let data = data, let notifs = try? JSONDecoder().decode([ServerNotification].self, from: data) {
+        NetworkService.shared.dataTask(with: reqNotif, cacheFor: 15, forceRefresh: forceRefresh) { data, _, _ in
+            Task { @MainActor in
+                if let data = data, let notifs = try? await BackgroundJSON.decode([ServerNotification].self, from: data) {
                     self.serverNotifications = notifs
                 }
                 group.leave()
@@ -85,9 +85,9 @@ class UserHomeViewModel: ObservableObject {
         var reqEv = URLRequest(url: serverURL.appendingPathComponent("events"))
         reqEv.httpMethod = "GET"
         reqEv.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        NetworkService.shared.dataTask(with: reqEv) { data, _, _ in
-            DispatchQueue.main.async {
-                if let data = data, let evs = try? JSONDecoder().decode([RaceEvent].self, from: data) {
+        NetworkService.shared.dataTask(with: reqEv, cacheFor: 15, forceRefresh: forceRefresh) { data, _, _ in
+            Task { @MainActor in
+                if let data = data, let evs = try? await BackgroundJSON.decode([RaceEvent].self, from: data) {
                     self.events = evs
                 }
                 group.leave()
@@ -112,7 +112,7 @@ class UserHomeViewModel: ObservableObject {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             NetworkService.shared.dataTask(with: req).resume()
         }
-        DispatchQueue.main.async {
+        Task { @MainActor in
             // Save current IDs to cleared list
             var clearedIds = Set(UserDefaults.standard.stringArray(forKey: "clearedNotificationIds") ?? [])
             for notif in self.notifications {
@@ -156,14 +156,14 @@ class UserHomeViewModel: ObservableObject {
                 req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 NetworkService.shared.dataTask(with: req).resume()
                 
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self.serverNotifications.removeAll(where: { $0.id == serverNotifId })
                     self.buildNotifications()
                 }
             }
         } else {
             // È una notifica locale, aggiungila ai clearedIds
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 var clearedIds = Set(UserDefaults.standard.stringArray(forKey: "clearedNotificationIds") ?? [])
                 clearedIds.insert(id)
                 UserDefaults.standard.set(Array(clearedIds), forKey: "clearedNotificationIds")
@@ -282,7 +282,7 @@ class UserHomeViewModel: ObservableObject {
     }
 }
 
-struct UserProfile: Codable {
+nonisolated struct UserProfile: Codable, Sendable {
     let id: Int
     let username: String
     let firstName: String?

@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Live Kart Assignment
 
-struct LiveKartAssignment: Identifiable, Codable {
+nonisolated struct LiveKartAssignment: Identifiable, Codable, Sendable {
     let id: Int
     let eventId: Int
     let teamId: String
@@ -28,13 +28,7 @@ struct LiveKartAssignment: Identifiable, Codable {
     }
 
     var parsedStintLastResume: Date? {
-        guard let ds = stintLastResume else { return nil }
-        let df = DateFormatter()
-        df.timeZone = TimeZone(abbreviation: "UTC")
-        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
-        if let d = df.date(from: ds) { return d }
-        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        return df.date(from: ds)
+        stintLastResume.flatMap { LiveDateCache.parse($0) }
     }
     
     var currentStintDuration: TimeInterval {
@@ -48,7 +42,7 @@ struct LiveKartAssignment: Identifiable, Codable {
 
 // MARK: - Race Penalty
 
-struct RacePenalty: Identifiable, Codable {
+nonisolated struct RacePenalty: Identifiable, Codable, Sendable {
     let id: Int
     let eventId: Int
     let kartNumber: Int
@@ -96,26 +90,12 @@ struct RacePenalty: Identifiable, Codable {
             || penaltyType == "blue_flag"
     }
 
-    var parsedDate: Date? {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: createdAt) { return d }
-        let f2 = ISO8601DateFormatter()
-        if let d = f2.date(from: createdAt) { return d }
-        
-        let df = DateFormatter()
-        df.timeZone = TimeZone(abbreviation: "UTC")
-        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
-        if let d = df.date(from: createdAt) { return d }
-        
-        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        return df.date(from: createdAt)
-    }
+    var parsedDate: Date? { LiveDateCache.parse(createdAt) }
 }
 
 // MARK: - Race Message
 
-struct RaceMessage: Identifiable, Codable {
+nonisolated struct RaceMessage: Identifiable, Codable, Sendable {
     let id: Int
     let eventId: Int
     let targetKart: Int?     // nil = broadcast
@@ -134,33 +114,19 @@ struct RaceMessage: Identifiable, Codable {
 
     var isBroadcast: Bool { targetKart == nil }
 
-    var parsedDate: Date? {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: createdAt) { return d }
-        let f2 = ISO8601DateFormatter()
-        if let d = f2.date(from: createdAt) { return d }
-        
-        let df = DateFormatter()
-        df.timeZone = TimeZone(abbreviation: "UTC")
-        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
-        if let d = df.date(from: createdAt) { return d }
-        
-        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        return df.date(from: createdAt)
-    }
+    var parsedDate: Date? { LiveDateCache.parse(createdAt) }
 }
 
 // MARK: - Team Member Weight
 
-struct TeamMemberWeight: Codable {
+nonisolated struct TeamMemberWeight: Codable, Sendable {
     let username: String?
     let weight: Double?
 }
 
 // MARK: - My Kart (User)
 
-struct MyKartResponse: Codable {
+nonisolated struct MyKartResponse: Codable, Sendable {
     let kartNumber: Int?
     let teamId: String?
     let teamName: String?
@@ -197,13 +163,7 @@ struct MyKartResponse: Codable {
     }
 
     var parsedStintLastResume: Date? {
-        guard let ds = stintLastResume else { return nil }
-        let df = DateFormatter()
-        df.timeZone = TimeZone(abbreviation: "UTC")
-        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
-        if let d = df.date(from: ds) { return d }
-        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        return df.date(from: ds)
+        stintLastResume.flatMap { LiveDateCache.parse($0) }
     }
     
     var currentStintDuration: TimeInterval {
@@ -219,7 +179,7 @@ struct MyKartResponse: Codable {
 
 // MARK: - Penalty Type
 
-struct PenaltyType: Identifiable, Codable, Equatable {
+nonisolated struct PenaltyType: Identifiable, Codable, Equatable, Sendable {
     let id: Int
     let code: String
     let name: String
@@ -300,5 +260,35 @@ enum MessagePreset: String, CaseIterable, Identifiable {
         case .info:       return ""
         case .custom:     return ""
         }
+    }
+}
+
+nonisolated private enum LiveDateCache {
+    private static let cache: NSCache<NSString, NSDate> = {
+        let cache = NSCache<NSString, NSDate>()
+        cache.countLimit = 2048
+        return cache
+    }()
+
+    static func parse(_ value: String) -> Date? {
+        if let date = cache.object(forKey: value as NSString) { return date as Date }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var parsed = iso.date(from: value)
+        if parsed == nil {
+            iso.formatOptions = [.withInternetDateTime]
+            parsed = iso.date(from: value)
+        }
+        if parsed == nil {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            for format in ["yyyy-MM-dd'T'HH:mm:ss.SSSSSS", "yyyy-MM-dd'T'HH:mm:ss"] {
+                formatter.dateFormat = format
+                if let date = formatter.date(from: value) { parsed = date; break }
+            }
+        }
+        if let parsed { cache.setObject(parsed as NSDate, forKey: value as NSString) }
+        return parsed
     }
 }

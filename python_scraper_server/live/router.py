@@ -35,7 +35,7 @@ Endpoints:
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Header
 from sqlalchemy.orm import Session
 
 from db.database import get_db
@@ -387,7 +387,8 @@ def update_kart_pit_status(
     body: KartPitUpdate,
     background_tasks: BackgroundTasks,
     user_payload: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request_id: Optional[str] = Header(default=None, alias="X-Request-ID", max_length=128)
 ):
     """Aggiorna lo stato pit (in box o in pista) di un kart. Solo race_director/admin."""
     _require_director(user_payload)
@@ -420,7 +421,13 @@ def update_kart_pit_status(
     db.commit()
     db.refresh(assignment)
     
-    background_tasks.add_task(broadcast_to_event, event_id, {"type": "event_update"})
+    background_tasks.add_task(broadcast_to_event, event_id, {
+        "type": "event_update",
+        "change": "pit",
+        "event_id": event_id,
+        "kart_number": kart_number,
+        "request_id": request_id,
+    })
     r = KartAssignmentResponse.model_validate(assignment)
     r.total_penalty_seconds = _penalty_seconds_by_kart(event_id, db).get(kart_number, 0)
     return r
