@@ -87,6 +87,7 @@ def _apply_migrations() -> None:
         "ALTER TABLE events ADD COLUMN release_form_text TEXT",
         # Risultati multipli
         "ALTER TABLE event_results ADD COLUMN result_type TEXT NOT NULL DEFAULT 'final'",
+        "ALTER TABLE live_kart_assignments ADD COLUMN stint_penalty_assessed INTEGER NOT NULL DEFAULT 0",
         # Stint tracking
         "ALTER TABLE live_kart_assignments ADD COLUMN is_in_pit INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE live_kart_assignments ADD COLUMN stint_elapsed_seconds INTEGER NOT NULL DEFAULT 0",

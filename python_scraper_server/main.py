@@ -35,7 +35,8 @@ Struttura del progetto:
   kartodromi/router.py   → endpoint /kartodromi/*
 """
 
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 
 import uvicorn
 from fastapi import FastAPI
@@ -55,6 +56,7 @@ from kartodromi.router import router as kartodromi_router
 from results.router import router as results_router
 from notifications.router import router as notifications_router
 from live.router import router as live_router
+from live.stint_monitor import monitor_stints
 
 # ---------------------------------------------------------------------------
 # Lifecycle
@@ -67,11 +69,17 @@ async def lifespan(app: FastAPI):
     init_db()                   # crea le tabelle DB se non esistono
     clear_saved_timing_data()   # pulizia di eventuali residui da uno stop non pulito
     await start_bonjour()
-    yield
-    for session in list(sessions.values()):
-        session.stop()
-    await stop_bonjour()
-    clear_saved_timing_data()
+    monitor = asyncio.create_task(monitor_stints())
+    try:
+        yield
+    finally:
+        monitor.cancel()
+        with suppress(asyncio.CancelledError):
+            await monitor
+        for session in list(sessions.values()):
+            session.stop()
+        await stop_bonjour()
+        clear_saved_timing_data()
 
 
 # ---------------------------------------------------------------------------

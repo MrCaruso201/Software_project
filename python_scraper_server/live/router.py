@@ -51,6 +51,8 @@ from live.schemas import (
     MessageCreate, MessageResponse,
     MyKartResponse, EventStatusUpdate, KartPitUpdate
 )
+from live.stint_monitor import assess_stint, penalty_notification
+
 import json
 from datetime import datetime, timezone
 from scraper.storage import json_path_for
@@ -188,6 +190,7 @@ def update_event_status(
         ).all()
         for k in registered_karts:
             k.is_in_pit = False
+            k.stint_penalty_assessed = False
             k.stint_elapsed_seconds = 0
             k.stint_last_resume = now
 
@@ -405,6 +408,8 @@ def update_kart_pit_status(
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     race_is_running = event.race_status == "running"
     
+    # Check before freezing/resetting the timer so a sub-second monitor gap cannot hide an overrun.
+    automatic_penalty = assess_stint(db, event, assignment, now)
     if body.is_in_pit and not assignment.is_in_pit:
         # Entra nei box: accumula secondi, ferma il timer
         if assignment.stint_last_resume and race_is_running:
@@ -414,12 +419,15 @@ def update_kart_pit_status(
         assignment.is_in_pit = True
     elif not body.is_in_pit and assignment.is_in_pit:
         # Esce dai box: azzera stint e riavvia solo se la gara è in corso
+        assignment.stint_penalty_assessed = False
         assignment.stint_elapsed_seconds = 0
         assignment.stint_last_resume = now if race_is_running else None
         assignment.is_in_pit = False
         
     db.commit()
     db.refresh(assignment)
+    if automatic_penalty:
+        background_tasks.add_task(broadcast_to_event, event_id, penalty_notification(event_id))
     
     background_tasks.add_task(broadcast_to_event, event_id, {
         "type": "event_update",
@@ -641,6 +649,10 @@ def send_message(
         body.message_type == "custom" and body.text.strip().lower() == "gara iniziata"
     )
     
+    automatic_penalty = False
+    for kart in karts:
+        automatic_penalty = assess_stint(db, event, kart, now) or automatic_penalty
+
     if body.message_type in ("red_flag", "checkered_flag"):
         # Ferma tutti i timer — stint_last_resume = None garantisce che il timer iOS si fermi
         for k in karts:
@@ -661,12 +673,15 @@ def send_message(
         # Porta TUTTI i kart in pista, azzera e avvia i timer da zero
         for k in karts:
             k.is_in_pit = False
+            k.stint_penalty_assessed = False
             k.stint_elapsed_seconds = 0
             k.stint_last_resume = now
         event.race_status = "running"
 
     db.commit()
     db.refresh(message)
+    if automatic_penalty:
+        background_tasks.add_task(broadcast_to_event, event_id, penalty_notification(event_id))
     background_tasks.add_task(broadcast_to_event, event_id, {
         "type": "event_update", "change": "messages", "event_id": event_id,
         "karts_changed": body.message_type in ("red_flag", "green_flag", "checkered_flag") or is_gara_iniziata,
