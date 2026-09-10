@@ -3,6 +3,7 @@ import Combine
 
 struct PitWallLiveView: View {
     @ObservedObject var viewModel: LiveViewModel
+    var event: RaceEvent?
     @EnvironmentObject var manager: KartTimingManager
     
     @State private var currentTime = Date()
@@ -16,6 +17,19 @@ struct PitWallLiveView: View {
                 if let timing = manager.timing, !timing.rows.isEmpty {
                     ScrollView {
                         VStack(spacing: 8) {
+                            if let max = event?.maxStintDuration {
+                                HStack {
+                                    Image(systemName: "timer")
+                                    Text("Durata Massima Stint: \(max) min")
+                                        .font(.system(size: 14, weight: .bold))
+                                }
+                                .foregroundColor(.orange)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.orange.opacity(0.15))
+                                .cornerRadius(8)
+                            }
+                            
                             ForEach(Array(timing.rows.enumerated()), id: \.offset) { idx, row in
                                 if let kartNumStr = getKartNumber(from: row, headers: timing.headers),
                                    let kartNum = Int(kartNumStr) {
@@ -26,7 +40,8 @@ struct PitWallLiveView: View {
                                         kartNumber: kartNum,
                                         teamName: name,
                                         viewModel: viewModel,
-                                        currentTime: currentTime
+                                        currentTime: currentTime,
+                                        event: event
                                     )
                                 }
                             }
@@ -73,6 +88,7 @@ struct PitWallKartRow: View {
     let teamName: String
     @ObservedObject var viewModel: LiveViewModel
     let currentTime: Date
+    var event: RaceEvent?
     
     @State private var isUpdating = false
     @State private var showError = false

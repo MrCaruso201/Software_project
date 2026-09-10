@@ -36,7 +36,7 @@ struct DirectorLiveView: View {
                     .tag(2)
 
                 // ── Tab 4: Pit Stop ───────────────────────────────────
-                PitWallLiveView(viewModel: viewModel)
+                PitWallLiveView(viewModel: viewModel, event: event)
                     .tabItem { Label("Pit Stop", systemImage: "stopwatch.fill") }
                     .tag(3)
 

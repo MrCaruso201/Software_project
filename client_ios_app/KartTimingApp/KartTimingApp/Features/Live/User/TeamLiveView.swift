@@ -402,19 +402,27 @@ struct TeamLiveView: View {
                             Text(formatStint(myKart.currentStintDuration))
                                 .font(.system(size: 28, weight: .black, design: .monospaced))
                                 .foregroundColor(.white)
-                            if myKart.isInPit {
-                                Text("PIT")
-                                    .font(.system(size: 11, weight: .black, design: .monospaced))
-                                    .foregroundColor(.red)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 2)
-                                    .background(Color.red.opacity(0.15))
-                                    .clipShape(Capsule())
-                                    .overlay(Capsule().stroke(Color.red.opacity(0.5), lineWidth: 1))
-                            } else {
-                                Text("STINT")
-                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.kartDim)
+                            HStack(spacing: 6) {
+                                if myKart.isInPit {
+                                    Text("PIT")
+                                        .font(.system(size: 11, weight: .black, design: .monospaced))
+                                        .foregroundColor(.red)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 2)
+                                        .background(Color.red.opacity(0.15))
+                                        .clipShape(Capsule())
+                                        .overlay(Capsule().stroke(Color.red.opacity(0.5), lineWidth: 1))
+                                } else {
+                                    Text("STINT")
+                                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.kartDim)
+                                }
+                                
+                                if let max = event?.maxStintDuration {
+                                    Text("MAX \(max)'")
+                                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.orange)
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity)
