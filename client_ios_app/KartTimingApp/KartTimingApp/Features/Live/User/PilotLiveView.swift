@@ -48,6 +48,8 @@ private extension RaceMessage {
 /// Vista personale del pilota in gara.
 /// Layout identico a PilotView (landscape locked) + flash bandiera + badge penalità.
 struct PilotLiveView: View {
+    @StateObject private var gpsSpeed = GPSSpeedMonitor()
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: LiveViewModel
     var event: RaceEvent?
@@ -173,11 +175,33 @@ struct PilotLiveView: View {
                 }
             }
         }
-        .navigationTitle("Vista Pilota")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 10) {
+                    Image(systemName: "speedometer")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.kartAccent)
+                    Text(gpsSpeed.speedKmh.map { String(format: "%.0f", $0) } ?? "—")
+                        .font(.system(size: 34, weight: .black, design: .monospaced))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .fixedSize()
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("km/h").font(.system(size: 12, weight: .bold))
+                        Text(gpsSpeed.status).font(.system(size: 10))
+                            .foregroundColor(.kartDim)
+                    }
+                }
+                .foregroundColor(.kartForeground)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
+                .background(Color.kartPanel, in: RoundedRectangle(cornerRadius: 10))
+                .accessibilityElement(children: .combine)
+            }
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
                     dismiss()
@@ -188,6 +212,9 @@ struct PilotLiveView: View {
                 }
             }
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { gpsSpeed.start() } else { gpsSpeed.stop() }
+        }
         .onChange(of: myKart.messages.last?.id) { _, _ in
             checkForNewFlag(messages: myKart.messages)
             checkForNewTextMessage(messages: myKart.messages)
@@ -197,6 +224,7 @@ struct PilotLiveView: View {
             checkForNewDropPosition()
         }
         .onReceive(timer) { _ in
+            gpsSpeed.expireSample()
             if let maxMinutes = event?.maxStintDuration {
                 let maxSeconds = TimeInterval(maxMinutes * 60)
                 let duration = myKart.currentStintDuration
@@ -219,6 +247,7 @@ struct PilotLiveView: View {
         }
         // ── Orientation lock (identico a PilotView) ────────────────────────
         .onAppear {
+            gpsSpeed.start()
             // Mantiene accesa la dashboard durante la guida.
             UIApplication.shared.isIdleTimerDisabled = true
             checkForNewBlueFlags()
@@ -242,6 +271,7 @@ struct PilotLiveView: View {
             }
         }
         .onDisappear {
+            gpsSpeed.stop()
             // Riabilita il blocco automatico quando si esce dalla vista pilota.
             UIApplication.shared.isIdleTimerDisabled = false
             AppDelegate.orientationLock = .portrait
