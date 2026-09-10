@@ -47,7 +47,6 @@ struct UserHomeView: View {
                 }
             }
         }
-        .navigationTitle("Home")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

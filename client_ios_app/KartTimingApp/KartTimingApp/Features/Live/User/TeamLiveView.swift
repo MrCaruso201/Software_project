@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Team View — mostra posizione, penalità e messaggi dell'intera squadra.
 struct TeamLiveView: View {
+    @Environment(\.colorScheme) private var colorScheme
     var event: RaceEvent?
     @ObservedObject var viewModel: LiveViewModel
 
@@ -184,7 +185,7 @@ struct TeamLiveView: View {
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartDim)
                         Picker("Pilota attuale", selection: $viewModel.driverSwap.current) {
-                            Text("Seleziona pilota").tag(nil as String?)
+                            Text("Seleziona").tag(nil as String?)
                             ForEach(members.indices, id: \.self) { i in
                                 Text(members[i].name).tag(Optional(members[i].name))
                             }
@@ -209,7 +210,7 @@ struct TeamLiveView: View {
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartDim)
                         Picker("Pilota successivo", selection: $viewModel.driverSwap.next) {
-                            Text("Seleziona pilota").tag(nil as String?)
+                            Text("Seleziona").tag(nil as String?)
                             ForEach(members.indices, id: \.self) { i in
                                 Text(members[i].name).tag(Optional(members[i].name))
                             }
@@ -478,19 +479,30 @@ struct TeamLiveView: View {
 
     // MARK: - Penalties Card
 
+    @ViewBuilder
+    private var penaltyWarningIcon: some View {
+        if colorScheme == .light {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(Color.black, Color.yellow)
+        } else {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.yellow)
+        }
+    }
+
     private var penaltiesCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle.fill")
+                penaltyWarningIcon
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.kartWarningText)
                 Text("PENALITÀ E AVVISI")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.kartWarningText)
+                    .foregroundColor(.kartPenaltyText)
                 Spacer()
                 Text("+\(myKart.totalPenaltySeconds)s totali")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.kartWarningText)
+                    .foregroundColor(.kartPenaltyText)
             }
             .padding(14)
             .background(Color.yellow.opacity(0.08))
@@ -498,9 +510,15 @@ struct TeamLiveView: View {
             VStack(spacing: 0) {
                 ForEach(myKart.penalties) { penalty in
                     HStack(spacing: 12) {
-                        Image(systemName: penalty.isWarning ? "exclamationmark.bubble.fill" : "exclamationmark.triangle.fill")
-                            .foregroundColor(penalty.isWarning ? .kartDim : .kartWarningText)
-                            .font(.system(size: 14))
+                        Group {
+                            if penalty.isWarning {
+                                Image(systemName: "exclamationmark.bubble.fill")
+                                    .foregroundColor(.kartDim)
+                            } else {
+                                penaltyWarningIcon
+                            }
+                        }
+                        .font(.system(size: 14))
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(penalty.displayLabel)

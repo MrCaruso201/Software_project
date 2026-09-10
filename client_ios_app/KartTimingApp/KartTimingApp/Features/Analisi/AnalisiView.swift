@@ -48,7 +48,6 @@ struct AnalisiView: View {
                 }
             }
         }
-        .navigationTitle("Analisi")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.fetchAll(serverURL: server.httpURL, token: authState.currentToken)

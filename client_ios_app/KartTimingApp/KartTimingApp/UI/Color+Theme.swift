@@ -46,6 +46,11 @@ extension Color {
         light: UIColor(red: 1.0, green: 0.82, blue: 0.0, alpha: 1),
         dark: UIColor(Color.yellow)
     )
+    // Testi delle penalità leggibili anche sull’intestazione gialla.
+    static let kartPenaltyText = adaptive(
+        light: UIColor(red: 0.22, green: 0.18, blue: 0.08, alpha: 1),
+        dark: UIColor(Color.yellow)
+    )
     static let kartNavigationTint = adaptive(
         light: UIColor(red: 1.0, green: 0.82, blue: 0.0, alpha: 1),
         dark: UIColor(red: 1.0, green: 0.82, blue: 0.0, alpha: 1)

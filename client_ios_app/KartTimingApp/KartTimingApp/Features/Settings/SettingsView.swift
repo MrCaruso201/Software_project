@@ -117,14 +117,15 @@ struct SettingsView: View {
                             Text("Logout")
                                 .font(.title2.weight(.bold))
                         }
-                        .foregroundColor(.kartForeground)
+                        .foregroundColor(.kartRed)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 18)
+                        .background(Color.kartRed.opacity(0.08))
                         .background(Color.kartPanel)
                         .cornerRadius(16)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
+                                .stroke(Color.kartRed.opacity(0.25), lineWidth: 1)
                         )
                     }
                     .padding(.horizontal, 30)
@@ -133,7 +134,6 @@ struct SettingsView: View {
                 .padding(.vertical, 24)
             }
         }
-        .navigationTitle("Impostazioni")
         .navigationBarTitleDisplayMode(.inline)
     }
 
