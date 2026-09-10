@@ -36,6 +36,7 @@ struct LiveRootView: View {
                 serverURL: server.httpURL,
                 token: authState.currentToken,
                 eventId: event.id,
+                isDirector: isDirector,
                 timingManager: timingManager
             )
             if isDirector {

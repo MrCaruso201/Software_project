@@ -9,6 +9,13 @@ class KartTimingManager: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var showError: Bool = false
     @Published var lastEventUpdate: Date? = nil
+    let pitUpdates = PassthroughSubject<PitUpdate, Never>()
+
+    struct PitUpdate {
+        let eventId: Int
+        let kartNumber: Int
+        let requestId: String?
+    }
 
     private var webSocketSession: URLSession?
     private var webSocketTask: URLSessionWebSocketTask?
@@ -113,7 +120,15 @@ class KartTimingManager: ObservableObject {
                 }
 
             case "event_update":
-                self.lastEventUpdate = Date()
+                if json["change"] as? String == "pit",
+                   let eventId = json["event_id"] as? Int,
+                   let kartNumber = json["kart_number"] as? Int {
+                    self.pitUpdates.send(PitUpdate(eventId: eventId, kartNumber: kartNumber,
+                                                   requestId: json["request_id"] as? String))
+                } else {
+                    // Older servers and other changes retain the general refresh path.
+                    self.lastEventUpdate = Date()
+                }
 
             default:
                 break

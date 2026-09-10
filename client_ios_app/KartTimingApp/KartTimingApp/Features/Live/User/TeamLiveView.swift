@@ -366,8 +366,8 @@ struct TeamLiveView: View {
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                         
-                    if let teamId = myKart.teamId, let team = viewModel.registeredTeams.first(where: { $0.teamId == teamId }) {
-                        let memberNames = team.members.compactMap { $0.username }.joined(separator: " • ")
+                    if !myKart.teamMembers.isEmpty {
+                        let memberNames = myKart.teamMembers.compactMap { $0.username }.joined(separator: " • ")
                         Text(memberNames)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.kartDim)

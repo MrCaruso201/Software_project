@@ -34,6 +34,10 @@ class LiveViewModel: ObservableObject {
     private var eventId: Int = 0
     private var refreshTask: Task<Void, Never>?
     private var refreshPending = false
+    private var fullRefreshPending = false
+    private var isDirector = false
+    private var ownPitRequests: [String] = []
+    private var pitVersion = 0
     private var generation = UUID()
     private var penaltyTypesFetchedAt: Date?
     
@@ -44,13 +48,17 @@ class LiveViewModel: ObservableObject {
 
     // MARK: - Init / Setup
 
-    func configure(serverURL: URL?, token: String?, eventId: Int, timingManager: KartTimingManager? = nil) {
+    func configure(serverURL: URL?, token: String?, eventId: Int, isDirector: Bool = false, timingManager: KartTimingManager? = nil) {
         stopPolling()
         lastFetchedData.removeAll()
         penaltyTypesFetchedAt = nil
         self.serverURL = serverURL
         self.token = token
         self.eventId = eventId
+        self.isDirector = isDirector
+        registeredTeams = []
+        registeredIndividuals = []
+        ownPitRequests = []
         self.timingManager = timingManager
         
         timingManager?.$lastEventUpdate
@@ -60,6 +68,15 @@ class LiveViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 Task { await self?.fetchAll() }
+            }
+            .store(in: &cancellables)
+
+        timingManager?.pitUpdates
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] update in
+                guard let self, update.eventId == self.eventId else { return }
+                if let requestId = update.requestId, self.ownPitRequests.contains(requestId) { return }
+                Task { await self.refresh(pitOnly: true) }
             }
             .store(in: &cancellables)
     }
@@ -76,12 +93,14 @@ class LiveViewModel: ObservableObject {
         refreshTask?.cancel()
         refreshTask = nil
         refreshPending = false
+        fullRefreshPending = false
     }
 
 
     // MARK: - Fetch All (director)
 
-    private func fetchRawData(path: String) async -> Data? {
+    private func fetchRawData(path: String, enabled: Bool = true) async -> Data? {
+        guard enabled else { return nil }
         guard let url = endpoint(path), let token = token else { return nil }
         var req = URLRequest(url: url)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -94,7 +113,10 @@ class LiveViewModel: ObservableObject {
         }
     }
 
-    func fetchAll() async {
+    func fetchAll() async { await refresh(pitOnly: false) }
+
+    private func refresh(pitOnly: Bool) async {
+        fullRefreshPending = fullRefreshPending || !pitOnly
         if let refreshTask {
             refreshPending = true
             await refreshTask.value
@@ -105,7 +127,9 @@ class LiveViewModel: ObservableObject {
             guard let self else { return }
             repeat {
                 self.refreshPending = false
-                await self.fetchSnapshot(generation: currentGeneration)
+                let fullRefresh = self.fullRefreshPending
+                self.fullRefreshPending = false
+                await self.fetchSnapshot(generation: currentGeneration, pitOnly: !fullRefresh)
             } while self.refreshPending && !Task.isCancelled && self.generation == currentGeneration
         }
         refreshTask = task
@@ -113,21 +137,24 @@ class LiveViewModel: ObservableObject {
         if generation == currentGeneration { refreshTask = nil }
     }
 
-    private func fetchPenaltyTypesIfNeeded() async -> Data? {
+    private func fetchPenaltyTypesIfNeeded(enabled: Bool) async -> Data? {
+        guard enabled else { return nil }
         if let fetched = penaltyTypesFetchedAt, Date().timeIntervalSince(fetched) < 300 { return nil }
         return await fetchRawData(path: "/live/penalty-types")
     }
 
-    private func fetchSnapshot(generation: UUID) async {
-        async let eventData = fetchRawData(path: "/events/\(eventId)")
+    private func fetchSnapshot(generation: UUID, pitOnly: Bool) async {
+        let version = pitVersion
+        let director = isDirector
+        async let eventData = fetchRawData(path: "/events/\(eventId)", enabled: !pitOnly)
         async let kartsData = fetchRawData(path: "/live/\(eventId)/karts")
-        async let typesData = fetchPenaltyTypesIfNeeded()
-        async let penaltiesData = fetchRawData(path: "/live/\(eventId)/penalties")
-        async let messagesData = fetchRawData(path: "/live/\(eventId)/messages")
-        async let teamsData = fetchRawData(path: "/events/\(eventId)/registrations/teams")
-        async let individualsData = fetchRawData(path: "/events/\(eventId)/registrations")
-        async let resultsData = fetchRawData(path: "/events/\(eventId)/results")
-        async let myKartData = fetchRawData(path: "/live/\(eventId)/my-kart")
+        async let typesData = fetchPenaltyTypesIfNeeded(enabled: !pitOnly && director)
+        async let penaltiesData = fetchRawData(path: "/live/\(eventId)/penalties", enabled: !pitOnly)
+        async let messagesData = fetchRawData(path: "/live/\(eventId)/messages", enabled: !pitOnly)
+        async let teamsData = fetchRawData(path: "/events/\(eventId)/registrations/teams", enabled: !pitOnly && director)
+        async let individualsData = fetchRawData(path: "/events/\(eventId)/registrations", enabled: !pitOnly && director)
+        async let resultsData = fetchRawData(path: "/events/\(eventId)/results", enabled: !pitOnly)
+        async let myKartData = fetchRawData(path: "/live/\(eventId)/my-kart", enabled: !director)
         
         let (eventD, kartsD, typesD, penaltiesD, messagesD, teamsD, individualsD, resultsD, myKartD) = await (
             eventData, kartsData, typesData, penaltiesData, messagesData, teamsData, individualsData, resultsData, myKartData
@@ -156,11 +183,12 @@ class LiveViewModel: ObservableObject {
             lastFetchedData["event"] = eventD
             self.currentSessionName = value.sessionName
         }
-        if let value = snapshot.karts {
+        if version != pitVersion { refreshPending = true }
+        if let value = snapshot.karts, version == pitVersion {
             lastFetchedData["karts"] = kartsD
             self.kartAssignments = value
         }
-        if let value = snapshot.myKart {
+        if let value = snapshot.myKart, version == pitVersion {
             lastFetchedData["mykart"] = myKartD
             self.myKart = value
         }
@@ -237,19 +265,38 @@ class LiveViewModel: ObservableObject {
 
     func togglePitStatus(kartNumber: Int, isInPit: Bool) async throws {
         guard let url = endpoint("/live/\(eventId)/karts/\(kartNumber)/pit"),
-              let token = token else { throw URLError(.badURL) }
+              let token else { throw URLError(.badURL) }
+        let currentGeneration = generation
+        let requestId = UUID().uuidString
+        ownPitRequests.append(requestId)
+        if ownPitRequests.count > 128 { ownPitRequests.removeFirst() }
         var req = URLRequest(url: url)
         req.httpMethod = "PATCH"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue(requestId, forHTTPHeaderField: "X-Request-ID")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = ["is_in_pit": isInPit]
-        req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await NetworkService.shared.data(for: req)
-        if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
-            let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore aggiornamento pit"
-            throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
+        req.httpBody = try JSONEncoder().encode(["is_in_pit": isInPit])
+        do {
+            let (data, response) = try await NetworkService.shared.data(for: req)
+            guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+            guard (200..<300).contains(http.statusCode) else {
+                let message = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore aggiornamento pit"
+                throw NSError(domain: "", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: message])
+            }
+            let assignment = try await BackgroundJSON.decode(LiveKartAssignment.self, from: data)
+            guard generation == currentGeneration else { return }
+            pitVersion += 1
+            if let index = kartAssignments.firstIndex(where: { $0.kartNumber == kartNumber }) {
+                kartAssignments[index] = assignment
+            } else {
+                kartAssignments.append(assignment)
+            }
+            lastFetchedData["karts"] = nil
+        } catch {
+            // The write may have reached the server even if its response was lost.
+            if generation == currentGeneration { await refresh(pitOnly: true) }
+            throw error
         }
-        await fetchAll()
     }
 
     func updateRegistrationWeight(registrationId: Int, weight: Double) async throws {
