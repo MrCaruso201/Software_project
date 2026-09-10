@@ -57,6 +57,10 @@ struct LoginView: View {
                         }
 
                         CustomSecureField(placeholder: "Password", text: $password, icon: "lock")
+                            .submitLabel(isLoginTab ? .go : .done)
+                            .onSubmit {
+                                if isLoginTab { submit() }
+                            }
                     }
                     .padding(.horizontal, 30)
 
@@ -130,6 +134,9 @@ struct LoginView: View {
     }
 
     private func submit() {
+        guard !isLoadingLogin, !isLoadingGuest,
+              !username.isEmpty, !password.isEmpty,
+              isLoginTab || !email.isEmpty else { return }
         isLoadingLogin = true
         errorMessage = nil
 
