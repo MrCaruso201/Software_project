@@ -37,6 +37,17 @@ extension Color {
     static let kartDim     = adaptive(light: UIColor.black.withAlphaComponent(0.68),
                                       dark: UIColor.white.withAlphaComponent(0.35))
 
+    // Zavorra: ambra per le azioni e verde per gli stati corretti.
+    // Tonalità più scure in modalità chiara per mantenere leggibili i valori.
+    static let kartBallastAmber = adaptive(
+        light: UIColor(red: 0.55, green: 0.32, blue: 0.04, alpha: 1),
+        dark: UIColor(red: 0.91, green: 0.68, blue: 0.30, alpha: 1)
+    )
+    static let kartBallastSuccess = adaptive(
+        light: UIColor(red: 0.16, green: 0.43, blue: 0.28, alpha: 1),
+        dark: UIColor(red: 0.40, green: 0.76, blue: 0.53, alpha: 1)
+    )
+
     // Testi, bordi e superfici neutre seguono il tema di sistema.
     static let kartForeground = adaptive(light: .black, dark: .white)
     static let kartInset = adaptive(light: .white, dark: .black)

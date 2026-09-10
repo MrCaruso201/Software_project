@@ -101,17 +101,17 @@ struct TeamLiveView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "scalemass.fill")
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.purple)
+                            .foregroundColor(.kartForeground)
                         Text("PESO E ZAVORRA")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(.purple)
+                            .foregroundColor(.kartForeground)
                         Spacer()
                         Text("Min. \(minLimit, specifier: "%.0f") kg")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartDim)
                     }
                     .padding(14)
-                    .background(Color.purple.opacity(0.08))
+                    .background(Color.kartForeground.opacity(0.04))
 
                     // Righe membri
                     let members: [(name: String, weight: Double?)] = {
@@ -139,7 +139,7 @@ struct TeamLiveView: View {
                 }
                 .background(Color.kartPanel)
                 .cornerRadius(14)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.purple.opacity(0.2), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartBorder(opacity: 0.06), lineWidth: 1))
             }
         }
     }
@@ -170,10 +170,10 @@ struct TeamLiveView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.left.arrow.right.circle.fill")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.cyan)
+                        .foregroundColor(.kartForeground)
                     Text("CAMBIO PILOTA")
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundColor(.cyan)
+                        .foregroundColor(.kartForeground)
                     Spacer()
                 }
 
@@ -191,6 +191,7 @@ struct TeamLiveView: View {
                             }
                         }
                         .pickerStyle(.menu)
+                        .tint(.kartForeground)
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
@@ -216,6 +217,7 @@ struct TeamLiveView: View {
                             }
                         }
                         .pickerStyle(.menu)
+                        .tint(.kartForeground)
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
@@ -244,17 +246,17 @@ struct TeamLiveView: View {
                 } else if !bothKnown {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.kartWarningText)
+                            .foregroundColor(.kartBallastAmber)
                         Text("Peso mancante: impossibile calcolare")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.kartWarningText)
+                            .foregroundColor(.kartBallastAmber)
                     }
                     .padding(.vertical, 6)
                 } else if delta == 0 {
                     HStack(spacing: 10) {
                         Image(systemName: "equal.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundColor(.green)
+                            .foregroundColor(.kartBallastSuccess)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Nessun cambio zavorra")
                                 .font(.system(size: 14, weight: .bold))
@@ -271,11 +273,11 @@ struct TeamLiveView: View {
                     HStack(spacing: 10) {
                         Image(systemName: isAdding ? "plus.circle.fill" : "minus.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundColor(isAdding ? .orange : .cyan)
+                            .foregroundColor(.kartBallastAmber)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(isAdding ? "Aggiungi \(abs(delta)) kg" : "Togli \(abs(delta)) kg")
                                 .font(.system(size: 16, weight: .black, design: .monospaced))
-                                .foregroundColor(isAdding ? .orange : .cyan)
+                                .foregroundColor(.kartBallastAmber)
                             Text(isAdding ? "Aggiungere zavorra al kart" : "Rimuovere zavorra dal kart")
                                 .font(.system(size: 11))
                                 .foregroundColor(.kartDim)
@@ -295,7 +297,7 @@ struct TeamLiveView: View {
                 }
             }
             .padding(14)
-            .background(Color.cyan.opacity(0.05))
+            .background(Color.kartForeground.opacity(0.025))
         }
     }
 
@@ -307,8 +309,8 @@ struct TeamLiveView: View {
         }()
 
         let accentColor: Color = {
-            if weight == nil { return .yellow }
-            return requiredWeight > 0 ? .orange : .green
+            if weight == nil { return .kartBallastAmber }
+            return requiredWeight > 0 ? .kartBallastAmber : .kartBallastSuccess
         }()
 
         return HStack(spacing: 12) {
@@ -337,20 +339,20 @@ struct TeamLiveView: View {
             if weight == nil {
                 Text("?")
                     .font(.system(size: 15, weight: .black, design: .monospaced))
-                    .foregroundColor(.kartWarningText)
+                    .foregroundColor(.kartBallastAmber)
             } else if requiredWeight > 0 {
                 VStack(alignment: .trailing, spacing: 1) {
                     Text("+\(requiredWeight) kg")
                         .font(.system(size: 15, weight: .black, design: .monospaced))
-                        .foregroundColor(.orange)
+                        .foregroundColor(.kartBallastAmber)
                     Text("zavorra")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(.orange.opacity(0.7))
+                        .foregroundColor(.kartSecondaryText(opacity: 0.65))
                 }
             } else {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundColor(.green)
+                    .foregroundColor(.kartBallastSuccess)
             }
         }
         .padding(.horizontal, 14)
