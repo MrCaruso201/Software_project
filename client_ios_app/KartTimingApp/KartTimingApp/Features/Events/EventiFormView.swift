@@ -55,7 +55,7 @@ struct EventiFormView: View {
 
                         formRow(label: "Nome Evento", icon: "flag.checkered") {
                             TextField("Es. Gran Premio", text: $title)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .multilineTextAlignment(.trailing)
                                 .frame(maxWidth: 180)
                         }
@@ -82,7 +82,6 @@ struct EventiFormView: View {
                         formRow(label: "Data Evento", icon: "calendar") {
                             DatePicker("", selection: $eventDate, displayedComponents: [.date, .hourAndMinute])
                                 .labelsHidden()
-                                .colorScheme(.dark)
                                 .tint(.kartAccent)
                         }
                     }
@@ -92,7 +91,7 @@ struct EventiFormView: View {
 
                         formRow(label: "Costo (€)", icon: "eurosign") {
                             TextField("Es. 150.00", text: $registrationCost)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .multilineTextAlignment(.trailing)
                                 .keyboardType(.decimalPad)
                                 .frame(maxWidth: 120)
@@ -102,7 +101,7 @@ struct EventiFormView: View {
 
                         formRow(label: "Max Partecipanti", icon: "person.fill") {
                             TextField("Es. 60", text: $maxParticipants)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .multilineTextAlignment(.trailing)
                                 .keyboardType(.numberPad)
                                 .frame(maxWidth: 80)
@@ -112,7 +111,7 @@ struct EventiFormView: View {
 
                         formRow(label: "Min per Squadra", icon: "person.2") {
                             TextField("Es. 2", text: $minPeoplePerGroup)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .multilineTextAlignment(.trailing)
                                 .keyboardType(.numberPad)
                                 .frame(maxWidth: 80)
@@ -122,7 +121,7 @@ struct EventiFormView: View {
 
                         formRow(label: "Max per Squadra", icon: "person.2.fill") {
                             TextField("Es. 5", text: $maxPeoplePerGroup)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .multilineTextAlignment(.trailing)
                                 .keyboardType(.numberPad)
                                 .frame(maxWidth: 80)
@@ -133,7 +132,7 @@ struct EventiFormView: View {
                         formRow(label: "Chiudi iscrizioni", icon: "clock.fill") {
                             HStack(spacing: 4) {
                                 TextField("Es. 3", text: $daysBeforeDeadline)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                                     .multilineTextAlignment(.trailing)
                                     .keyboardType(.numberPad)
                                     .frame(maxWidth: 60)
@@ -149,7 +148,7 @@ struct EventiFormView: View {
 
                         formRow(label: "Peso Min. (kg)", icon: "scalemass") {
                             TextField("Es. 85.0", text: $weightLimit)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .multilineTextAlignment(.trailing)
                                 .keyboardType(.decimalPad)
                                 .frame(maxWidth: 100)
@@ -159,7 +158,7 @@ struct EventiFormView: View {
 
                         formRow(label: "Kart", icon: "steeringwheel") {
                             TextField("Es. Sodi SR5", text: $kart)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .multilineTextAlignment(.trailing)
                                 .frame(maxWidth: 160)
                         }
@@ -169,7 +168,7 @@ struct EventiFormView: View {
                         formRow(label: "Durata Gara", icon: "clock") {
                             HStack(spacing: 4) {
                                 TextField("60", text: $raceDuration)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                                     .multilineTextAlignment(.trailing)
                                     .keyboardType(.numberPad)
                                     .frame(maxWidth: 50)
@@ -184,7 +183,7 @@ struct EventiFormView: View {
                         formRow(label: "Max Stint", icon: "stopwatch") {
                             HStack(spacing: 4) {
                                 TextField("30", text: $maxStintDuration)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                                     .multilineTextAlignment(.trailing)
                                     .keyboardType(.numberPad)
                                     .frame(maxWidth: 50)
@@ -212,7 +211,7 @@ struct EventiFormView: View {
                                 .frame(minHeight: 110)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .font(.system(size: 13))
                                 .scrollContentBackground(.hidden)
                                 .background(Color.clear)
@@ -221,7 +220,7 @@ struct EventiFormView: View {
                     }
                     .background(Color.kartPanel)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1))
 
                     // ── Errore ────────────────────────────────────────────
                     if let err = saveError {
@@ -261,7 +260,7 @@ struct EventiFormView: View {
                             .background(
                                 isFormValid
                                     ? Color.kartAccent
-                                    : Color.white.opacity(0.08)
+                                    : Color.kartForeground.opacity(0.08)
                             )
                             .cornerRadius(14)
                             .shadow(color: isFormValid ? Color.kartAccent.opacity(0.35) : .clear,
@@ -370,7 +369,7 @@ struct EventiFormView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1))
     }
 
     /// Riga standard: icona + etichetta a sx, contenuto a dx (Picker / TextField / DatePicker)
@@ -397,7 +396,7 @@ struct EventiFormView: View {
 
     private func rowDivider() -> some View {
         Divider()
-            .background(Color.white.opacity(0.05))
+            .background(Color.kartForeground.opacity(0.05))
             .padding(.leading, 44)
     }
 

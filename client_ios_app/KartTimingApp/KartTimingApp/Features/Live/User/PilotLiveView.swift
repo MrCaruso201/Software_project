@@ -174,7 +174,6 @@ struct PilotLiveView: View {
         .navigationTitle("Vista Pilota")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -279,7 +278,7 @@ struct PilotLiveView: View {
                     HStack(spacing: 30) {
                         Text("P\(pos)")
                             .font(.system(size: 80, weight: .heavy, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                         
                         VStack(alignment: .leading, spacing: 6) {
                             // LAST LAP (più visibile)
@@ -289,7 +288,7 @@ struct PilotLiveView: View {
                                     .foregroundColor(.kartDim)
                                 Text(lapTime)
                                     .font(.system(size: 46, weight: .heavy, design: .monospaced))
-                                    .foregroundColor(isPersonalBest ? .kartGreen : .white)
+                                    .foregroundColor(isPersonalBest ? .kartGreen : .kartForeground)
                             }
                             
                             // BEST LAP (più piccolo, in verde)
@@ -332,7 +331,7 @@ struct PilotLiveView: View {
                         .foregroundColor(.kartRed)
                     Text("Kart #\(kartNum) non in pista")
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     Text("Attendi che il kart completi un giro...")
                         .font(.system(size: 14))
                         .foregroundColor(.kartDim)
@@ -354,7 +353,7 @@ struct PilotLiveView: View {
         VStack(spacing: 8) {
             Text(name)
                 .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
                 .lineLimit(1)
             HStack(spacing: 4) {
                 Image(systemName: isAhead ? "arrow.up.right" : "arrow.down.right")
@@ -367,11 +366,11 @@ struct PilotLiveView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color.black.opacity(0.3))
+        .background(Color.kartInset.opacity(0.3))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
         )
     }
 
@@ -404,7 +403,7 @@ struct PilotLiveView: View {
                 .padding(.vertical, 12)
                 .background(color.opacity(0.25))
                 .clipShape(Capsule())
-                .overlay(Capsule().stroke(color.opacity(0.8), lineWidth: 2))
+                .overlay(Capsule().stroke(Color.kartMessageBorder(color, opacity: 0.8), lineWidth: 2))
             }
         }
     }
@@ -429,7 +428,7 @@ struct PilotLiveView: View {
             .padding(.vertical, 12)
             .background(Color.orange.opacity(0.2))
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(Color.orange.opacity(0.6), lineWidth: 2))
+            .overlay(Capsule().stroke(Color.kartMessageBorder(.orange, opacity: 0.6), lineWidth: 2))
         }
     }
 
@@ -450,7 +449,7 @@ struct PilotLiveView: View {
             .padding(.vertical, 12)
             .background(Color.red.opacity(0.15))
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(Color.red.opacity(0.6), lineWidth: 2))
+            .overlay(Capsule().stroke(Color.kartMessageBorder(.red, opacity: 0.6), lineWidth: 2))
         } else {
             TimelineView(.periodic(from: .now, by: 1.0)) { _ in
                 let duration = myKart.currentStintDuration
@@ -459,7 +458,7 @@ struct PilotLiveView: View {
                 let isOverTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds)
                 let isWarningTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds - 120) && !isOverTime
                 
-                let timerColor: Color = isOverTime ? .red : (isWarningTime ? .yellow : .white)
+                let timerColor: Color = isOverTime ? .red : (isWarningTime ? .yellow : .kartForeground)
                 let iconColor: Color = isOverTime ? .red : (isWarningTime ? .yellow : .kartGreen)
                 let iconName: String = (isWarningTime || isOverTime) ? "exclamationmark.triangle.fill" : "stopwatch.fill"
                 
@@ -473,9 +472,9 @@ struct PilotLiveView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
-                .background(Color.black.opacity(0.4))
+                .background(Color.kartInset.opacity(0.4))
                 .clipShape(Capsule())
-                .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 2))
+                .overlay(Capsule().stroke(Color.kartBorder(opacity: 0.2), lineWidth: 2))
             }
         }
     }

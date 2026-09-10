@@ -65,7 +65,6 @@ struct TimingView: View {
         .onChange(of: selectedKartodromo?.id) { _, _ in updateConnection() }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             // Nessun back button necessario perché ora gestiamo la navigazione tramite la barra inferiore in HomeView
 
@@ -414,7 +413,7 @@ struct TimingView: View {
 
                     // Divisore
                     Rectangle()
-                        .fill(Color.white.opacity(0.06))
+                        .fill(Color.kartForeground.opacity(0.06))
                         .frame(width: 1, height: 44)
 
                     // ── Kart # + Nome ──────────────────────────────────────
@@ -423,12 +422,12 @@ struct TimingView: View {
                             if !kart.isEmpty {
                                 Text("#\(kart)")
                                     .font(.system(size: 15, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                             }
                             if !shortName.isEmpty {
                                 Text(shortName)
                                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                                    .foregroundColor(isLeader ? .kartAccent : .white)
+                                    .foregroundColor(isLeader ? .kartAccent : .kartForeground)
                                     .tracking(2)
                             }
                         }
@@ -450,7 +449,7 @@ struct TimingView: View {
                         // Ultimo giro (primario)
                         Text(lapTime)
                             .font(.system(size: 17, weight: .bold, design: .monospaced))
-                            .foregroundColor(isLeader ? .kartAccent : .white)
+                            .foregroundColor(isLeader ? .kartAccent : .kartForeground)
 
                         HStack(spacing: 8) {
                             // Migliore giro
@@ -485,7 +484,7 @@ struct TimingView: View {
                 
                 if isExpanded {
                     Divider()
-                        .background(Color.white.opacity(0.1))
+                        .background(Color.kartForeground.opacity(0.1))
                         .padding(.horizontal, 16)
                     
                     VStack(alignment: .leading, spacing: 14) {
@@ -497,7 +496,7 @@ struct TimingView: View {
                                     .foregroundColor(.kartDim)
                                 Text(fullName)
                                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                             }
                         }
                         
@@ -519,7 +518,7 @@ struct TimingView: View {
                                             .foregroundColor(.kartDim)
                                         Text(item.value.isEmpty ? "-" : item.value)
                                             .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.kartForeground)
                                     }
                                 }
                             }

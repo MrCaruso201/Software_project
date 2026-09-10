@@ -46,7 +46,6 @@ struct UploadResultsView: View {
             }
             .navigationTitle("Carica Risultati")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
@@ -118,7 +117,7 @@ struct UploadResultsView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1))
     }
     
 
@@ -133,14 +132,14 @@ struct UploadResultsView: View {
                         .font(.system(size: 14, weight: .bold))
                         .lineLimit(1).truncationMode(.middle)
                 }
-                .foregroundColor(selectedFileURL != nil ? .black : .white)
+                .foregroundColor(selectedFileURL != nil ? .black : .kartForeground)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(selectedFileURL != nil ? Color.kartAccent : Color.white.opacity(0.1))
+                .background(selectedFileURL != nil ? Color.kartAccent : Color.kartForeground.opacity(0.1))
                 .cornerRadius(12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(selectedFileURL != nil ? Color.clear : Color.white.opacity(0.2), lineWidth: 1)
+                        .stroke(selectedFileURL != nil ? Color.clear : Color.kartBorder(opacity: 0.2), lineWidth: 1)
                 )
             }
 
@@ -164,12 +163,12 @@ struct UploadResultsView: View {
 
             // Divisore
             HStack {
-                Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
+                Rectangle().fill(Color.kartForeground.opacity(0.07)).frame(height: 1)
                 Text("oppure")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.kartDim)
                     .padding(.horizontal, 8)
-                Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
+                Rectangle().fill(Color.kartForeground.opacity(0.07)).frame(height: 1)
             }
 
             // Cancella
@@ -203,9 +202,9 @@ struct UploadResultsView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.05))
+        .background(Color.kartForeground.opacity(0.05))
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1))
     }
 
     @ViewBuilder
@@ -220,14 +219,14 @@ struct UploadResultsView: View {
             .padding(.horizontal, 14).padding(.top, 12)
 
             if !importErrors.isEmpty {
-                Divider().background(Color.white.opacity(0.08)).padding(.horizontal, 14)
+                Divider().background(Color.kartBorder(opacity: 0.08)).padding(.horizontal, 14)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(importErrors.count) avvertiment\(importErrors.count == 1 ? "o" : "i"):")
-                        .font(.system(size: 11, weight: .bold)).foregroundColor(.yellow)
+                        .font(.system(size: 11, weight: .bold)).foregroundColor(.kartWarningText)
                         .padding(.horizontal, 14)
                     ForEach(importErrors, id: \.self) { err in
                         Text("• \(err)")
-                            .font(.system(size: 11)).foregroundColor(.yellow.opacity(0.85))
+                            .font(.system(size: 11)).foregroundColor(.kartWarningText.opacity(0.85))
                             .padding(.horizontal, 14)
                     }
                 }
@@ -364,7 +363,7 @@ struct UploadResultsView: View {
     private func csvFormatRow(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 11, design: .monospaced))
-            .foregroundColor(.white.opacity(0.7))
+            .foregroundColor(Color.kartSecondaryText(opacity: 0.7))
             .padding(.horizontal, 14)
             .padding(.vertical, 2)
     }

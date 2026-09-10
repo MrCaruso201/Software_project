@@ -60,7 +60,6 @@ struct AdminAnalisiView: View {
             }
             .navigationTitle("Analisi Utente")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationDestination(isPresented: Binding(
                 get: { selectedUser != nil },
                 set: { if !$0 { selectedUser = nil } }
@@ -88,7 +87,7 @@ struct AdminAnalisiView: View {
                       prompt: Text("Cerca per username o email...")
                           .foregroundColor(.kartDim))
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
                 .disableAutocorrection(true)
                 .textInputAutocapitalization(.never)
 
@@ -104,11 +103,11 @@ struct AdminAnalisiView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color.white.opacity(0.05))
+        .background(Color.kartForeground.opacity(0.05))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(searchText.isEmpty ? Color.white.opacity(0.06) : Color.kartAccent.opacity(0.4),
+                .stroke(searchText.isEmpty ? Color.kartBorder(opacity: 0.06) : Color.kartAccent.opacity(0.4),
                         lineWidth: 1)
         )
     }
@@ -158,7 +157,7 @@ struct AdminAnalisiView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(user.username)
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     Text(user.email)
                         .font(.system(size: 12))
                         .foregroundColor(.kartDim)
@@ -187,7 +186,7 @@ struct AdminAnalisiView: View {
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                    .stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -208,7 +207,7 @@ struct AdminAnalisiView: View {
             }
             Text("Cerca un pilota")
                 .font(.system(size: 17, weight: .bold))
-                .foregroundColor(.white.opacity(0.85))
+                .foregroundColor(Color.kartSecondaryText(opacity: 0.85))
             Text("Digita lo username o l'email di un\nutente per visualizzarne l'analisi.")
                 .font(.system(size: 13))
                 .foregroundColor(.kartDim)
@@ -314,13 +313,12 @@ struct UserAnalisiDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 1) {
                     Text(targetUser.username)
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     Text(targetUser.email)
                         .font(.system(size: 10))
                         .foregroundColor(.kartDim)
@@ -406,7 +404,7 @@ struct UserAnalisiDetailView: View {
                 .foregroundColor(.kartDim)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(Color.white.opacity(0.05))
+                .background(Color.kartForeground.opacity(0.05))
                 .cornerRadius(6)
             }
             .padding(14)
@@ -424,11 +422,11 @@ struct UserAnalisiDetailView: View {
                     statCell(icon: stat.0, value: stat.1, label: stat.2)
                 }
             }
-            .background(Color.white.opacity(0.04))
+            .background(Color.kartForeground.opacity(0.04))
         }
         .background(Color.kartPanel)
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.06), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartBorder(opacity: 0.06), lineWidth: 1))
     }
 
     private func statCell(icon: String, value: String, label: String) -> some View {
@@ -438,7 +436,7 @@ struct UserAnalisiDetailView: View {
                 .foregroundColor(.kartAccent)
             Text(value)
                 .font(.system(size: 26, weight: .black, design: .monospaced))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
             Text(label)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundColor(.kartDim)

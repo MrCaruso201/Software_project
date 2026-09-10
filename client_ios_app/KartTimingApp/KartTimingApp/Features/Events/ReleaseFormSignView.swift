@@ -28,13 +28,13 @@ struct ReleaseFormSignView: View {
             VStack(spacing: 16) {
                 Text("Liberatoria Evento")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .padding(.top)
                 
                 ScrollView {
                 Text(releaseText)
                     .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.9))
+                    .foregroundColor(Color.kartSecondaryText(opacity: 0.9))
                     .padding()
             }
             .frame(maxHeight: 250)
@@ -45,37 +45,36 @@ struct ReleaseFormSignView: View {
             VStack(spacing: 12) {
                 TextField("Nome", text: $firstName)
                     .padding()
-                    .background(Color.white.opacity(0.1))
+                    .background(Color.kartForeground.opacity(0.1))
                     .cornerRadius(8)
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                 
                 TextField("Cognome", text: $lastName)
                     .padding()
-                    .background(Color.white.opacity(0.1))
+                    .background(Color.kartForeground.opacity(0.1))
                     .cornerRadius(8)
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     
                 TextField("Codice Fiscale", text: $codiceFiscale)
                     .padding()
-                    .background(Color.white.opacity(0.1))
+                    .background(Color.kartForeground.opacity(0.1))
                     .cornerRadius(8)
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .autocapitalization(.allCharacters)
                     
                 TextField("Data di Nascita (dd/mm/yyyy)", text: $birthDate)
                     .padding()
-                    .background(Color.white.opacity(0.1))
+                    .background(Color.kartForeground.opacity(0.1))
                     .cornerRadius(8)
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     
                 TextField("Luogo di Residenza", text: $residence)
                     .padding()
-                    .background(Color.white.opacity(0.1))
+                    .background(Color.kartForeground.opacity(0.1))
                     .cornerRadius(8)
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
             }
             .padding(.horizontal)
-            .environment(\.colorScheme, .dark)
             
             if let oldImage = previousSignatureImage {
                 VStack(spacing: 12) {
@@ -148,8 +147,8 @@ struct ReleaseFormSignView: View {
                         }
                     }
                     .padding(.vertical, 14)
-                    .background(Color.white.opacity(0.1))
-                    .foregroundColor(.white)
+                    .background(Color.kartForeground.opacity(0.1))
+                    .foregroundColor(.kartForeground)
                     .cornerRadius(12)
                     .disabled(isSigning)
                     

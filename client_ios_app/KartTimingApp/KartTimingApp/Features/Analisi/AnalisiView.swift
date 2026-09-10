@@ -50,7 +50,6 @@ struct AnalisiView: View {
         }
         .navigationTitle("Analisi")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .onAppear {
             viewModel.fetchAll(serverURL: server.httpURL, token: authState.currentToken)
         }
@@ -137,11 +136,11 @@ struct AnalisiView: View {
                     statCell(icon: stat.0, value: stat.1, label: stat.2)
                 }
             }
-            .background(Color.white.opacity(0.04))
+            .background(Color.kartForeground.opacity(0.04))
         }
         .background(Color.kartPanel)
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.06), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartBorder(opacity: 0.06), lineWidth: 1))
     }
 
     private func statCell(icon: String, value: String, label: String) -> some View {
@@ -151,7 +150,7 @@ struct AnalisiView: View {
                 .foregroundColor(.kartAccent)
             Text(value)
                 .font(.system(size: 26, weight: .black, design: .monospaced))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
             Text(label)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundColor(.kartDim)
@@ -336,7 +335,7 @@ struct PastEventCard: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(event.title)
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .lineLimit(1)
                     HStack(spacing: 8) {
                         Label(event.location.components(separatedBy: " - ").first ?? event.location,
@@ -353,7 +352,7 @@ struct PastEventCard: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
 
-            Divider().background(Color.white.opacity(0.07))
+            Divider().background(Color.kartBorder(opacity: 0.07))
 
             // ── Tempi ───────────────────────────────────────────────────────
             HStack(spacing: 0) {
@@ -374,7 +373,7 @@ struct PastEventCard: View {
                         Text("Classifica")
                     }
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .background(Color.kartAccent.opacity(0.15))
@@ -386,7 +385,7 @@ struct PastEventCard: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1))
         .sheet(isPresented: $showClassification) {
             ClassificationSheet(event: event, viewModel: viewModel, server: server)
                 .environmentObject(authState)
@@ -452,7 +451,7 @@ struct CircuitCard: View {
                     .foregroundColor(.kartAccent)
                 Text(stat.circuitName.uppercased())
                     .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                 Spacer()
                 Text("\(stat.racesCount) \(stat.racesCount == 1 ? "gara" : "gare")")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
@@ -492,7 +491,7 @@ struct CircuitCard: View {
 
             // ── Swift Chart ───────────────────────────────────────────────
             if stat.hasAnyLapData {
-                Divider().background(Color.white.opacity(0.07))
+                Divider().background(Color.kartBorder(opacity: 0.07))
                 lapChart
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
@@ -500,7 +499,7 @@ struct CircuitCard: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.05), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1))
     }
 
     private func miniStat(label: String, value: String, accent: Color) -> some View {
@@ -565,7 +564,7 @@ struct CircuitCard: View {
                 .chartYScale(domain: .automatic(includesZero: false))
                 .chartYAxis {
                     AxisMarks(values: .automatic(desiredCount: 4)) { val in
-                        AxisGridLine().foregroundStyle(Color.white.opacity(0.06))
+                        AxisGridLine().foregroundStyle(Color.kartBorder(opacity: 0.06))
                         AxisValueLabel {
                             if let s = val.as(Double.self) {
                                 Text(formatSecs(s))
@@ -577,7 +576,7 @@ struct CircuitCard: View {
                 }
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: min(points.count, 4))) { _ in
-                        AxisGridLine().foregroundStyle(Color.white.opacity(0.06))
+                        AxisGridLine().foregroundStyle(Color.kartBorder(opacity: 0.06))
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
                             .font(.system(size: 8))
                             .foregroundStyle(Color.kartDim)
@@ -661,7 +660,6 @@ struct ClassificationSheet: View {
             }
             .navigationTitle("Classifica")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Chiudi") { dismiss() }.foregroundColor(.kartAccent)
@@ -688,7 +686,7 @@ struct ClassificationSheet: View {
     private func individualRow(_ result: EventResult) -> some View {
         let (bgColor, strokeColor) = podiumColors(result.position)
         let isMe = result.userId != nil && result.userId == currentUserId
-        let borderColor = isMe ? Color.white.opacity(0.85) : strokeColor
+        let borderColor = isMe ? Color.kartForeground.opacity(0.85) : strokeColor
         let borderWidth: CGFloat = isMe ? 2.0 : 1
 
         return HStack(spacing: 12) {
@@ -699,11 +697,11 @@ struct ClassificationSheet: View {
                     if let k = result.kartNumber {
                         Text("#\(k)")
                             .font(.system(size: 13, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                     }
                     Text(result.displayName)
                         .font(.system(size: 14, weight: isMe ? .bold : .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .lineLimit(1)
                 }
 
@@ -728,7 +726,7 @@ struct ClassificationSheet: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(laps)")
                         .font(.system(size: 14, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     Text(laps == 1 ? "Giro" : "Giri")
                         .font(.system(size: 10))
                         .foregroundColor(.kartDim)
@@ -794,7 +792,7 @@ struct ClassificationSheet: View {
 
     private func teamRow(_ team: TeamRow) -> some View {
         let (bgColor, strokeColor) = podiumColors(team.position)
-        let borderColor = team.isMyTeam ? Color.white.opacity(0.85) : strokeColor
+        let borderColor = team.isMyTeam ? Color.kartForeground.opacity(0.85) : strokeColor
         let borderWidth: CGFloat = team.isMyTeam ? 2.0 : 1
 
         return HStack(spacing: 12) {
@@ -805,14 +803,14 @@ struct ClassificationSheet: View {
                     if let k = team.kartNumber {
                         Text("#\(k)")
                             .font(.system(size: 13, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                     }
                     Image(systemName: "person.3.fill")
                         .font(.system(size: 9))
                         .foregroundColor(.kartDim)
                     Text(team.teamName)
                         .font(.system(size: 14, weight: team.isMyTeam ? .bold : .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .lineLimit(1)
                 }
 
@@ -843,7 +841,7 @@ struct ClassificationSheet: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(laps)")
                         .font(.system(size: 14, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     Text(laps == 1 ? "Giro" : "Giri")
                         .font(.system(size: 10))
                         .foregroundColor(.kartDim)
@@ -865,7 +863,7 @@ struct ClassificationSheet: View {
         case 1: return (Color.yellow.opacity(0.07), Color.yellow.opacity(0.3))
         case 2: return (Color(white: 0.5).opacity(0.07), Color(white: 0.6).opacity(0.25))
         case 3: return (Color.orange.opacity(0.07), Color.orange.opacity(0.25))
-        default: return (Color.kartPanel, Color.white.opacity(0.06))
+        default: return (Color.kartPanel, Color.kartForeground.opacity(0.06))
         }
     }
 
@@ -927,7 +925,7 @@ struct AddCircuitTimeSheet: View {
                             } label: {
                                 HStack {
                                     Text(selectedKartodromoName ?? "Seleziona un circuito")
-                                        .foregroundColor(selectedKartodromoId == nil ? .kartDim : .white)
+                                        .foregroundColor(selectedKartodromoId == nil ? .kartDim : .kartForeground)
                                         .font(.system(size: 16, weight: .semibold))
                                     Spacer()
                                     Image(systemName: "chevron.up.chevron.down")
@@ -936,7 +934,7 @@ struct AddCircuitTimeSheet: View {
                                 .padding(14)
                                 .background(Color.kartPanel)
                                 .cornerRadius(10)
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.06), lineWidth: 1))
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.kartBorder(opacity: 0.06), lineWidth: 1))
                             }
                         }
                         .padding(.top, 8)
@@ -954,7 +952,6 @@ struct AddCircuitTimeSheet: View {
                             )
                             .datePickerStyle(.compact)
                             .labelsHidden()
-                            .environment(\.colorScheme, .dark)
                         }
 
                         // Best lap structured input
@@ -1006,7 +1003,6 @@ struct AddCircuitTimeSheet: View {
             }
             .navigationTitle("Aggiungi Tempo")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Annulla") { dismiss() }.foregroundColor(.kartAccent)
@@ -1043,14 +1039,14 @@ struct AddCircuitTimeSheet: View {
     private func timeField(_ placeholder: String, text: Binding<String>) -> some View {
         TextField(placeholder, text: text)
             .font(.system(size: 22, weight: .bold, design: .monospaced))
-            .foregroundColor(.white)
+            .foregroundColor(.kartForeground)
             .multilineTextAlignment(.center)
             .keyboardType(.numberPad)
             .padding(14)
             .background(Color.kartPanel)
             .cornerRadius(10)
             .overlay(RoundedRectangle(cornerRadius: 10)
-                .stroke(text.wrappedValue.isEmpty ? Color.white.opacity(0.06) : Color.kartAccent.opacity(0.4),
+                .stroke(text.wrappedValue.isEmpty ? Color.kartBorder(opacity: 0.06) : Color.kartAccent.opacity(0.4),
                         lineWidth: 1))
     }
 

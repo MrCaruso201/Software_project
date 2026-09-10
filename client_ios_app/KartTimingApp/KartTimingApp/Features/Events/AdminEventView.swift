@@ -95,7 +95,6 @@ struct AdminEventView: View {
             .tint(.kartAccent)
             .navigationTitle(localEvent.title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 // ── Chiudi ────────────────────────────────────────────────
                 ToolbarItem(placement: .navigationBarLeading) {

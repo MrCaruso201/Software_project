@@ -40,9 +40,9 @@ struct EventRegistrationSheetView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         RegistrationHeaderSection(event: event, isTeamEvent: isTeamEvent)
-                        Divider().background(Color.white.opacity(0.1))
+                        Divider().background(Color.kartBorder(opacity: 0.1))
                         RegistrationDetailsSection(event: event, isTeamEvent: isTeamEvent)
-                        Divider().background(Color.white.opacity(0.1))
+                        Divider().background(Color.kartBorder(opacity: 0.1))
                         if isTeamEvent {
                             TeamFormSection(
                                 teamName: $teamName,
@@ -55,13 +55,13 @@ struct EventRegistrationSheetView: View {
                             if filledEmailsCount == 0 {
                                 Toggle("Voglio essere accorpato ad una squadra", isOn: $wantsToBeGrouped)
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                                     .tint(.kartAccent)
                                     .padding(.top, 10)
                             } else if filledEmailsCount < maxAdditionalMembers {
                                 Toggle("Accetto membri extra accorpati dagli admin", isOn: $acceptsExtraPilots)
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                                     .tint(.kartAccent)
                                     .padding(.top, 10)
                             }
@@ -84,7 +84,6 @@ struct EventRegistrationSheetView: View {
             }
             .navigationTitle("Iscrizione Evento")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Annulla") { dismiss() }
@@ -216,7 +215,7 @@ struct RegistrationHeaderSection: View {
             Text(event.title)
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
 
             HStack(spacing: 8) {
                 Image(systemName: "calendar").foregroundColor(.kartAccent)
@@ -239,15 +238,15 @@ struct RegistrationHeaderSection: View {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "clock.badge.exclamationmark.fill")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .padding(.top, 1)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("DEADLINE SCADUTA")
                             .font(.system(size: 12, weight: .black, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                         Text("Verrai posizionato in lista d'attesa. Controlla le notifiche: riceverai un avviso se l'organizzatore ti accetta.")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.white.opacity(0.88))
+                            .foregroundColor(Color.kartSecondaryText(opacity: 0.88))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -335,7 +334,7 @@ private struct IndividualEventBadge: View {
                 endPoint: .trailing
             )
         )
-        .foregroundColor(.white)
+        .foregroundColor(.kartForeground)
         .clipShape(Capsule())
         .padding(.top, 4)
     }
@@ -351,7 +350,7 @@ private struct RegistrationDetailsSection: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Dettagli Evento")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
 
             costRow
             weightRow
@@ -393,7 +392,7 @@ private struct DetailRowView: View {
         HStack {
             Text(label).foregroundColor(.kartDim)
             Spacer()
-            Text(value).foregroundColor(.white).fontWeight(.medium)
+            Text(value).foregroundColor(.kartForeground).fontWeight(.medium)
         }
     }
 }
@@ -430,7 +429,7 @@ private struct RegistrationButton: View {
         Button(action: action) {
             HStack {
                 if isLoading {
-                    ProgressView().tint(isDeadlinePassed ? .white : .black).padding(.trailing, 5)
+                    ProgressView().tint(isDeadlinePassed ? .kartForeground : .black).padding(.trailing, 5)
                 }
                 Image(systemName: isDeadlinePassed
                     ? "clock.badge.exclamationmark.fill"
@@ -482,7 +481,7 @@ struct TeamFormSection: View {
             HStack {
                 Text("Dati Squadra")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                 Spacer()
                 Text("Membri: \(filledCount + 1)/\(maxAdditionalMembers + 1)")
                     .font(.system(size: 12, weight: .semibold, design: .monospaced))
@@ -494,7 +493,7 @@ struct TeamFormSection: View {
             memberEmailsSection
         }
         .padding(14)
-        .background(Color.white.opacity(0.04))
+        .background(Color.kartForeground.opacity(0.04))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -509,13 +508,13 @@ struct TeamFormSection: View {
                 .foregroundColor(.kartDim)
 
             let isEmpty = teamName.trimmingCharacters(in: .whitespaces).isEmpty
-            let borderColor: Color = isEmpty ? Color.white.opacity(0.15) : Color.kartAccent.opacity(0.6)
+            let borderColor: Color = isEmpty ? Color.kartForeground.opacity(0.15) : Color.kartAccent.opacity(0.6)
 
             TextField("Inserisci il nome della squadra", text: $teamName)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
-                .background(Color.white.opacity(0.07))
-                .foregroundColor(.white)
+                .background(Color.kartForeground.opacity(0.07))
+                .foregroundColor(.kartForeground)
                 .cornerRadius(9)
                 .overlay(RoundedRectangle(cornerRadius: 9).stroke(borderColor, lineWidth: 1))
                 .autocorrectionDisabled()
@@ -526,18 +525,18 @@ struct TeamFormSection: View {
         VStack(alignment: .leading, spacing: 6) {
             Label("Email, @Username o Nome Caposquadra", systemImage: "star.fill")
                 .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
             
             let isEmpty = leaderEmail.trimmingCharacters(in: .whitespaces).isEmpty
-            let borderColor: Color = isEmpty ? Color.white.opacity(0.15) : Color.kartAccent.opacity(0.6)
+            let borderColor: Color = isEmpty ? Color.kartForeground.opacity(0.15) : Color.kartAccent.opacity(0.6)
             
             TextField("Email, @Username o Nome", text: $leaderEmail)
                 .keyboardType(.emailAddress)
                 .autocapitalization(.none)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
-                .background(isLeaderEditable ? Color.white.opacity(0.07) : Color.white.opacity(0.02))
-                .foregroundColor(isLeaderEditable ? .white : .gray)
+                .background(isLeaderEditable ? Color.kartForeground.opacity(0.07) : Color.kartForeground.opacity(0.02))
+                .foregroundColor(isLeaderEditable ? .kartForeground : .gray)
                 .cornerRadius(9)
                 .overlay(RoundedRectangle(cornerRadius: 9).stroke(borderColor, lineWidth: 1))
                 .autocorrectionDisabled()
@@ -595,7 +594,7 @@ private struct EmailFieldRow: View {
 
     private var borderColor: Color {
         let t = email.trimmingCharacters(in: .whitespaces)
-        if t.isEmpty { return Color.white.opacity(0.15) }
+        if t.isEmpty { return Color.kartForeground.opacity(0.15) }
         return t.contains("@") ? Color.green.opacity(0.5) : Color.orange.opacity(0.5)
     }
 
@@ -612,8 +611,8 @@ private struct EmailFieldRow: View {
                 .autocorrectionDisabled()
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(Color.white.opacity(0.07))
-                .foregroundColor(.white)
+                .background(Color.kartForeground.opacity(0.07))
+                .foregroundColor(.kartForeground)
                 .cornerRadius(9)
                 .overlay(RoundedRectangle(cornerRadius: 9).stroke(borderColor, lineWidth: 1))
 

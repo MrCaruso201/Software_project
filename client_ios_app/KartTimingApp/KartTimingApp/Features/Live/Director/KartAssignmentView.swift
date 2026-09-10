@@ -149,7 +149,7 @@ struct KartAssignmentView: View {
                 totalPenaltySeconds: totalPenaltySeconds
             )
             
-            Divider().background(Color.white.opacity(0.08))
+            Divider().background(Color.kartBorder(opacity: 0.08))
             
             // Lista Membri
             VStack(spacing: 0) {
@@ -161,7 +161,7 @@ struct KartAssignmentView: View {
                             if let name = member.username, !name.isEmpty {
                                 Text(name)
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                             }
                             if let email = member.email {
                                 Text(email)
@@ -187,7 +187,7 @@ struct KartAssignmentView: View {
                     .padding(.vertical, 9)
                     
                     if member.id != team.members.last?.id {
-                        Divider().background(Color.white.opacity(0.05)).padding(.leading, 52)
+                        Divider().background(Color.kartBorder(opacity: 0.05)).padding(.leading, 52)
                     }
                 }
             }
@@ -195,7 +195,7 @@ struct KartAssignmentView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.07), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.07), lineWidth: 1))
     }
     
     // MARK: - Individual Card
@@ -216,14 +216,14 @@ struct KartAssignmentView: View {
                 totalPenaltySeconds: totalPenaltySeconds
             )
             
-            Divider().background(Color.white.opacity(0.08))
+            Divider().background(Color.kartBorder(opacity: 0.08))
             
             HStack(spacing: 10) {
                 memberFallbackIcon
                 VStack(alignment: .leading, spacing: 2) {
                     Text(defaultName)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     if let email = reg.email, reg.username != nil {
                         Text(email)
                             .font(.system(size: 11))
@@ -239,7 +239,7 @@ struct KartAssignmentView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.07), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.07), lineWidth: 1))
     }
     
     // MARK: - Shared Header
@@ -248,7 +248,7 @@ struct KartAssignmentView: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(assignment != nil ? Color.kartAccent.opacity(0.12) : Color.white.opacity(0.05))
+                    .fill(assignment != nil ? Color.kartAccent.opacity(0.12) : Color.kartForeground.opacity(0.05))
                 
                 Text(assignment != nil ? "#\(assignment!.kartNumber)" : "-")
                     .font(.system(size: 20, weight: .black, design: .monospaced))
@@ -259,7 +259,7 @@ struct KartAssignmentView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(assignment?.teamName ?? defaultName)
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .lineLimit(1)
                 
                 if let _ = assignment, (totalPenaltySeconds > 0 || penaltyCount > 0) {
@@ -311,8 +311,8 @@ struct KartAssignmentView: View {
                     .font(.system(size: 11, weight: .bold))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.1))
-                    .foregroundColor(.white)
+                    .background(Color.kartForeground.opacity(0.1))
+                    .foregroundColor(.kartForeground)
                     .cornerRadius(4)
             } else {
                 HStack(spacing: 2) {
@@ -335,7 +335,7 @@ struct KartAssignmentView: View {
             .font(.system(size: 14))
             .foregroundColor(.kartDim)
             .frame(width: 32, height: 32)
-            .background(Color.white.opacity(0.06))
+            .background(Color.kartForeground.opacity(0.06))
             .clipShape(Circle())
     }
 }

@@ -81,7 +81,6 @@ struct AdminKartodromoView: View {
         }
         .navigationTitle("Circuiti")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             // Barra ricerca stile Live Timing
             ToolbarItem(placement: .principal) {
@@ -95,7 +94,6 @@ struct AdminKartodromoView: View {
                         .multilineTextAlignment(.center)
                         .disableAutocorrection(true)
                 }
-                .environment(\.colorScheme, .light)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
                 .background(
@@ -163,7 +161,7 @@ struct AdminKartodromoView: View {
                     HStack(spacing: 6) {
                         Text(k.nome)
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                         if !k.attivo {
                             Text("INATTIVO")
                                 .font(.system(size: 9, weight: .bold))
@@ -197,7 +195,7 @@ struct AdminKartodromoView: View {
 
             // Corpo espanso
             if isExpanded {
-                Divider().background(Color.white.opacity(0.1))
+                Divider().background(Color.kartBorder(opacity: 0.1))
 
                 VStack(alignment: .leading, spacing: 10) {
                     // URL timing
@@ -311,11 +309,11 @@ struct AdminKartodromoView: View {
                                 ? (uploadResult!.success ? Color.green.opacity(0.8) : Color.kartRed.opacity(0.7))
                                 : Color.kartBG
                         )
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                                .stroke(Color.kartBorder(opacity: 0.15), lineWidth: 1)
                         )
                     }
                 }
@@ -329,7 +327,7 @@ struct AdminKartodromoView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(
-                    k.attivo ? Color.white.opacity(0.05) : Color.kartRed.opacity(0.25),
+                    k.attivo ? Color.kartForeground.opacity(0.05) : Color.kartRed.opacity(0.25),
                     lineWidth: 1
                 )
         )
@@ -348,7 +346,7 @@ struct AdminKartodromoView: View {
         HStack(spacing: 10) {
             Text("Circuiti nel sistema")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
             Spacer()
             Text("\(filtered.count) trovati")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))

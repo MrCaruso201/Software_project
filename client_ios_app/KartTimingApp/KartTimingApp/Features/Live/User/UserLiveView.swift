@@ -34,7 +34,6 @@ struct UserLiveView: View {
             .tint(.kartAccent)
             .navigationTitle(viewModel.currentSessionName ?? event.title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 // ── Chiudi ────────────────────────────────────────────
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -46,7 +45,7 @@ struct UserLiveView: View {
                 ToolbarItem(placement: .principal) {
                     Text(event.title)
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .lineLimit(1)
                 }
 

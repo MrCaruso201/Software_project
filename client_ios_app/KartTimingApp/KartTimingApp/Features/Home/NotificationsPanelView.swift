@@ -43,7 +43,6 @@ struct NotificationsPanelView: View {
             }
             .navigationTitle("Notifiche")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
@@ -74,7 +73,7 @@ struct NotificationsPanelView: View {
             Text("Nessuna notifica")
                 .font(.title3)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
             Text("Quando ci saranno aggiornamenti sulle tue iscrizioni o nuovi eventi, li troverai qui.")
                 .font(.subheadline)
                 .foregroundColor(.kartDim)
@@ -136,7 +135,7 @@ struct NotificationRowView: View {
                     }
                     Text(notification.title)
                         .font(.system(size: 14, weight: notification.isRead ? .regular : .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     Text(notification.message)
                         .font(.system(size: 13))
                         .foregroundColor(.kartDim)

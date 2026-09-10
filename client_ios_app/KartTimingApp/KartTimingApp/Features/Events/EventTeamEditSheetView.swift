@@ -31,12 +31,12 @@ struct EventTeamEditSheetView: View {
                 
                 if isFetching {
                     ProgressView("Caricamento team...")
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             RegistrationHeaderSection(event: event, isTeamEvent: true, showDeadlineBanner: false)
-                            Divider().background(Color.white.opacity(0.1))
+                            Divider().background(Color.kartBorder(opacity: 0.1))
                             
                             TeamFormSection(
                                 teamName: $teamName,
@@ -50,7 +50,7 @@ struct EventTeamEditSheetView: View {
                             if filledCount < maxAdditionalMembers {
                                 Toggle("Accetto membri extra accorpati dagli admin", isOn: $acceptsExtraPilots)
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                                     .tint(.kartAccent)
                             }
                             
@@ -103,7 +103,6 @@ struct EventTeamEditSheetView: View {
             }
             .navigationTitle("Modifica Team")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }

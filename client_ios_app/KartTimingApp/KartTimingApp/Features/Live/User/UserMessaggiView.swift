@@ -44,7 +44,7 @@ struct UserMessaggiView: View {
                                 .foregroundColor(.kartDim)
                             Text("Log comunicazioni e penalità")
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                         }
                         Spacer()
                         // Badge "sola lettura"
@@ -57,7 +57,7 @@ struct UserMessaggiView: View {
                         .foregroundColor(.kartDim)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.05))
+                        .background(Color.kartForeground.opacity(0.05))
                         .cornerRadius(6)
                     }
                 }
@@ -65,7 +65,7 @@ struct UserMessaggiView: View {
                 .padding(.vertical, 12)
                 .background(Color.kartPanel)
 
-                Divider().background(Color.white.opacity(0.06))
+                Divider().background(Color.kartBorder(opacity: 0.06))
 
                 if combinedLog.isEmpty {
                     Spacer()
@@ -152,7 +152,7 @@ struct UserMessageRow: View {
                 }
                 Text(message.text)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .fixedSize(horizontal: false, vertical: true)
             }
             // Nessun pulsante elimina
@@ -160,7 +160,7 @@ struct UserMessageRow: View {
         .padding(12)
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(accentColor.opacity(0.15), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartMessageBorder(accentColor, opacity: 0.15), lineWidth: 1))
     }
 }
 
@@ -179,11 +179,11 @@ struct UserPenaltyLogRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Image(systemName: penalty.isWarning ? "exclamationmark.bubble.fill" : "exclamationmark.triangle.fill")
-                        .foregroundColor(penalty.isWarning ? .kartDim : .yellow)
+                        .foregroundColor(penalty.isWarning ? .kartDim : .kartWarningText)
                         .font(.system(size: 11))
                     Text(penalty.displayLabel)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                 }
                 if let note = penalty.note, !note.isEmpty {
                     Text(note)
@@ -204,6 +204,6 @@ struct UserPenaltyLogRow: View {
         .padding(12)
         .background(Color.kartPanel)
         .cornerRadius(10)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(penalty.isWarning ? Color.white.opacity(0.15) : Color.yellow.opacity(0.3), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(penalty.isWarning ? Color.kartBorder(opacity: 0.15) : Color.kartMessageBorder(.yellow, opacity: 0.3), lineWidth: 1))
     }
 }

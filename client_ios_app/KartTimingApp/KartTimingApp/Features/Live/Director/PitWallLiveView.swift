@@ -139,7 +139,7 @@ struct PitWallKartRow: View {
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isInPit ? Color.red.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
+                .stroke(isInPit ? Color.red.opacity(0.5) : Color.kartBorder(opacity: 0.1), lineWidth: 1)
         )
         .alert(isPresented: $showError) {
             Alert(title: Text("Errore"), message: Text(errorMsg), dismissButton: .default(Text("OK")))

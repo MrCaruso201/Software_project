@@ -49,7 +49,6 @@ struct UserHomeView: View {
         }
         .navigationTitle("Home")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
@@ -122,7 +121,7 @@ struct UserHomeView: View {
                             Text("\(p.firstName ?? "") \(p.lastName ?? "")")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                             Text("@\(p.username)")
                                 .font(.subheadline)
                                 .foregroundColor(.kartDim)
@@ -130,13 +129,13 @@ struct UserHomeView: View {
                             Text("@\(p.username)")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                         }
                     } else {
                         Text("Utente")
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                     }
                 }
                 Spacer()
@@ -192,7 +191,7 @@ struct UserHomeView: View {
                                         }
                                         Text(nextEvent.title)
                                             .font(.system(size: 16, weight: .bold))
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.kartForeground)
                                         Text(isLive ? "Tocca per i dettagli" : "Tocca per i dettagli")
                                             .font(.system(size: 12))
                                             .foregroundColor(.kartDim)
@@ -279,7 +278,7 @@ struct UserHomeView: View {
                                 
                                 Text(nextEvent.title)
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                                     .lineLimit(1)
                                     
                                 let city = nextEvent.location.components(separatedBy: " - ").first ?? nextEvent.location
@@ -297,7 +296,7 @@ struct UserHomeView: View {
                                 HStack {
                                     Text("- \(countdownString(to: firstDate))")
                                         .font(.system(size: 24, weight: .bold))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.kartForeground)
                                 }
                                 .padding(.top, 4)
                             }
@@ -388,7 +387,7 @@ struct UserHomeView: View {
 
                             if idx < sorted.count - 1 {
                                 Divider()
-                                    .background(Color.white.opacity(0.06))
+                                    .background(Color.kartForeground.opacity(0.06))
                                     .padding(.leading, 58)
                             }
                         }
@@ -398,7 +397,7 @@ struct UserHomeView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.06), lineWidth: 1))
     }
 
     private func registrationRow(reg: EventRegistrationResponse, event: RaceEvent) -> some View {
@@ -424,7 +423,7 @@ struct UserHomeView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(event.title)
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .lineLimit(1)
 
                     HStack(spacing: 6) {

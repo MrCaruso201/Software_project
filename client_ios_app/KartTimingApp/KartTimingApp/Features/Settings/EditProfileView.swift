@@ -46,11 +46,11 @@ struct EditProfileView: View {
                                     .fill(Color.kartPanel)
                                     .frame(width: 80, height: 80)
                                     .overlay(
-                                        Circle().stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                        Circle().stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1)
                                     )
                                 
                                 if isUploadingAvatar {
-                                    ProgressView().tint(.white)
+                                    ProgressView().tint(.kartForeground)
                                 } else if let avatarImage {
                                     avatarImage
                                         .resizable()
@@ -117,7 +117,7 @@ struct EditProfileView: View {
                             disabledField(title: "Username", icon: "person", text: username)
                             disabledField(title: "Email", icon: "envelope", text: email)
                             
-                            Divider().background(Color.white.opacity(0.2)).padding(.vertical, 8)
+                            Divider().background(Color.kartBorder(opacity: 0.2)).padding(.vertical, 8)
                             
                             // Campi modificabili
                             editableField(
@@ -182,7 +182,7 @@ struct EditProfileView: View {
                             .cornerRadius(16)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                    .stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1)
                             )
                         }
                         .disabled(isLoading)
@@ -242,14 +242,14 @@ struct EditProfileView: View {
                     .foregroundColor(.kartDim)
                     .frame(width: 18)
                 TextField("Inserisci \(title.lowercased())", text: text)
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
             }
             .padding(14)
             .background(Color.kartPanel)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
             )
         }
     }

@@ -138,7 +138,6 @@ struct EventiView: View {
         }
         .navigationTitle("Eventi")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             // Barra ricerca stile Live Timing
             ToolbarItem(placement: .principal) {
@@ -152,7 +151,6 @@ struct EventiView: View {
                         .multilineTextAlignment(.center)
                         .disableAutocorrection(true)
                 }
-                .environment(\.colorScheme, .light)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
                 .background(
@@ -263,7 +261,7 @@ struct EventiView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(event.title)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     
                     HStack(spacing: 12) {
                         HStack(spacing: 4) {
@@ -291,14 +289,14 @@ struct EventiView: View {
             
             // Corpo espanso
             if isExpanded {
-                Divider().background(Color.white.opacity(0.1))
+                Divider().background(Color.kartBorder(opacity: 0.1))
 
                 VStack(spacing: 12) {
                     // Informazioni rapide: tipo gara e prezzo
                     HStack {
                         Text(event.isTeamEvent ? "GARA A SQUADRE" : "GARA INDIVIDUALE")
                             .font(.caption.bold())
-                            .foregroundColor(event.isTeamEvent ? .yellow : .blue)
+                            .foregroundColor(event.isTeamEvent ? .kartWarningText : .blue)
                         Spacer()
                         if let cost = event.registrationCost {
                             let priceLabel = event.isTeamEvent ? "Squadra" : "Prezzo"
@@ -388,7 +386,7 @@ struct EventiView: View {
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                .stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1)
         )
         .padding(.horizontal, 16)
         .contentShape(Rectangle())
@@ -408,7 +406,7 @@ struct EventiView: View {
             Text("\(label):")
                 .foregroundColor(.kartDim)
             Text(value)
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
         }
         .font(.system(size: 11, weight: .medium))
     }
@@ -418,7 +416,7 @@ struct EventiView: View {
         HStack(spacing: 10) {
             Text("Eventi in programma")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
             Spacer()
             Text("\(filteredEvents.count) trovati")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))

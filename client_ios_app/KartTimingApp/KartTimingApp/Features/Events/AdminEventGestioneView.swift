@@ -186,7 +186,7 @@ struct AdminEventGestioneView: View {
                     }
                     .background(Color.kartPanel)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1))
                     .padding(.horizontal, 16)
 
                     Spacer(minLength: 40)

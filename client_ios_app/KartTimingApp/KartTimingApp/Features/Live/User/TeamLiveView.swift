@@ -126,7 +126,7 @@ struct TeamLiveView: View {
                         ForEach(Array(members.enumerated()), id: \.offset) { _, member in
                             weightMemberRow(name: member.name, weight: member.weight, minLimit: minLimit)
                             if member.name != members.last?.name {
-                                Divider().background(Color.white.opacity(0.05)).padding(.leading, 14)
+                                Divider().background(Color.kartBorder(opacity: 0.05)).padding(.leading, 14)
                             }
                         }
                     }
@@ -162,7 +162,7 @@ struct TeamLiveView: View {
         let sameDriver = viewModel.driverSwap.current == viewModel.driverSwap.next
 
         return VStack(spacing: 0) {
-            Divider().background(Color.white.opacity(0.08))
+            Divider().background(Color.kartBorder(opacity: 0.08))
 
             VStack(spacing: 12) {
                 // Header sezione
@@ -193,9 +193,9 @@ struct TeamLiveView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
-                        .background(Color.white.opacity(0.06))
+                        .background(Color.kartForeground.opacity(0.06))
                         .cornerRadius(8)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1))
                     }
                     .frame(maxWidth: .infinity)
 
@@ -218,9 +218,9 @@ struct TeamLiveView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
-                        .background(Color.white.opacity(0.06))
+                        .background(Color.kartForeground.opacity(0.06))
                         .cornerRadius(8)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1))
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -243,10 +243,10 @@ struct TeamLiveView: View {
                 } else if !bothKnown {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.yellow)
+                            .foregroundColor(.kartWarningText)
                         Text("Peso mancante: impossibile calcolare")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.yellow)
+                            .foregroundColor(.kartWarningText)
                     }
                     .padding(.vertical, 6)
                 } else if delta == 0 {
@@ -257,7 +257,7 @@ struct TeamLiveView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Nessun cambio zavorra")
                                 .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                             Text("I due piloti richiedono la stessa zavorra")
                                 .font(.system(size: 11))
                                 .foregroundColor(.kartDim)
@@ -284,7 +284,7 @@ struct TeamLiveView: View {
                         VStack(alignment: .trailing, spacing: 1) {
                             Text("\(nextBallast) kg")
                                 .font(.system(size: 14, weight: .black, design: .monospaced))
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                             Text("zavorra totale")
                                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                                 .foregroundColor(.kartDim)
@@ -319,7 +319,7 @@ struct TeamLiveView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                 if let w = weight {
                     Text("\(w, specifier: "%.1f") kg personali")
                         .font(.system(size: 11))
@@ -336,7 +336,7 @@ struct TeamLiveView: View {
             if weight == nil {
                 Text("?")
                     .font(.system(size: 15, weight: .black, design: .monospaced))
-                    .foregroundColor(.yellow)
+                    .foregroundColor(.kartWarningText)
             } else if requiredWeight > 0 {
                 VStack(alignment: .trailing, spacing: 1) {
                     Text("+\(requiredWeight) kg")
@@ -377,7 +377,7 @@ struct TeamLiveView: View {
                 VStack(spacing: 8) {
                     Text(myKart.teamName ?? "—")
                         .font(.system(size: 32, weight: .black))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .multilineTextAlignment(.center)
                         
                     if !myKart.teamMembers.isEmpty {
@@ -389,7 +389,7 @@ struct TeamLiveView: View {
                     }
                 }
                 
-                Divider().background(Color.white.opacity(0.1))
+                Divider().background(Color.kartBorder(opacity: 0.1))
 
                 // NUMERO KART, STINT E PENALITÀ
                 HStack(spacing: 10) {
@@ -409,14 +409,14 @@ struct TeamLiveView: View {
                     }
                     .frame(maxWidth: .infinity)
 
-                    Divider().background(Color.white.opacity(0.1)).frame(height: 50)
+                    Divider().background(Color.kartBorder(opacity: 0.1)).frame(height: 50)
 
                     TimelineView(.periodic(from: .now, by: 1.0)) { _ in
                         let duration = myKart.currentStintDuration
                         let maxSeconds = (event?.maxStintDuration ?? 0) * 60
                         let isOverTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds)
                         let isWarningTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds - 120) && !isOverTime
-                        let timerColor: Color = isOverTime ? .red : (isWarningTime ? .yellow : .white)
+                        let timerColor: Color = isOverTime ? .red : (isWarningTime ? .yellow : .kartForeground)
 
                         VStack(spacing: 4) {
                             Text(formatStint(duration))
@@ -431,7 +431,7 @@ struct TeamLiveView: View {
                                         .padding(.vertical, 2)
                                         .background(Color.red.opacity(0.15))
                                         .clipShape(Capsule())
-                                        .overlay(Capsule().stroke(Color.red.opacity(0.5), lineWidth: 1))
+                                        .overlay(Capsule().stroke(Color.kartMessageBorder(.red, opacity: 0.5), lineWidth: 1))
                                 } else {
                                     Text("STINT")
                                         .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -448,7 +448,7 @@ struct TeamLiveView: View {
                         .frame(maxWidth: .infinity)
                     }
 
-                    Divider().background(Color.white.opacity(0.1)).frame(height: 50)
+                    Divider().background(Color.kartBorder(opacity: 0.1)).frame(height: 50)
 
                     VStack(spacing: 6) {
                         Text("+\(myKart.totalPenaltySeconds)s")
@@ -465,7 +465,7 @@ struct TeamLiveView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.06), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartBorder(opacity: 0.06), lineWidth: 1))
     }
 
     private func formatStint(_ interval: TimeInterval) -> String {
@@ -483,14 +483,14 @@ struct TeamLiveView: View {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.yellow)
+                    .foregroundColor(.kartWarningText)
                 Text("PENALITÀ E AVVISI")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.yellow)
+                    .foregroundColor(.kartWarningText)
                 Spacer()
                 Text("+\(myKart.totalPenaltySeconds)s totali")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.yellow)
+                    .foregroundColor(.kartWarningText)
             }
             .padding(14)
             .background(Color.yellow.opacity(0.08))
@@ -499,13 +499,13 @@ struct TeamLiveView: View {
                 ForEach(myKart.penalties) { penalty in
                     HStack(spacing: 12) {
                         Image(systemName: penalty.isWarning ? "exclamationmark.bubble.fill" : "exclamationmark.triangle.fill")
-                            .foregroundColor(penalty.isWarning ? .kartDim : .yellow)
+                            .foregroundColor(penalty.isWarning ? .kartDim : .kartWarningText)
                             .font(.system(size: 14))
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(penalty.displayLabel)
                                 .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                             if let note = penalty.note, !note.isEmpty {
                                 Text(note).font(.system(size: 11)).foregroundColor(.kartDim)
                             }
@@ -522,14 +522,14 @@ struct TeamLiveView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
                     .overlay(alignment: .bottom) {
-                        Divider().background(Color.white.opacity(0.05)).padding(.leading, 40)
+                        Divider().background(Color.kartBorder(opacity: 0.05)).padding(.leading, 40)
                     }
                 }
             }
         }
         .background(Color.kartPanel)
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.orange.opacity(0.2), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartMessageBorder(.orange, opacity: 0.2), lineWidth: 1))
     }
 
     // MARK: - Messages Card
@@ -556,7 +556,7 @@ struct TeamLiveView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.cyan.opacity(0.2), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartMessageBorder(.cyan, opacity: 0.2), lineWidth: 1))
     }
 
     private func userMessageRow(_ msg: RaceMessage) -> some View {
@@ -589,7 +589,7 @@ struct TeamLiveView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(msg.text)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 4) {
                     if msg.isBroadcast {
@@ -609,7 +609,7 @@ struct TeamLiveView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .overlay(alignment: .bottom) {
-            Divider().background(Color.white.opacity(0.05)).padding(.leading, 30)
+            Divider().background(Color.kartBorder(opacity: 0.05)).padding(.leading, 30)
         }
     }
 
@@ -622,7 +622,7 @@ struct TeamLiveView: View {
                 .foregroundColor(.green)
             Text("Tutto OK!")
                 .font(.system(size: 15, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
             Text("Nessuna penalità o messaggio ricevuto.")
                 .font(.system(size: 12))
                 .foregroundColor(.kartDim)
@@ -711,20 +711,20 @@ struct TeamLiveView: View {
         HStack(spacing: 12) {
             Image(systemName: "timer")
                 .font(.system(size: 24))
-                .foregroundColor(isOverTime ? .red : .yellow)
+                .foregroundColor(isOverTime ? .red : .kartWarningText)
             VStack(alignment: .leading, spacing: 2) {
                 Text(isOverTime ? "LIMITE STINT SUPERATO!" : "LIMITE TEMPO STINT")
                     .font(.system(size: 14, weight: .black, design: .monospaced))
-                    .foregroundColor(isOverTime ? .red : .yellow)
+                    .foregroundColor(isOverTime ? .red : .kartWarningText)
                 Text(isOverTime ? "Rientrare immediatamente ai box." : "Mancano meno di 2 minuti alla fine.")
                     .font(.system(size: 12))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
             }
             Spacer()
         }
         .padding(16)
         .background(Color.kartPanel)
         .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(isOverTime ? Color.red.opacity(0.5) : Color.yellow.opacity(0.5), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(isOverTime ? Color.kartMessageBorder(.red, opacity: 0.5) : Color.kartMessageBorder(.yellow, opacity: 0.5), lineWidth: 1))
     }
 }

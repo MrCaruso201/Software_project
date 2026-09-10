@@ -29,7 +29,7 @@ struct LoginView: View {
                             .foregroundColor(.kartAccent)
                         Text("Race Manager")
                             .font(.system(size: 28, weight: .heavy, design: .default))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                     }
                     .padding(.top, 40)
                     .padding(.bottom, 20)
@@ -229,7 +229,7 @@ struct CustomTextField: View {
                 .foregroundColor(.kartDim)
                 .frame(width: 20)
             TextField("", text: $text)
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
                 .placeholder(when: text.isEmpty) {
@@ -239,7 +239,7 @@ struct CustomTextField: View {
         .padding()
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1))
     }
 }
 
@@ -254,7 +254,7 @@ struct CustomSecureField: View {
                 .foregroundColor(.kartDim)
                 .frame(width: 20)
             SecureField("", text: $text)
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
                 .placeholder(when: text.isEmpty) {
@@ -264,7 +264,7 @@ struct CustomSecureField: View {
         .padding()
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1))
     }
 }
 
@@ -332,7 +332,7 @@ struct DevModeToggle: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(
-                                isEnabled ? Color.orange.opacity(0.5) : Color.white.opacity(0.08),
+                                isEnabled ? Color.orange.opacity(0.5) : Color.kartForeground.opacity(0.08),
                                 lineWidth: 1
                             )
                     )
@@ -396,7 +396,7 @@ struct ServerSelectionView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(server.name)
                                             .font(.headline)
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.kartForeground)
                                         Text("\(server.host):\(server.port)")
                                             .font(.caption)
                                             .foregroundColor(.kartDim)

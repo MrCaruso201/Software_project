@@ -35,9 +35,9 @@ struct AdminReleaseFormSheetView: View {
                             TextEditor(text: $releaseText)
                                 .frame(height: 150)
                                 .padding(4)
-                                .background(Color.white.opacity(0.1))
+                                .background(Color.kartForeground.opacity(0.1))
                                 .cornerRadius(8)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .scrollContentBackground(.hidden)
                             
                             HStack {
@@ -50,7 +50,7 @@ struct AdminReleaseFormSheetView: View {
                                 HStack(spacing: 12) {
                                     Button(action: previewAdminRelease) {
                                         if isPreviewing {
-                                            ProgressView().tint(.white)
+                                            ProgressView().tint(.kartForeground)
                                         } else {
                                             Text("Anteprima")
                                                 .font(.system(size: 13, weight: .bold))
@@ -58,8 +58,8 @@ struct AdminReleaseFormSheetView: View {
                                     }
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
-                                    .background(Color.white.opacity(0.1))
-                                    .foregroundColor(.white)
+                                    .background(Color.kartForeground.opacity(0.1))
+                                    .foregroundColor(.kartForeground)
                                     .cornerRadius(8)
                                     .disabled(isPreviewing)
                                     
@@ -103,7 +103,7 @@ struct AdminReleaseFormSheetView: View {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(release.username ?? "")
                                                 .font(.system(size: 14, weight: .semibold))
-                                                .foregroundColor(.white)
+                                                .foregroundColor(.kartForeground)
                                                 
                                             let first = release.firstName ?? ""
                                             let last = release.lastName ?? ""
@@ -140,7 +140,7 @@ struct AdminReleaseFormSheetView: View {
                                     }
                                     .padding(.vertical, 8)
                                     .padding(.horizontal, 12)
-                                    .background(Color.white.opacity(0.05))
+                                    .background(Color.kartForeground.opacity(0.05))
                                     .cornerRadius(8)
                                 }
                             }
@@ -155,7 +155,6 @@ struct AdminReleaseFormSheetView: View {
             }
             .navigationTitle("Gestione Liberatoria")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Chiudi") { dismiss() }

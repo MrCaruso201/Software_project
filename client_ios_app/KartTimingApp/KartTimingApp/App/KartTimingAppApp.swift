@@ -26,6 +26,7 @@ struct KartTimingApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authState    = AuthState.shared
     @StateObject private var appEnv       = AppEnvironment.shared
+    @AppStorage(AppTheme.storageKey) private var theme: AppTheme = .system
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -34,15 +35,18 @@ struct KartTimingApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if authState.isLoggedIn {
-                HomeView()
-                    .environmentObject(authState)
-                    .environmentObject(appEnv)
-            } else {
-                LoginView()
-                    .environmentObject(authState)
-                    .environmentObject(appEnv)
+            Group {
+                if authState.isLoggedIn {
+                    HomeView()
+                        .environmentObject(authState)
+                        .environmentObject(appEnv)
+                } else {
+                    LoginView()
+                        .environmentObject(authState)
+                        .environmentObject(appEnv)
+                }
             }
+            .preferredColorScheme(theme.colorScheme)
         }
         .onChange(of: scenePhase) { _, newPhase in
             // Quando l'app va in background/termina con una sessione guest,

@@ -60,7 +60,7 @@ struct EventDetailContentView: View {
 
                             Text(descText)
                                 .font(.system(size: 14, weight: .regular))
-                                .foregroundColor(.white.opacity(0.88))
+                                .foregroundColor(Color.kartSecondaryText(opacity: 0.88))
                                 .lineSpacing(5)
                                 .padding(.horizontal, 14)
                                 .padding(.bottom, 14)
@@ -70,7 +70,7 @@ struct EventDetailContentView: View {
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                                .stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1)
                         )
                     }
 
@@ -247,7 +247,7 @@ struct EventDetailContentView: View {
             .background(Color.kartPanel)
             .cornerRadius(12)
             .overlay(
-                RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1)
             )
         }
     }
@@ -263,25 +263,25 @@ struct EventDetailContentView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(event.title)
                         .font(.system(size: 22, weight: .black))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .lineLimit(3)
                 }
             }
 
-            Divider().background(Color.white.opacity(0.08))
+            Divider().background(Color.kartBorder(opacity: 0.08))
 
             HStack(spacing: 0) {
                 heroStat(value: event.formattedDate, icon: "calendar")
 
                 if let cost = event.registrationCost {
                     Spacer()
-                    Divider().frame(height: 36).background(Color.white.opacity(0.1))
+                    Divider().frame(height: 36).background(Color.kartForeground.opacity(0.1))
                     Spacer()
                     heroStat(value: "€ \(String(format: "%.0f", cost))", icon: "eurosign.circle.fill")
                 }
 
                 Spacer()
-                Divider().frame(height: 36).background(Color.white.opacity(0.1))
+                Divider().frame(height: 36).background(Color.kartForeground.opacity(0.1))
                 Spacer()
                 let typeValue = event.isTeamEvent ? "GARA\nA SQUADRE" : "GARA\nINDIVIDUALE"
                 let typeIcon = event.isTeamEvent ? "person.3.fill" : "person.fill"
@@ -311,7 +311,7 @@ struct EventDetailContentView: View {
             Image(systemName: icon).font(.system(size: 12)).foregroundColor(.kartAccent)
             Text(value)
                 .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
         }
@@ -342,7 +342,7 @@ struct EventDetailContentView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.05), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1))
     }
 
     private func infoRow(label: String, value: String, icon: String, dimmed: Bool = false) -> some View {
@@ -358,14 +358,14 @@ struct EventDetailContentView: View {
             Spacer()
             Text(value)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(dimmed ? .kartDim : .white)
+                .foregroundColor(dimmed ? .kartDim : .kartForeground)
                 .multilineTextAlignment(.trailing)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(Color.clear)
         .overlay(alignment: .bottom) {
-            Divider().background(Color.white.opacity(0.05)).padding(.leading, 44)
+            Divider().background(Color.kartBorder(opacity: 0.05)).padding(.leading, 44)
         }
     }
 
@@ -404,7 +404,7 @@ struct EventDetailContentView: View {
         .padding(.vertical, 12)
         .background(Color.clear)
         .overlay(alignment: .bottom) {
-            Divider().background(Color.white.opacity(0.05)).padding(.leading, 44)
+            Divider().background(Color.kartBorder(opacity: 0.05)).padding(.leading, 44)
         }
     }
 

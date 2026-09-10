@@ -115,7 +115,7 @@ struct KartPenaltyView: View {
                     .padding(.top, 14)
                     .padding(.bottom, 12)
 
-                Divider().background(Color.white.opacity(0.06))
+                Divider().background(Color.kartBorder(opacity: 0.06))
 
                 ScrollView {
                     VStack(spacing: 16) {
@@ -174,7 +174,7 @@ struct KartPenaltyView: View {
                         .foregroundColor(.kartDim)
                     Text(isStarted ? "In corso" : isFinished ? "Terminata" : "In attesa")
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundColor(isStarted ? .kartGreen : isFinished ? .kartDim : .white)
+                        .foregroundColor(isStarted ? .kartGreen : isFinished ? .kartDim : .kartForeground)
                 }
                 Spacer()
 
@@ -236,7 +236,7 @@ struct KartPenaltyView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(targetTitle)
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     Text(targetSubtitle)
                         .font(.system(size: 11))
                         .foregroundColor(.kartDim)
@@ -252,7 +252,7 @@ struct KartPenaltyView: View {
             .padding(.vertical, 12)
             .background(Color.kartPanel)
             .cornerRadius(14)
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.08), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1))
         }
     }
 
@@ -341,7 +341,7 @@ struct KartPenaltyView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(name ?? "Team Sconosciuto")
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                         // Penalità attive
                         let penCount = viewModel.penaltiesByKart[n]?.filter { !$0.isWarning }.count ?? 0
                         let warnCount = viewModel.penaltiesByKart[n]?.filter { $0.isWarning }.count ?? 0
@@ -349,7 +349,7 @@ struct KartPenaltyView: View {
                             if penCount > 0 {
                                 Label("\(penCount) pen.", systemImage: "exclamationmark.triangle.fill")
                                     .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.yellow)
+                                    .foregroundColor(.kartWarningText)
                             }
                             if warnCount > 0 {
                                 Label("\(warnCount) avv.", systemImage: "exclamationmark.bubble.fill")
@@ -398,7 +398,7 @@ struct KartPenaltyView: View {
                     TextField("Es. 10", text: $seconds)
                         .keyboardType(.numberPad)
                         .font(.system(size: 24, weight: .black, design: .monospaced))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .padding()
                         .background(Color.kartPanel)
                         .cornerRadius(12)
@@ -414,7 +414,7 @@ struct KartPenaltyView: View {
                         .foregroundColor(.kartDim)
                     TextField("Descrizione aggiuntiva...", text: $note)
                         .font(.system(size: 14))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .padding()
                         .background(Color.kartPanel)
                         .cornerRadius(12)
@@ -444,7 +444,7 @@ struct KartPenaltyView: View {
             }
             .disabled(isLoading || selectedType == nil)
 
-            Divider().background(Color.white.opacity(0.1))
+            Divider().background(Color.kartBorder(opacity: 0.1))
                 .padding(.vertical, 8)
 
             // Bottone Messaggio
@@ -522,21 +522,21 @@ struct KartPenaltyView: View {
                     // Penalità fissa con tempo noto → mostra il tempo
                     Text("+\(defSec)s")
                         .font(.system(size: 18, weight: .black, design: .monospaced))
-                        .foregroundColor(isSelected ? .white : accentCol)
+                        .foregroundColor(isSelected ? .kartForeground : accentCol)
                 } else {
                     Image(systemName: pType.systemIcon)
                         .font(.system(size: 22))
-                        .foregroundColor(isSelected ? .white : accentCol)
+                        .foregroundColor(isSelected ? .kartForeground : accentCol)
                 }
                 Text(pType.name)
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(isSelected ? .white : .white)
+                    .foregroundColor(isSelected ? .kartForeground : .kartForeground)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                 if let threshold = pType.warningThreshold {
                     Text("Auto dopo \(threshold)x")
                         .font(.system(size: 9))
-                        .foregroundColor(isSelected ? .white.opacity(0.8) : accentCol.opacity(0.8))
+                        .foregroundColor(isSelected ? Color.kartSecondaryText(opacity: 0.8) : accentCol.opacity(0.8))
                 }
             }
             .frame(maxWidth: .infinity)
@@ -556,7 +556,7 @@ struct KartPenaltyView: View {
                 Image(systemName: icon).font(.system(size: 24))
                 Text(title).font(.system(size: 13, weight: .bold)).multilineTextAlignment(.center)
             }
-            .foregroundColor(.white)
+            .foregroundColor(.kartForeground)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(color.opacity(0.82))

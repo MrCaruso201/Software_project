@@ -114,10 +114,10 @@ struct ClassificaLiveView: View {
                         Image(systemName: "chevron.down")
                     }
                     .padding()
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .background(Color.kartPanel)
                     .cornerRadius(8)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.kartBorder(opacity: 0.2), lineWidth: 1))
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
@@ -297,9 +297,9 @@ struct ClassificaLiveView: View {
             if isDirector {
                 TextField("Nome Turno (es. Gara 1)", text: $editingSessionName)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .padding(8)
-                    .background(Color.white.opacity(0.1))
+                    .background(Color.kartForeground.opacity(0.1))
                     .cornerRadius(8)
                     .onSubmit {
                         saveSessionName()
@@ -323,7 +323,7 @@ struct ClassificaLiveView: View {
             } else if let sessionName = viewModel.currentSessionName, !sessionName.isEmpty {
                 Text(sessionName)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 8)
             }
@@ -372,16 +372,16 @@ struct ClassificaLiveView: View {
                                     let nameText = bestStr.isEmpty ? res.displayName : "\(res.displayName) - \(bestStr)"
                                     Text(nameText)
                                         .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.kartForeground)
                                         .lineLimit(1)
                                         
                                     Text("\(res.position ?? 0)")
                                         .font(.system(size: 24, weight: .black, design: .monospaced))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.kartForeground)
                                         .frame(width: 50, height: 50)
                                         .background(Color.kartPanel)
                                         .overlay(
-                                            InvertedUShape().stroke(Color.white, lineWidth: 3)
+                                            InvertedUShape().stroke(Color.kartForeground, lineWidth: 3)
                                         )
                                 }
                                 .padding()
@@ -417,7 +417,7 @@ struct ClassificaLiveView: View {
             return .kartDim
         }()
         
-        let borderColor = (isFirst || isSecond || isThird) ? positionColor.opacity(0.4) : Color.white.opacity(0.1)
+        let borderColor = (isFirst || isSecond || isThird) ? positionColor.opacity(0.4) : Color.kartForeground.opacity(0.1)
         
         return HStack(spacing: 16) {
             // Posizione
@@ -448,7 +448,7 @@ struct ClassificaLiveView: View {
                     if let kartNum = res.kartNumber {
                         Text("#\(kartNum)")
                             .font(.system(size: 16, weight: .black, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                     }
                     Image(systemName: "person.2.fill")
                         .font(.system(size: 12))
@@ -456,7 +456,7 @@ struct ClassificaLiveView: View {
                     
                     Text(res.displayName)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .lineLimit(1)
                 }
                 
@@ -488,7 +488,7 @@ struct ClassificaLiveView: View {
                 VStack(spacing: 2) {
                     Text("\(laps)")
                         .font(.system(size: 18, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     Text("Giri")
                         .font(.system(size: 10))
                         .foregroundColor(.kartDim)
@@ -557,7 +557,7 @@ struct ClassificaLiveView: View {
                             if viewModel.raceEndTime != nil || flag?.messageType == "checkered_flag" {
                                 Image(systemName: "flag.checkered")
                                     .font(.system(size: 14))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                             } else if let type = flag?.messageType {
                                 switch type {
                                 case "yellow_flag":
@@ -573,13 +573,13 @@ struct ClassificaLiveView: View {
                             
                             Text(String(format: (viewModel.raceEndTime != nil || flag?.messageType == "checkered_flag") ? "%02d:%02d" : "T: %02d:%02d", min, sec))
                                 .font(.system(size: 16, weight: .bold, design: .monospaced))
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                         }
                     }
                 } else {
                     Text("T: 00:00")
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                 }
             }
         )
@@ -707,7 +707,7 @@ struct ClassificaLiveView: View {
 
                     // Divisore
                     Rectangle()
-                        .fill(Color.white.opacity(0.06))
+                        .fill(Color.kartForeground.opacity(0.06))
                         .frame(width: 1, height: 44)
 
                     // ── Kart # + Nome ──────────────────────────────────────
@@ -716,12 +716,12 @@ struct ClassificaLiveView: View {
                             if !kart.isEmpty {
                                 Text("#\(kart)")
                                     .font(.system(size: 15, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                             }
                             if !shortName.isEmpty {
                                 Text(shortName)
                                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                                    .foregroundColor(isLeader ? .kartAccent : .white)
+                                    .foregroundColor(isLeader ? .kartAccent : .kartForeground)
                                     .tracking(2)
                             }
                             
@@ -777,7 +777,7 @@ struct ClassificaLiveView: View {
                         // Ultimo giro
                         Text(lapTime)
                             .font(.system(size: 17, weight: .bold, design: .monospaced))
-                            .foregroundColor(isLeader ? .kartAccent : .white)
+                            .foregroundColor(isLeader ? .kartAccent : .kartForeground)
 
                         HStack(spacing: 8) {
                             // Migliore giro
@@ -812,7 +812,7 @@ struct ClassificaLiveView: View {
                 
                 if isExpanded {
                     Divider()
-                        .background(Color.white.opacity(0.1))
+                        .background(Color.kartForeground.opacity(0.1))
                         .padding(.horizontal, 16)
                     
                     VStack(alignment: .leading, spacing: 14) {
@@ -823,7 +823,7 @@ struct ClassificaLiveView: View {
                                     .foregroundColor(.kartDim)
                                 Text(fullName)
                                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                             }
                         }
                         
@@ -844,7 +844,7 @@ struct ClassificaLiveView: View {
                                             .foregroundColor(.kartDim)
                                         Text(item.value)
                                             .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.kartForeground)
                                     }
                                 }
                             }
@@ -859,16 +859,16 @@ struct ClassificaLiveView: View {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("PENALITÀ")
                                         .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                        .foregroundColor(.yellow)
+                                        .foregroundColor(.kartWarningText)
                                     
                                     ForEach(actualPenalties) { penalty in
                                         HStack(spacing: 6) {
                                             Image(systemName: "exclamationmark.triangle.fill")
-                                                .foregroundColor(.yellow)
+                                                .foregroundColor(.kartWarningText)
                                                 .font(.system(size: 11))
                                             Text(penalty.displayLabel)
                                                 .font(.system(size: 13, weight: .bold))
-                                                .foregroundColor(.white)
+                                                .foregroundColor(.kartForeground)
                                             if let note = penalty.note, !note.isEmpty {
                                                 Text("- \(note)")
                                                     .font(.system(size: 11))
@@ -893,7 +893,7 @@ struct ClassificaLiveView: View {
                                                 .font(.system(size: 11))
                                             Text(warning.displayLabel)
                                                 .font(.system(size: 13, weight: .bold))
-                                                .foregroundColor(.white)
+                                                .foregroundColor(.kartForeground)
                                             if let note = warning.note, !note.isEmpty {
                                                 Text("- \(note)")
                                                     .font(.system(size: 11))

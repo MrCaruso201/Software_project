@@ -33,7 +33,7 @@ struct AdminUsersView: View {
                 if isLoading {
                     Spacer()
                     ProgressView()
-                        .tint(.white)
+                        .tint(.kartForeground)
                         .scaleEffect(1.4)
                     Spacer()
                 } else if users.isEmpty {
@@ -91,7 +91,6 @@ struct AdminUsersView: View {
         }
         .navigationTitle("Utenti")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             // Barra ricerca stile Live Timing / Eventi
             ToolbarItem(placement: .principal) {
@@ -109,7 +108,6 @@ struct AdminUsersView: View {
                             triggerSearch()
                         }
                 }
-                .environment(\.colorScheme, .light)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
                 .background(
@@ -133,7 +131,7 @@ struct AdminUsersView: View {
         HStack(spacing: 10) {
             Text("Utenti a sistema")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
             Spacer()
             Text("\(users.count) trovati")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
@@ -330,7 +328,7 @@ private struct UserCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(user.username)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     
                     Text(roleLabel)
                         .font(.caption.weight(.semibold))
@@ -349,7 +347,7 @@ private struct UserCard: View {
             
             // ── Corpo espanso ─────────────────────────────────────────
             if isExpanded {
-                Divider().background(Color.white.opacity(0.1))
+                Divider().background(Color.kartBorder(opacity: 0.1))
                 
                 VStack(spacing: 12) {
                     HStack {
@@ -358,7 +356,7 @@ private struct UserCard: View {
                             .font(.system(size: 12))
                         Text(user.email)
                             .font(.system(size: 13))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                         Spacer()
                     }
                     
@@ -394,7 +392,7 @@ private struct UserCard: View {
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                .stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1)
         )
         .padding(.horizontal, 16)
         .contentShape(Rectangle())

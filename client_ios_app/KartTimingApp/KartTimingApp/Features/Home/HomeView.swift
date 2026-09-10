@@ -49,7 +49,7 @@ struct HomeView: View {
                 
                 // Le view di amministrazione sono state spostate dentro SettingsView per evitare il tab "Altro" (>5 tabs)
             }
-            .tint(Color(red: 1.0, green: 0.82, blue: 0.0))
+            .tint(Color.kartNavigationTint)
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenEventDetail"))) { notif in
                 self.selectedTab = .eventi
                 if let eventId = notif.userInfo?["eventId"] as? Int {

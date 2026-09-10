@@ -16,7 +16,7 @@ struct PaymentInfoSheetView: View {
                         .padding(.top, 20)
                     
                     Text(event.title)
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                         .font(.title2)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
@@ -76,7 +76,6 @@ struct PaymentInfoSheetView: View {
             }
             .navigationTitle("Pagamento")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Chiudi") { dismiss() }

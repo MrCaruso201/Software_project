@@ -84,7 +84,6 @@ struct UserEventView: View {
             .tint(.kartAccent)
             .navigationTitle(localEvent.title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
@@ -292,7 +291,7 @@ struct UserEventView: View {
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                .stroke(Color.kartBorder(opacity: 0.05), lineWidth: 1)
         )
     }
 
@@ -318,7 +317,7 @@ struct UserEventView: View {
                 .cornerRadius(12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        .stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1)
                 )
             } else {
                 // Evento non ancora iniziato: mostra il pulsante Iscriviti

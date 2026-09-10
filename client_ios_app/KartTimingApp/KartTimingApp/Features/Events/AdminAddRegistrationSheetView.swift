@@ -33,7 +33,7 @@ struct AdminAddRegistrationSheetView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         RegistrationHeaderSection(event: event, isTeamEvent: isTeamEvent)
                         
-                        Divider().background(Color.white.opacity(0.1))
+                        Divider().background(Color.kartBorder(opacity: 0.1))
                         
                         if isTeamEvent {
                             teamForm
@@ -74,7 +74,6 @@ struct AdminAddRegistrationSheetView: View {
             }
             .navigationTitle("Nuova Iscrizione")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Annulla") { dismiss() }
@@ -91,15 +90,15 @@ struct AdminAddRegistrationSheetView: View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Email, @Username o Nome Pilota")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
             
             TextField("Email, @Username o Nome", text: $email)
                 .keyboardType(.emailAddress)
                 .autocapitalization(.none)
                 .padding()
-                .background(Color.white.opacity(0.05))
+                .background(Color.kartForeground.opacity(0.05))
                 .cornerRadius(8)
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
         }
     }
     

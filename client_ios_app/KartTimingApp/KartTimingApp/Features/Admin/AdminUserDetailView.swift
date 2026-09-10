@@ -44,7 +44,7 @@ struct AdminUserDetailView: View {
                         Text("\(user.firstName ?? "") \(user.lastName ?? "")")
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                         Text("@\(user.username)")
                             .font(.subheadline)
                             .foregroundColor(.kartDim)
@@ -52,7 +52,7 @@ struct AdminUserDetailView: View {
                         Text("@\(user.username)")
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                     }
                 }
                 Spacer()
@@ -120,7 +120,7 @@ struct AdminUserDetailView: View {
 
                             if idx < sorted.count - 1 {
                                 Divider()
-                                    .background(Color.white.opacity(0.06))
+                                    .background(Color.kartForeground.opacity(0.06))
                                     .padding(.leading, 58)
                             }
                         }
@@ -130,7 +130,7 @@ struct AdminUserDetailView: View {
         }
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.06), lineWidth: 1))
     }
     
     private func registrationRow(reg: EventRegistrationResponse, event: RaceEvent) -> some View {
@@ -147,7 +147,7 @@ struct AdminUserDetailView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(event.title)
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .lineLimit(1)
                 
                 HStack(spacing: 6) {

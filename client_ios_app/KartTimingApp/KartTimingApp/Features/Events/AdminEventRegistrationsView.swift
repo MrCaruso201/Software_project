@@ -62,7 +62,6 @@ struct AdminEventRegistrationsView: View {
         }
         .navigationTitle("Iscrizioni: \(event.title)")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 // Aggiungi iscrizione
@@ -206,7 +205,7 @@ struct AdminEventRegistrationsView: View {
                             }
                             .padding(.top, 10)
                             
-                            Divider().background(Color.white.opacity(0.1))
+                            Divider().background(Color.kartBorder(opacity: 0.1))
                         }
                         
                         if !waitlistTeams.isEmpty {
@@ -222,14 +221,14 @@ struct AdminEventRegistrationsView: View {
                             }
                             .padding(.top, 10)
                             
-                            Divider().background(Color.white.opacity(0.1))
+                            Divider().background(Color.kartBorder(opacity: 0.1))
                         }
                         
                         if !enrolledTeams.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("SQUADRE ISCRITTE")
                                     .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                                     .padding(.horizontal, 16)
                                     
                                 ForEach(enrolledTeams) { team in
@@ -252,7 +251,7 @@ struct AdminEventRegistrationsView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(team.teamName)
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     
                     HStack(spacing: 6) {
                         Text("\(team.members.count) partecipanti")
@@ -296,7 +295,7 @@ struct AdminEventRegistrationsView: View {
             .padding(.vertical, 12)
             .background(Color.kartPanel)
             
-            Divider().background(Color.white.opacity(0.08))
+            Divider().background(Color.kartBorder(opacity: 0.08))
             
             // ── Lista membri ─────────────────────────────────
             VStack(spacing: 0) {
@@ -309,7 +308,7 @@ struct AdminEventRegistrationsView: View {
                             if let name = member.username, !name.isEmpty {
                                 Text(name)
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.kartForeground)
                             }
                             if let email = member.email {
                                 Text(email)
@@ -344,14 +343,14 @@ struct AdminEventRegistrationsView: View {
                     
                     if member.id != team.members.last?.id {
                         Divider()
-                            .background(Color.white.opacity(0.05))
+                            .background(Color.kartForeground.opacity(0.05))
                             .padding(.leading, 52)
                     }
                 }
             }
             .background(Color.kartPanel.opacity(0.6))
             
-            Divider().background(Color.white.opacity(0.08))
+            Divider().background(Color.kartBorder(opacity: 0.08))
             
             // ── Azioni admin ───────────────────────────────────────
             HStack(spacing: 8) {
@@ -463,7 +462,7 @@ struct AdminEventRegistrationsView: View {
                 .stroke(
                     team.overallStatus == "confirmed"
                         ? Color.green.opacity(0.2)
-                        : Color.white.opacity(0.07),
+                        : Color.kartForeground.opacity(0.07),
                     lineWidth: 1
                 )
         )
@@ -490,7 +489,7 @@ struct AdminEventRegistrationsView: View {
                 case .failure:
                     memberFallbackIcon
                 default:
-                    Circle().fill(Color.white.opacity(0.07))
+                    Circle().fill(Color.kartForeground.opacity(0.07))
                         .frame(width: 32, height: 32)
                         .overlay(ProgressView().scaleEffect(0.5))
                 }
@@ -505,7 +504,7 @@ struct AdminEventRegistrationsView: View {
             .font(.system(size: 14))
             .foregroundColor(.kartDim)
             .frame(width: 32, height: 32)
-            .background(Color.white.opacity(0.06))
+            .background(Color.kartForeground.opacity(0.06))
             .clipShape(Circle())
     }
     
@@ -533,7 +532,7 @@ struct AdminEventRegistrationsView: View {
                     HStack {
                         Text(reg.username ?? reg.email ?? "Utente")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                         
                         if reg.hasSignedRelease == true {
                             Image(systemName: "signature")
@@ -685,7 +684,7 @@ struct AdminEventRegistrationsView: View {
                     fallbackAvatar
                 default:
                     Circle()
-                        .fill(Color.white.opacity(0.07))
+                        .fill(Color.kartForeground.opacity(0.07))
                         .frame(width: 40, height: 40)
                         .overlay(ProgressView().scaleEffect(0.6))
                 }
@@ -933,7 +932,7 @@ struct AdminTeamSelectionSheet: View {
                                 .font(.system(size: 40))
                                 .foregroundColor(.orange)
                             Text("Nessuna squadra disponibile.")
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .font(.headline)
                             Text("Non ci sono squadre che hanno posti liberi e accettano piloti extra.")
                                 .foregroundColor(.kartDim)
@@ -958,7 +957,7 @@ struct AdminTeamSelectionSheet: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(team.teamName)
                                                 .font(.headline)
-                                                .foregroundColor(.white)
+                                                .foregroundColor(.kartForeground)
                                             let maxP = event.maxPeoplePerGroup ?? 1
                                             Text("Posti liberi: \(maxP - team.members.count)")
                                                 .font(.caption)
@@ -997,7 +996,6 @@ struct AdminTeamSelectionSheet: View {
             }
             .navigationTitle("Seleziona Squadra")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Annulla") { dismiss() }
@@ -1076,13 +1074,13 @@ struct AdminCreateTeamFormSheet: View {
                     
                     Section(header: Text("Dettagli Nuova Squadra").foregroundColor(.kartAccent)) {
                         TextField("Nome della squadra", text: $teamName)
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                             .disableAutocorrection(true)
                             .autocapitalization(.words)
                         
                         Toggle("Accetta piloti extra", isOn: $acceptsExtraPilots)
                             .tint(.kartAccent)
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                     }
                     .listRowBackground(Color.kartPanel)
                     
@@ -1093,11 +1091,11 @@ struct AdminCreateTeamFormSheet: View {
                             HStack {
                                 Spacer()
                                 if isCreating {
-                                    ProgressView().tint(.white)
+                                    ProgressView().tint(.kartForeground)
                                 } else {
                                     Text("Crea Squadra")
                                         .font(.system(size: 16, weight: .bold))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.kartForeground)
                                 }
                                 Spacer()
                             }
@@ -1114,7 +1112,6 @@ struct AdminCreateTeamFormSheet: View {
             }
             .navigationTitle("Nuova Squadra")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Annulla") { dismiss() }

@@ -26,7 +26,7 @@ struct PilotView: View {
                             .foregroundColor(.kartAccent)
                         Text("Ricerca Pilota")
                             .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                         Text("Inserisci il nome del pilota di cui vuoi acquisire il live timing.")
                             .font(.system(size: 14, weight: .regular))
                             .foregroundColor(.kartDim)
@@ -46,7 +46,7 @@ struct PilotView: View {
                             Image(systemName: "magnifyingglass")
                                 .foregroundColor(.kartDim)
                             TextField("Nome pilota...", text: $pilotName)
-                                .foregroundColor(.white)
+                                .foregroundColor(.kartForeground)
                                 .autocorrectionDisabled(true)
                                 .textInputAutocapitalization(.words)
                         }
@@ -55,7 +55,7 @@ struct PilotView: View {
                         .cornerRadius(10)
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
                         )
                         .frame(maxWidth: 350)
                         
@@ -85,7 +85,6 @@ struct PilotView: View {
         .navigationTitle(isNameConfirmed ? "Live: \(pilotName)" : "Vista Pilota")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
@@ -153,7 +152,7 @@ struct PilotView: View {
                     HStack(spacing: 30) {
                         Text("P\(pos)")
                             .font(.system(size: 80, weight: .heavy, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(.kartForeground)
                         
                         VStack(alignment: .leading, spacing: 6) {
                             // LAST LAP (più visibile)
@@ -163,7 +162,7 @@ struct PilotView: View {
                                     .foregroundColor(.kartDim)
                                 Text(lapTime)
                                     .font(.system(size: 46, weight: .heavy, design: .monospaced))
-                                    .foregroundColor(isPersonalBest ? .kartGreen : .white)
+                                    .foregroundColor(isPersonalBest ? .kartGreen : .kartForeground)
                             }
                             
                             // BEST LAP (più piccolo, in verde)
@@ -206,7 +205,7 @@ struct PilotView: View {
                         .foregroundColor(.kartRed)
                     Text("Pilota non trovato")
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     Text("In attesa che '\(pilotName)' scenda in pista...")
                         .font(.system(size: 14))
                         .foregroundColor(.kartDim)
@@ -228,7 +227,7 @@ struct PilotView: View {
         VStack(spacing: 8) {
             Text(name)
                 .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(.kartForeground)
                 .lineLimit(1)
             HStack(spacing: 4) {
                 Image(systemName: isAhead ? "arrow.up.right" : "arrow.down.right")
@@ -241,11 +240,11 @@ struct PilotView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color.black.opacity(0.3))
+        .background(Color.kartInset.opacity(0.3))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
         )
     }
 

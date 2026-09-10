@@ -26,7 +26,7 @@ struct TeamMemberView: View {
 
                 if isFetching {
                     ProgressView("Caricamento team...")
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
@@ -35,14 +35,14 @@ struct TeamMemberView: View {
                                 isTeamEvent: true,
                                 showDeadlineBanner: false
                             )
-                            Divider().background(Color.white.opacity(0.1))
+                            Divider().background(Color.kartBorder(opacity: 0.1))
 
                             // Composizione team
                             if let team = teamData {
                                 VStack(alignment: .leading, spacing: 14) {
                                     Text("Squadra: \(team.teamName)")
                                         .font(.system(size: 17, weight: .bold))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.kartForeground)
 
                                     ForEach(team.members, id: \.registrationId) { member in
                                         memberRow(member)
@@ -90,7 +90,6 @@ struct TeamMemberView: View {
             }
             .navigationTitle("Il tuo team")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
@@ -114,18 +113,18 @@ struct TeamMemberView: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(member.isTeamLeader ? Color.kartAccent.opacity(0.2) : Color.white.opacity(0.08))
+                    .fill(member.isTeamLeader ? Color.kartAccent.opacity(0.2) : Color.kartForeground.opacity(0.08))
                     .frame(width: 40, height: 40)
                 Image(systemName: member.isTeamLeader ? "star.fill" : "person.fill")
                     .font(.system(size: 16))
-                    .foregroundColor(member.isTeamLeader ? .kartAccent : .white.opacity(0.6))
+                    .foregroundColor(member.isTeamLeader ? .kartAccent : Color.kartSecondaryText(opacity: 0.6))
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(member.username ?? member.email ?? "Utente sconosciuto")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.kartForeground)
                     if member.isTeamLeader {
                         Text("LEADER")
                             .font(.system(size: 9, weight: .black, design: .monospaced))
@@ -153,7 +152,7 @@ struct TeamMemberView: View {
                 if let email = member.email {
                     Text(email)
                         .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(Color.kartSecondaryText(opacity: 0.5))
                 }
             }
 

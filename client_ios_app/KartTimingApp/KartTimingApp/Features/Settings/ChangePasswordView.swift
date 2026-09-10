@@ -32,7 +32,7 @@ struct ChangePasswordView: View {
                             .fill(Color.kartPanel)
                             .frame(width: 80, height: 80)
                             .overlay(
-                                Circle().stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                Circle().stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1)
                             )
                         Image(systemName: "lock.rotation")
                             .font(.system(size: 34, weight: .semibold))
@@ -115,7 +115,7 @@ struct ChangePasswordView: View {
                         .cornerRadius(16)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                .stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1)
                         )
                     }
                     .disabled(!formIsValid || isLoading)
@@ -155,7 +155,7 @@ struct ChangePasswordView: View {
                     .foregroundColor(.kartDim)
                     .frame(width: 18)
                 SecureField("••••••••", text: text)
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
             }
@@ -165,7 +165,7 @@ struct ChangePasswordView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(
-                        hint != nil ? Color.red.opacity(0.6) : Color.white.opacity(0.1),
+                        hint != nil ? Color.red.opacity(0.6) : Color.kartForeground.opacity(0.1),
                         lineWidth: 1
                     )
             )

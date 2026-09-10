@@ -42,7 +42,7 @@ struct AdminUserSearchCard: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.kartDim)
                 TextField("Cerca utente (nome, email...)", text: $viewModel.searchQuery)
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
             }
@@ -79,7 +79,7 @@ struct AdminUserSearchCard: View {
                         
                         if idx < topResults.count - 1 {
                             Divider()
-                                .background(Color.white.opacity(0.06))
+                                .background(Color.kartForeground.opacity(0.06))
                                 .padding(.leading, 60)
                         }
                 } // ForEach
@@ -89,7 +89,7 @@ struct AdminUserSearchCard: View {
         } // outer VStack
         .background(Color.kartPanel)
         .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.kartBorder(opacity: 0.06), lineWidth: 1))
         .onAppear {
             viewModel.setup(serverURL: server.httpURL, token: authState.currentToken)
         }
@@ -106,7 +106,7 @@ struct AdminUserSearchCard: View {
                 let fullName = "\(user.firstName ?? "") \(user.lastName ?? "")".trimmingCharacters(in: .whitespaces)
                 Text(fullName.isEmpty ? user.username : fullName)
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.kartForeground)
                 Text(user.email)
                     .font(.system(size: 12))
                     .foregroundColor(.kartDim)
