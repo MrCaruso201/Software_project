@@ -9,8 +9,6 @@ struct TeamLiveView: View {
 
     @State private var showingBlueFlagCard = false
     @State private var processedBlueFlagIds: Set<Int> = []
-    @State private var currentDriverIndex: Int = 0
-    @State private var nextDriverIndex: Int = 1
 
 
     var body: some View {
@@ -146,26 +144,22 @@ struct TeamLiveView: View {
     }
 
     private func driverSwapSection(members: [(name: String, weight: Double?)], minLimit: Double) -> some View {
-        let safeCurrentIdx = min(currentDriverIndex, members.count - 1)
-        let safeNextIdx = min(nextDriverIndex, members.count - 1)
-        let currentDriver = members[safeCurrentIdx]
-        let nextDriver = members[safeNextIdx]
-
-        // Calcola la zavorra attuale del pilota corrente e quella del prossimo
+        let currentDriver = members.first { $0.name == viewModel.driverSwap.current }
+        let nextDriver = members.first { $0.name == viewModel.driverSwap.next }
         let currentBallast: Int = {
-            guard let w = currentDriver.weight else { return 0 }
+            guard let w = currentDriver?.weight else { return 0 }
             let diff = minLimit - w
             return diff > 0 ? Int(ceil(diff / 5.0)) * 5 : 0
         }()
         let nextBallast: Int = {
-            guard let w = nextDriver.weight else { return 0 }
+            guard let w = nextDriver?.weight else { return 0 }
             let diff = minLimit - w
             return diff > 0 ? Int(ceil(diff / 5.0)) * 5 : 0
         }()
         let delta = nextBallast - currentBallast  // positivo = aggiungere, negativo = togliere
 
-        let bothKnown = currentDriver.weight != nil && nextDriver.weight != nil
-        let sameDriver = safeCurrentIdx == safeNextIdx
+        let bothKnown = currentDriver?.weight != nil && nextDriver?.weight != nil
+        let sameDriver = viewModel.driverSwap.current == viewModel.driverSwap.next
 
         return VStack(spacing: 0) {
             Divider().background(Color.white.opacity(0.08))
@@ -189,9 +183,10 @@ struct TeamLiveView: View {
                         Text("ATTUALE")
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartDim)
-                        Picker("", selection: $currentDriverIndex) {
+                        Picker("Pilota attuale", selection: $viewModel.driverSwap.current) {
+                            Text("Seleziona pilota").tag(nil as String?)
                             ForEach(members.indices, id: \.self) { i in
-                                Text(members[i].name).tag(i)
+                                Text(members[i].name).tag(Optional(members[i].name))
                             }
                         }
                         .pickerStyle(.menu)
@@ -213,9 +208,10 @@ struct TeamLiveView: View {
                         Text("SUCCESSIVO")
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartDim)
-                        Picker("", selection: $nextDriverIndex) {
+                        Picker("Pilota successivo", selection: $viewModel.driverSwap.next) {
+                            Text("Seleziona pilota").tag(nil as String?)
                             ForEach(members.indices, id: \.self) { i in
-                                Text(members[i].name).tag(i)
+                                Text(members[i].name).tag(Optional(members[i].name))
                             }
                         }
                         .pickerStyle(.menu)
@@ -230,7 +226,12 @@ struct TeamLiveView: View {
                 }
 
                 // Risultato cambio
-                if sameDriver {
+                if currentDriver == nil || nextDriver == nil {
+                    Text("Seleziona il pilota attuale e il successivo per calcolare il cambio zavorra.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.kartDim)
+                        .padding(.vertical, 6)
+                } else if sameDriver {
                     HStack(spacing: 8) {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(.kartDim)

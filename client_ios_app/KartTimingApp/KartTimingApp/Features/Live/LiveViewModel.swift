@@ -15,7 +15,10 @@ class LiveViewModel: ObservableObject {
     }
     @Published var penaltyTypes: [PenaltyType] = []
     @Published var messages: [RaceMessage] = []
-    @Published var myKart: MyKartResponse = MyKartResponse()
+    @Published var driverSwap = DriverSwapSelection()
+    @Published var myKart: MyKartResponse = MyKartResponse() {
+        didSet { driverSwap.update(with: myKart) }
+    }
     @Published var registeredTeams: [TeamRegistrationResponse] = []
     @Published var registeredIndividuals: [EventRegistrationWithUserResponse] = []
     @Published var currentSessionName: String? = nil
@@ -49,6 +52,9 @@ class LiveViewModel: ObservableObject {
     // MARK: - Init / Setup
 
     func configure(serverURL: URL?, token: String?, eventId: Int, isDirector: Bool = false, timingManager: KartTimingManager? = nil) {
+        if self.eventId != eventId || self.token != token || self.serverURL != serverURL {
+            driverSwap = DriverSwapSelection()
+        }
         stopPolling()
         lastFetchedData.removeAll()
         penaltyTypesFetchedAt = nil

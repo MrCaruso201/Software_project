@@ -292,3 +292,31 @@ nonisolated private enum LiveDateCache {
         return parsed
     }
 }
+
+/// Local live-session choices, independent of whether the Team tab is visible.
+struct DriverSwapSelection {
+    var current: String?
+    var next: String?
+    private var teamId: String?
+    private var kartNumber: Int?
+    private var wasInPit: Bool?
+
+    mutating func update(with kart: MyKartResponse) {
+        guard kart.teamId != nil || kart.kartNumber != nil else { return }
+        if teamId != kart.teamId || kartNumber != kart.kartNumber {
+            current = nil
+            next = nil
+            wasInPit = nil
+        }
+        teamId = kart.teamId
+        kartNumber = kart.kartNumber
+        let names = Set(kart.teamMembers.compactMap(\.username))
+        if let current, !names.contains(current) { self.current = nil }
+        if let next, !names.contains(next) { self.next = nil }
+        if wasInPit == true && !kart.isInPit {
+            current = next
+            next = nil
+        }
+        wasInPit = kart.isInPit
+    }
+}
