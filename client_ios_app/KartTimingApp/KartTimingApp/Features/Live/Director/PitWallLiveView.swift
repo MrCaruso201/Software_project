@@ -110,22 +110,7 @@ struct PitWallKartRow: View {
             Spacer()
             
             // Stint Time
-            let duration = currentDuration()
-            let maxSeconds = (event?.maxStintDuration ?? 0) * 60
-            let isOverTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds)
-            let isWarningTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds - 120) && !isOverTime
-            
-            let color: Color = {
-                if isInPit { return .red }
-                if isOverTime { return .red }
-                if isWarningTime { return .yellow }
-                return .kartGreen
-            }()
-            
-            Text(formatStint(duration))
-                .font(.system(size: 18, weight: .heavy, design: .monospaced))
-                .foregroundColor(color)
-                .frame(width: 70, alignment: .trailing)
+            StintClock(assignment: assignment, event: event)
             
             // Switch in pista / in pit
             if isUpdating {
@@ -178,23 +163,40 @@ struct PitWallKartRow: View {
 
 private struct StintClock: View {
     let assignment: LiveKartAssignment?
+    var event: RaceEvent?
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1, paused: assignment?.isInPit != false)) { context in
-            Text(formattedDuration(at: context.date))
+            let duration = getDuration(at: context.date)
+            let maxSeconds = (event?.maxStintDuration ?? 0) * 60
+            let isOverTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds)
+            let isWarningTime = maxSeconds > 0 && duration >= TimeInterval(maxSeconds - 120) && !isOverTime
+            
+            let color: Color = {
+                if assignment?.isInPit == true { return .red }
+                if isOverTime { return .red }
+                if isWarningTime { return .yellow }
+                return .kartGreen
+            }()
+            
+            Text(formattedDuration(duration))
                 .font(.system(size: 18, weight: .heavy, design: .monospaced))
-                .foregroundColor(assignment?.isInPit == true ? .red : .kartGreen)
+                .foregroundColor(color)
                 .frame(width: 70, alignment: .trailing)
         }
     }
-
-    private func formattedDuration(at date: Date) -> String {
-        guard let assignment else { return "00:00" }
+    
+    private func getDuration(at date: Date) -> TimeInterval {
+        guard let assignment else { return 0 }
         var duration = Double(assignment.stintElapsedSeconds)
         if !assignment.isInPit, let resume = assignment.parsedStintLastResume {
             duration += date.timeIntervalSince(resume)
         }
-        let seconds = Int(max(0, duration))
+        return max(0, duration)
+    }
+
+    private func formattedDuration(_ duration: TimeInterval) -> String {
+        let seconds = Int(duration)
         return String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
 }
