@@ -36,7 +36,7 @@ nonisolated struct KartodromoResultResponse: Identifiable, Codable, Sendable {
 /// Risultato di un pilota in una gara.
 /// `isOfficial = true`  → inserito dall'admin (via CSV)
 /// `isOfficial = false` → auto-dichiarato dal pilota
-nonisolated struct EventResult: Identifiable, Codable, Sendable {
+nonisolated struct EventResult: Identifiable, Codable, Sendable, Equatable {
     let id: Int
     let eventId: Int
     let userId: Int?

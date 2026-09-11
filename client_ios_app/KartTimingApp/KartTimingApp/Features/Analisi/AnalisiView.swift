@@ -618,6 +618,8 @@ struct ClassificationSheet: View {
     let server: DiscoveredServer
     @EnvironmentObject var authState: AuthState
     @Environment(\.dismiss) private var dismiss
+    
+    @State private var pdfURL: URL? = nil
 
     var body: some View {
         NavigationView {
@@ -657,13 +659,42 @@ struct ClassificationSheet: View {
                     }
                 }
             }
+            .onAppear {
+                let results = viewModel.classifications[event.id] ?? []
+                if !results.isEmpty {
+                    generatePDF(from: results)
+                }
+            }
+            .onChange(of: viewModel.classifications[event.id]) { _, newResults in
+                if let newResults = newResults, !newResults.isEmpty {
+                    generatePDF(from: newResults)
+                }
+            }
             .navigationTitle("Classifica")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }.foregroundColor(.kartAccent)
                 }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if let url = pdfURL {
+                        if #available(iOS 16.0, *) {
+                            ShareLink(item: url) {
+                                Image(systemName: "square.and.arrow.up")
+                            }
+                            .foregroundColor(.kartAccent)
+                        }
+                    }
+                }
             }
+        }
+    }
+    
+    private func generatePDF(from results: [EventResult]) {
+        if #available(iOS 16.0, *) {
+            let isTeamRace = results.contains { r in !(r.teamName ?? "").isEmpty }
+            pdfURL = ClassificationPDFGenerator.generatePDF(for: event, results: results, isTeamRace: isTeamRace)
         }
     }
 
