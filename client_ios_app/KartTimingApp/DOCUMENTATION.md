@@ -10,7 +10,7 @@ L'app si sviluppa attorno a un'interfaccia basata su `TabView` per gli utenti au
 
 1. **Autenticazione (`LoginView` / `RegisterView`)**: Solo gli utenti loggati possono accedere alle funzionalità principali.
 2. **Home (`UserHomeView`)**: Dashboard riassuntiva con i prossimi eventi a cui l'utente è iscritto e un pannello notifiche interattivo.
-3. **Eventi (`EventiView`)**: Esplorazione delle gare disponibili, registrazione (singola o a squadre), gestione del proprio team, e (per gli admin/organizzatori) strumenti di approvazione e modifica iscrizioni.
+3. **Eventi (`EventsView`)**: Esplorazione delle gare disponibili, registrazione (singola o a squadre), gestione del proprio team, e (per gli admin/organizzatori) strumenti di approvazione e modifica iscrizioni.
 4. **Liberatorie (`ReleaseFormSignView`)**: Schermata integrata con `PencilKit` per permettere ai piloti di firmare digitalmente le liberatorie, con validazione dei dati anagrafici.
 5. **Timing (`TimingView`)**: La schermata di dettaglio per la classifica live in tempo reale, ricevuta via WebSocket.
 6. **Analisi (`AnalisiView`)**: Area placeholder per statistiche post-gara e telemetrie.
@@ -25,7 +25,7 @@ L'app si sviluppa attorno a un'interfaccia basata su `TabView` per gli utenti au
 - All'avvio verifica l'esistenza di un token salvato in modo sicuro nel sistema.
 - Gestisce il Role-Based Access Control (RBAC): i ruoli (`user`, `race_director`, `admin`) vengono estratti o letti tramite API per mostrare o nascondere dinamicamente funzionalità organizzative avanzate nell'interfaccia (come la forzatura di iscrizioni o l'accesso al pannello Admin).
 
-### 2.2 Gestione Eventi e Iscrizioni (`EventiViewModel`)
+### 2.2 Gestione Eventi e Iscrizioni (`EventsViewModel`)
 L'interfaccia per la gestione eventi modella due modalità di iscrizione:
 - **Iscrizioni in Team**: il team leader crea il team e può aggiungere o rimuovere compagni indicandone le email.
 - **Iscrizioni Singole**: per campionati individuali.
@@ -55,7 +55,7 @@ I dati sono decodificati (tramite `TimingPayload`) e mostrati tramite componenti
 | `App/KartTimingAppApp.swift` | Entry point, setup dell'ambiente e definizione della root view in base allo stato di login. |
 | `App/AppEnvironment.swift` | Gestisce configurazioni globali (come la modalità Dev) e la navigazione asincrona "cross-tab" (es. apertura eventi da notifica). |
 | `Features/Home/` | `HomeView` (il TabView principale dell'app), `UserHomeView`, e logica del pannello notifiche interagibile a scomparsa. |
-| `Features/Events/` | Esplorazione eventi, logica del model `EventiViewModel`, maschere (Sheet) per l'iscrizione, per l'amministrazione, e modifica team. |
+| `Features/Events/` | Esplorazione eventi, logica del model `EventsViewModel`, maschere (Sheet) per l'iscrizione, per l'amministrazione, e modifica team. |
 | `Features/Timing/` | Motore WebSocket (`KartTimingManager`), visualizzazione tabellare classifica e controllo dell'URL di scraping. |
 | `Features/Settings/` | Opzioni account, pulsante di logout e bridge verso `AdminUsersView`. |
 | `Network/` | Servizi client HTTP (`AuthService` e REST call generiche). |

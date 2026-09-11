@@ -46,7 +46,7 @@ private extension RaceMessage {
 // MARK: - PilotLiveView
 
 /// Vista personale del pilota in gara.
-/// Layout identico a PilotView (landscape locked) + flash bandiera + badge penalità.
+/// Layout identico a TimingPilotView (landscape locked) + flash bandiera + badge penalità.
 struct PilotLiveView: View {
     @StateObject private var gpsSpeed = GPSSpeedMonitor()
     @Environment(\.scenePhase) private var scenePhase
@@ -245,7 +245,7 @@ struct PilotLiveView: View {
                 }
             }
         }
-        // ── Orientation lock (identico a PilotView) ────────────────────────
+        // ── Orientation lock (identico a TimingPilotView) ────────────────────────
         .onAppear {
             gpsSpeed.start()
             // Mantiene accesa la dashboard durante la guida.
@@ -288,7 +288,7 @@ struct PilotLiveView: View {
         }
     }
 
-    // MARK: - Dashboard (identico strutturalmente a PilotView)
+    // MARK: - Dashboard (identico strutturalmente a TimingPilotView)
 
     @ViewBuilder
     private var dashboardView: some View {

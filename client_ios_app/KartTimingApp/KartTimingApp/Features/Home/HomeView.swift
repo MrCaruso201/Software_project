@@ -22,7 +22,7 @@ struct HomeView: View {
                 .tag(HomeTab.home)
 
                 NavigationStack {
-                    EventiView(server: appEnv.server(token: authState.currentToken ?? ""))
+                    EventsView(server: appEnv.server(token: authState.currentToken ?? ""))
                 }
                 .tabItem { Label("Eventi", systemImage: "calendar") }
                 .tag(HomeTab.eventi)

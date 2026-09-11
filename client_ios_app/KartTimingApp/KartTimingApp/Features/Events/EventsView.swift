@@ -1,10 +1,10 @@
 import SwiftUI
 
-struct EventiView: View {
+struct EventsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let server: DiscoveredServer
     @EnvironmentObject var authState: AuthState
-    @StateObject private var viewModel = EventiViewModel()
+    @StateObject private var viewModel = EventsViewModel()
     
     @State private var searchText = ""
     @State private var expandedEventId: Int? = nil
@@ -211,7 +211,7 @@ struct EventiView: View {
             switch sheetType {
             case .new:
                 // Evento creato → ricarica la lista eventi
-                EventiFormView(
+                EventFormView(
                     server: server,
                     authState: authState,
                     viewModel: viewModel,

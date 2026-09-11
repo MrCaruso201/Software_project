@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Vista Messaggi Live per il Race Director.
 /// Mostra la cronologia e permette di inviare nuovi messaggi (broadcast o per kart specifico).
-struct MessaggiView: View {
+struct DirectorMessaggiView: View {
     @ObservedObject var viewModel: LiveViewModel
 
     @State private var actionError: String? = nil

@@ -5,7 +5,7 @@ import SwiftUI
 struct EventRegistrationSheetView: View {
     let server: DiscoveredServer
     @EnvironmentObject var authState: AuthState
-    @ObservedObject var viewModel: EventiViewModel
+    @ObservedObject var viewModel: EventsViewModel
     let event: RaceEvent
 
     @Environment(\.dismiss) var dismiss

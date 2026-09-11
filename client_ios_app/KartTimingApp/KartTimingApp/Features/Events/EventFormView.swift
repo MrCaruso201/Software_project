@@ -1,11 +1,11 @@
 import SwiftUI
 
-struct EventiFormView: View {
+struct EventFormView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) var dismiss
     let server: DiscoveredServer
     let authState: AuthState
-    let viewModel: EventiViewModel
+    let viewModel: EventsViewModel
 
     var editingEvent: RaceEvent? = nil
     var onSaved: (() -> Void)? = nil

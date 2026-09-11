@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 
 struct AdminEventRegistrationsView: View {
     let server: DiscoveredServer
-    @ObservedObject var viewModel: EventiViewModel
+    @ObservedObject var viewModel: EventsViewModel
     let event: RaceEvent
     var showAsSheet: Bool = false
 
@@ -916,7 +916,7 @@ struct AdminEventRegistrationsView: View {
 
 struct AdminTeamSelectionSheet: View {
     let server: DiscoveredServer
-    @ObservedObject var viewModel: EventiViewModel
+    @ObservedObject var viewModel: EventsViewModel
     let event: RaceEvent
     let registration: EventRegistrationWithUserResponse
     let availableTeams: [TeamRegistrationResponse]
@@ -1053,7 +1053,7 @@ struct AdminTeamSelectionSheet: View {
 
 struct AdminCreateTeamFormSheet: View {
     let server: DiscoveredServer
-    @ObservedObject var viewModel: EventiViewModel
+    @ObservedObject var viewModel: EventsViewModel
     let event: RaceEvent
     let leaderRegistration: EventRegistrationWithUserResponse
     let onSuccess: () -> Void

@@ -3,7 +3,7 @@ import SwiftUI
 struct AdminReleaseFormSheetView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let server: DiscoveredServer
-    @ObservedObject var viewModel: EventiViewModel
+    @ObservedObject var viewModel: EventsViewModel
     let event: RaceEvent
     
     @EnvironmentObject var authState: AuthState

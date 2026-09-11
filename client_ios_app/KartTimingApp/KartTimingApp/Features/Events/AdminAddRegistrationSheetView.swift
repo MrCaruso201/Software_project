@@ -3,7 +3,7 @@ import SwiftUI
 struct AdminAddRegistrationSheetView: View {
     let server: DiscoveredServer
     @EnvironmentObject var authState: AuthState
-    @ObservedObject var viewModel: EventiViewModel
+    @ObservedObject var viewModel: EventsViewModel
     let event: RaceEvent
     let isTeamEvent: Bool
     

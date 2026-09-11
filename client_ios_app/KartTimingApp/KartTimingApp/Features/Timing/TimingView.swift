@@ -115,7 +115,7 @@ struct TimingView: View {
             }
         }
         .navigationDestination(isPresented: $navigateToPilot) {
-            PilotView()
+            TimingPilotView()
                 .environmentObject(manager)
         }
         .alert("Operazione negata", isPresented: $manager.showError) {

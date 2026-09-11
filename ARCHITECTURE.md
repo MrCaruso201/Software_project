@@ -127,9 +127,9 @@ Raggruppa le funzionalità principali nei vari tab/percorsi.
 
 #### `Features/Events/` - Gestione Eventi
 
-- **`EventiView.swift` / `EventiViewModel.swift`**: Elenco delle gare imminenti e chiamate di rete.
+- **`EventsView.swift` / `EventsViewModel.swift`**: Elenco delle gare imminenti e chiamate di rete.
 - **`EventDetailView.swift` / `EventDetailContentView.swift`**: Dettaglio della singola gara con lista partecipanti.
-- **`EventiFormView.swift`**: Form accessibile ai Race Director per configurare una nuova gara.
+- **`EventFormView.swift`**: Form accessibile ai Race Director per configurare una nuova gara.
 - **`EventRegistrationSheetView.swift` / `EventTeamEditSheetView.swift`**: Modali per iscriversi e gestire il proprio team (inviti tramite mail).
 - **`AdminEventView.swift` / `AdminEventRegistrationsView.swift`**: Strumenti per Race Director per gestire le code e forzare iscrizioni.
 - **`AdminAddRegistrationSheetView.swift` / `AdminReleaseFormSheetView.swift`**: Approvazione delle iscrizioni e consultazione firme ricevute.
@@ -152,8 +152,8 @@ Raggruppa le funzionalità principali nei vari tab/percorsi.
 - **`LiveRootView.swift` / `LiveViewModel.swift` / `Models/LiveModels.swift`**: Radice della navigazione, gestione della logica real-time e modelli dati per il timing dal vivo.
 - **`Director/`**: Sotto-cartella con controlli per il Race Director.
   - `ClassificaLiveView.swift`, `DirectorLiveView.swift`: Interfacce per manipolare l'andamento della gara.
-  - `KartAssignmentView.swift`, `KartPenaltyView.swift`: Finestre per l'assegnazione fisica del numero kart al pilota o di eventuali sanzioni.
-  - `MessaggiView.swift`: UI per l'invio di messaggi in direzione corsa.
+  - `AssegnazioneKartView.swift`, `GestioneLiveView.swift`: Finestre per l'assegnazione fisica del numero kart al pilota o di eventuali sanzioni.
+  - `DirectorMessaggiView.swift`: UI per l'invio di messaggi in direzione corsa.
 - **`User/`**: Sotto-cartella con viste per i normali utenti.
   - `PilotLiveView.swift`, `TeamLiveView.swift`, `UserLiveView.swift`: Schermate specifiche (spesso orizzontali ad alto contrasto) con telemetria utile al pilota o al team ai box.
 
@@ -165,7 +165,7 @@ Raggruppa le funzionalità principali nei vari tab/percorsi.
 #### `Features/Timing/` - Motore WebSocket Client-Side
 
 - **`KartTimingManager.swift`**: Cuore pulsante che si collega a `/ws`, riceve gli update live in JSON continuo dal server e ne notifica le View iscritte.
-- **`TimingView.swift` / `PilotView.swift`**: Tabelle UI dark-mode (ispirate ai veri monitor in pista) che renderizzano ciclicamente la classifica estratta dal WebSocket.
+- **`TimingView.swift` / `TimingPilotView.swift`**: Tabelle UI dark-mode (ispirate ai veri monitor in pista) che renderizzano ciclicamente la classifica estratta dal WebSocket.
 
 ### `Models/` - Data Transfer Object
 

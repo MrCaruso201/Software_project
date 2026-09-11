@@ -110,8 +110,8 @@ struct AdminUserDetailView: View {
                         if let event = viewModel.allEvents.first(where: { $0.id == reg.eventId }) {
                             // REINDIRIZZA A AdminEventRegistrationsView
                             NavigationLink {
-                                // EventiViewModel serve per la view di gestione
-                                let eventiVM = EventiViewModel()
+                                // EventsViewModel serve per la view di gestione
+                                let eventiVM = EventsViewModel()
                                 AdminEventRegistrationsView(server: server, viewModel: eventiVM, event: event)
                             } label: {
                                 registrationRow(reg: reg, event: event)

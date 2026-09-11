@@ -5,7 +5,7 @@ import SwiftUI
 struct AdminEventView: View {
     let server: DiscoveredServer
     let event: RaceEvent
-    @ObservedObject var viewModel: EventiViewModel
+    @ObservedObject var viewModel: EventsViewModel
 
     @EnvironmentObject var authState: AuthState
     @Environment(\.dismiss) private var dismiss
@@ -19,7 +19,7 @@ struct AdminEventView: View {
     // Refresh del form dopo salvataggio
     @State private var editFormId = UUID()
 
-    init(server: DiscoveredServer, event: RaceEvent, viewModel: EventiViewModel) {
+    init(server: DiscoveredServer, event: RaceEvent, viewModel: EventsViewModel) {
         self.server = server
         self.event = event
         self.viewModel = viewModel
@@ -60,7 +60,7 @@ struct AdminEventView: View {
                     .tag(2)
 
                 // ── Tab 4: Gestione ───────────────────────────────────────
-                AdminEventGestioneView(
+                AdminManageEventView(
                     server: server,
                     localEvent: $localEvent,
                     isAdmin: isAdmin,
@@ -71,7 +71,7 @@ struct AdminEventView: View {
                 .tag(3)
 
                 // ── Tab 5: Modifica ───────────────────────────────────────
-                EventiFormView(
+                EventFormView(
                     server: server,
                     authState: authState,
                     viewModel: viewModel,
