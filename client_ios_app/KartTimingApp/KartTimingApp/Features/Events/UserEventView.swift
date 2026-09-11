@@ -5,7 +5,7 @@ import SwiftUI
 struct UserEventView: View {
     let server: DiscoveredServer
     let event: RaceEvent
-    @ObservedObject var viewModel: EventiViewModel
+    @ObservedObject var viewModel: EventsViewModel
 
     @EnvironmentObject var authState: AuthState
     @Environment(\.dismiss) private var dismiss
@@ -34,7 +34,7 @@ struct UserEventView: View {
     @State private var showLive = false
     @State private var showLiveAsSpectator = false
 
-    init(server: DiscoveredServer, event: RaceEvent, viewModel: EventiViewModel) {
+    init(server: DiscoveredServer, event: RaceEvent, viewModel: EventsViewModel) {
         self.server = server
         self.event = event
         self.viewModel = viewModel

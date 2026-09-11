@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Pannello per assegnare i kart alle iscrizioni (squadre o singoli)
-struct KartAssignmentView: View {
+struct AssegnazioneKartView: View {
     let event: RaceEvent
     @ObservedObject var viewModel: LiveViewModel
     @EnvironmentObject var manager: KartTimingManager

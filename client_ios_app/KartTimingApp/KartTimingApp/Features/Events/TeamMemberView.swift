@@ -6,7 +6,7 @@ import SwiftUI
 
 struct TeamMemberView: View {
     let server: DiscoveredServer
-    @ObservedObject var viewModel: EventiViewModel
+    @ObservedObject var viewModel: EventsViewModel
     let event: RaceEvent
     let registration: EventRegistrationResponse
 

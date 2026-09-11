@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import Combine
 
-struct PilotView: View {
+struct TimingPilotView: View {
     @StateObject private var gpsSpeed = GPSSpeedMonitor()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) var dismiss

@@ -6,7 +6,7 @@ import SwiftUI
 struct EventDetailContentView: View {
     let server: DiscoveredServer
     @Binding var event: RaceEvent
-    @ObservedObject var viewModel: EventiViewModel
+    @ObservedObject var viewModel: EventsViewModel
 
     @EnvironmentObject var authState: AuthState
     @StateObject private var kartodromoVM = KartodromoViewModel()

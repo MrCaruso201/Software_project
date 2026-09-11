@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-class EventiViewModel: ObservableObject {
+class EventsViewModel: ObservableObject {
     @Published var events: [RaceEvent] = []
     @Published var userRegistrations: [Int: EventRegistrationResponse] = [:]
     @Published var isLoading: Bool = false

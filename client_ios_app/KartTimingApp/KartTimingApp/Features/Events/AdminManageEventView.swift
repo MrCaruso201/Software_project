@@ -3,7 +3,7 @@ import SwiftUI
 /// Tab "Gestione" nella AdminEventView.
 /// Contiene i controlli di stato gara (Avvia, Termina, Ripristina, Carica Risultati).
 /// In futuro potranno essere aggiunti altri controlli amministrativi.
-struct AdminEventGestioneView: View {
+struct AdminManageEventView: View {
     let server: DiscoveredServer
     @Binding var localEvent: RaceEvent
     let isAdmin: Bool

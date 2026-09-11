@@ -8,7 +8,7 @@ struct EventRootView: View {
     let event: RaceEvent
 
     @EnvironmentObject var authState: AuthState
-    @StateObject private var viewModel = EventiViewModel()
+    @StateObject private var viewModel = EventsViewModel()
 
     private var isAdmin: Bool {
         authState.currentUser?.role.canManageUsers == true

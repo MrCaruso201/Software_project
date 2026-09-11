@@ -3,7 +3,7 @@ import SwiftUI
 /// Pannello unificato per messaggi broadcast e penalità kart
 /// - In modalità "Broadcast": mostra i 4 pulsanti bandiera (visibili a tutti)
 /// - In modalità "kart selezionato": mostra l'elenco di penalità/avvisi assegnabili
-struct KartPenaltyView: View {
+struct GestioneLiveView: View {
     let event: RaceEvent
     @ObservedObject var viewModel: LiveViewModel
     @EnvironmentObject var manager: KartTimingManager

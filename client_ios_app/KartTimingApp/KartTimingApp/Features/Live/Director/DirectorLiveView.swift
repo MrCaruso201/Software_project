@@ -26,12 +26,12 @@ struct DirectorLiveView: View {
                     .tag(0)
 
                 // ── Tab 2: Kart (Assegnazione) ────────────────────────
-                KartAssignmentView(event: event, viewModel: viewModel)
+                AssegnazioneKartView(event: event, viewModel: viewModel)
                     .tabItem { Label("Kart", systemImage: "flag.2.crossed.fill") }
                     .tag(1)
                     
                 // ── Tab 3: Gestione LIVE (Penalità + Controllo Gara) ─────────────
-                KartPenaltyView(event: event, viewModel: viewModel)
+                GestioneLiveView(event: event, viewModel: viewModel)
                     .tabItem { Label("Gestione LIVE", systemImage: "exclamationmark.triangle.fill") }
                     .tag(2)
 
@@ -41,7 +41,7 @@ struct DirectorLiveView: View {
                     .tag(3)
 
                 // ── Tab 5: Messaggi ───────────────────────────────────
-                MessaggiView(viewModel: viewModel)
+                DirectorMessaggiView(viewModel: viewModel)
                     .tabItem { Label("Messaggi", systemImage: "bubble.left.and.bubble.right.fill") }
                     .tag(4)
             }
