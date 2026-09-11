@@ -210,6 +210,21 @@ async def upload_avatar(
     )
 
 
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Elimina l'account dell'utente autenticato."""
+    user = db.query(User).filter(User.id == int(user_payload["sub"])).first()
+    if not user:
+        raise HTTPException(404, "Utente non trovato")
+        
+    db.delete(user)
+    db.commit()
+    return None
+
+
 @router.post("/change-password", status_code=status.HTTP_200_OK)
 def change_password(
     req: ChangePasswordRequest,

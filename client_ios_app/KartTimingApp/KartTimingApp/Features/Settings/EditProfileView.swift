@@ -22,6 +22,7 @@ struct EditProfileView: View {
     @State private var errorMessage: String? = nil
     @State private var showSuccess: Bool = false
     @State private var isFetching: Bool = true
+    @State private var showDeleteConfirmation = false
 
     private var resolvedAvatarURL: URL? {
         guard let profilePictureURL = profilePictureURL,
@@ -169,7 +170,30 @@ struct EditProfileView: View {
                             .foregroundColor(!isLoading ? .white : .kartDim)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)
-                            .background(!isLoading ? Color.kartAction : Color.kartPanel)
+                            .background(!isLoading ? Color.kartGreen : Color.kartPanel)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1)
+                            )
+                        }
+                        .disabled(isLoading)
+                        .padding(.horizontal, 24)
+                        
+                        // ── Bottone Elimina Account ──────────────────────────
+                        Button {
+                            showDeleteConfirmation = true
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "trash.fill")
+                                    .font(.system(size: 15, weight: .bold))
+                                Text("ELIMINA ACCOUNT")
+                                    .font(.system(size: 16, weight: .bold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(Color.kartRed)
                             .cornerRadius(12)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
@@ -194,6 +218,14 @@ struct EditProfileView: View {
             Button("OK") { dismiss() }
         } message: {
             Text("Le tue informazioni sono state salvate con successo.")
+        }
+        .alert("Elimina Account", isPresented: $showDeleteConfirmation) {
+            Button("Annulla", role: .cancel) { }
+            Button("Elimina", role: .destructive) {
+                deleteAccount()
+            }
+        } message: {
+            Text("Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione è irreversibile.")
         }
         .animation(.easeInOut(duration: 0.2), value: errorMessage)
     }
@@ -246,6 +278,28 @@ struct EditProfileView: View {
     }
 
     // MARK: - Logic
+    
+    private func deleteAccount() {
+        guard let token = authState.currentToken else { return }
+        errorMessage = nil
+        isLoading = true
+
+        Task {
+            do {
+                try await AuthService.deleteAccount(token: token)
+                await MainActor.run {
+                    isLoading = false
+                    authState.logout()
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
 
     private func fetchProfile() {
         guard let token = authState.currentToken,

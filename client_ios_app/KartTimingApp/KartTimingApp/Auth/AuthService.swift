@@ -158,6 +158,22 @@ struct AuthService {
         }
     }
     
+    // MARK: - Delete Account
+    static func deleteAccount(token: String) async throws {
+        guard let url = URL(string: "\(baseURL)/auth/me") else { throw AuthError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await NetworkService.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
+
+        if httpResponse.statusCode != 204 {
+            let errorMsg = parseErrorMessage(data: data)
+            throw AuthError.requestFailed(errorMsg)
+        }
+    }
+    
     // MARK: - Upload Avatar
     static func uploadAvatar(imageData: Data, token: String) async throws {
         guard let url = URL(string: "\(baseURL)/auth/me/avatar") else { throw AuthError.invalidURL }
