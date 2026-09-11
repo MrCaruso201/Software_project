@@ -101,8 +101,8 @@ struct TimingView: View {
                 }
             }
 
-            // Pulsante area pilota — visibile solo agli utenti con ruolo "user"
-            if authState.currentUser?.role == .user, selectedKartodromo != nil {
+            // Pulsante area pilota
+            if selectedKartodromo != nil {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         navigateToPilot = true

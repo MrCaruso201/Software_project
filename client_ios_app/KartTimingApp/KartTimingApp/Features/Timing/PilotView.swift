@@ -1,13 +1,18 @@
 import SwiftUI
 import UIKit
+import Combine
 
 struct PilotView: View {
+    @StateObject private var gpsSpeed = GPSSpeedMonitor()
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authState: AuthState
     @EnvironmentObject var manager: KartTimingManager
 
     @State private var pilotName: String = ""
     @State private var isNameConfirmed: Bool = false
+    
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
@@ -82,22 +87,53 @@ struct PilotView: View {
                 }
             }
         }
-        .navigationTitle(isNameConfirmed ? "Live: \(pilotName)" : "Vista Pilota")
+        .navigationTitle(isNameConfirmed ? "" : "Vista Pilota")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
+            if isNameConfirmed {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "speedometer")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.kartAccent)
+                        Text(gpsSpeed.speedKmh.map { String(format: "%.0f", $0) } ?? "—")
+                            .font(.system(size: 34, weight: .black, design: .monospaced))
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .fixedSize()
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("km/h").font(.system(size: 12, weight: .bold))
+                            Text(gpsSpeed.status).font(.system(size: 10))
+                                .foregroundColor(.kartDim)
+                        }
+                    }
+                    .foregroundColor(.kartForeground)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
+                    .background(Color.kartPanel, in: RoundedRectangle(cornerRadius: 10))
+                    .accessibilityElement(children: .combine)
+                }
+            }
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.kartAccent) // Colore di sistema standard per l'app
+                        .foregroundColor(.kartAccent)
                 }
             }
         }
-        .toolbar(.hidden, for: .tabBar)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { gpsSpeed.start() } else { gpsSpeed.stop() }
+        }
+        .onReceive(timer) { _ in
+            gpsSpeed.expireSample()
+        }
         .onAppear {
+            gpsSpeed.start()
             // Mantiene accesa la dashboard durante la guida.
             UIApplication.shared.isIdleTimerDisabled = true
             // Forza orientamento landscape FISSO (solo destra, non ruota a 180°)
@@ -114,6 +150,7 @@ struct PilotView: View {
             }
         }
         .onDisappear {
+            gpsSpeed.stop()
             // Riabilita il blocco automatico quando si esce dalla vista pilota.
             UIApplication.shared.isIdleTimerDisabled = false
             // Ripristina portrait
