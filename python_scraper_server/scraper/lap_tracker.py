@@ -55,7 +55,7 @@ def process_payload_for_laps(url: str, payload: dict, previous_lap_counts: Dict[
         kart_idx = headers.index("Kart")
         # Support various column names for laps and last lap
         laps_idx = next(i for i, h in enumerate(headers) if h.lower() in ("laps", "giri", "lap"))
-        last_idx = next(i for i, h in enumerate(headers) if h.lower() in ("last", "last lap", "ultimo", "ultimo giro"))
+        last_idx = next(i for i, h in enumerate(headers) if h.lower() in ("last", "last lap", "ultimo", "ultimo giro", "lap time"))
     except (ValueError, StopIteration):
         return previous_lap_counts
 
@@ -95,9 +95,8 @@ def process_payload_for_laps(url: str, payload: dict, previous_lap_counts: Dict[
             if kartodromo:
                 event = db.query(Event).filter(
                     Event.location == kartodromo.nome,
-                    Event.status == "started",
-                    Event.race_status == "running"
-                ).first()
+                    Event.status == "started"
+                ).order_by(Event.id.desc()).first()
                 
                 if event:
                     now = datetime.now(timezone.utc).replace(tzinfo=None)
