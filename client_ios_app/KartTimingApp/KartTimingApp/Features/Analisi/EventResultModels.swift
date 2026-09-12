@@ -196,3 +196,22 @@ struct CSVImportResult {
     let imported: Int
     let errors: [String]
 }
+
+// MARK: - Lap Stats Response
+
+nonisolated struct LapStatsResponse: Identifiable, Codable, Sendable, Equatable {
+    var id: Int { kartNumber }
+    let kartNumber: Int
+    let bestLapMs: Int?
+    let worstLapMs: Int?
+    let avgLapMs: Int?
+    let lapsCounted: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case kartNumber = "kart_number"
+        case bestLapMs = "best_lap_ms"
+        case worstLapMs = "worst_lap_ms"
+        case avgLapMs = "avg_lap_ms"
+        case lapsCounted = "laps_counted"
+    }
+}

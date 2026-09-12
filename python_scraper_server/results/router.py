@@ -32,7 +32,7 @@ from auth.dependencies import get_current_user, require_role
 from auth.roles import Role
 from db.database import get_db
 from db.models import Event, EventRegistration, EventResult, User
-from results.schemas import CSVImportResponse, EventResultResponse, SelfDeclaredResultRequest
+from results.schemas import CSVImportResponse, EventResultResponse, SelfDeclaredResultRequest, LapStatsResponse
 
 router = APIRouter(tags=["results"])
 
@@ -147,6 +147,59 @@ def get_my_result_for_event(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# GET /events/{event_id}/lap-stats  — statistiche giri per kart
+
+@router.get("/events/{event_id}/lap-stats", response_model=List[LapStatsResponse])
+def get_lap_stats(
+    event_id: int,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Restituisce le statistiche dei giri (best, worst, avg) per ogni kart dell'evento.
+    I giri più lenti del 150% rispetto al best lap del kart vengono esclusi per il
+    calcolo della media e del worst lap (considerati giri anomali, es. sosta ai box).
+    """
+    from db.models import LapTime
+    
+    laps = db.query(LapTime).filter(LapTime.event_id == event_id).all()
+    
+    stats_by_kart = {}
+    for lap in laps:
+        kart = lap.kart_number
+        if kart not in stats_by_kart:
+            stats_by_kart[kart] = []
+        stats_by_kart[kart].append(lap.lap_time_ms)
+        
+    results = []
+    for kart, times in stats_by_kart.items():
+        if not times:
+            continue
+            
+        best = min(times)
+        threshold = best * 1.5
+        
+        valid_times = [t for t in times if t <= threshold]
+        
+        if valid_times:
+            worst = max(valid_times)
+            avg = int(sum(valid_times) / len(valid_times))
+        else:
+            worst = best
+            avg = best
+            
+        results.append(LapStatsResponse(
+            kart_number=kart,
+            best_lap_ms=best,
+            worst_lap_ms=worst,
+            avg_lap_ms=avg,
+            laps_counted=len(valid_times)
+        ))
+        
+    return results
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # POST /events/{event_id}/results/import_csv  — importazione classifica da CSV
 
 @router.post("/events/{event_id}/results/import_csv", response_model=CSVImportResponse)
@@ -191,11 +244,11 @@ async def import_results_from_csv(
     if reader.fieldnames is None:
         raise HTTPException(status_code=400, detail="CSV vuoto o privo di intestazione")
 
-    # Cancella risultati ufficiali precedenti per questo evento e questo tipo di risultato
+    # Cancella TUTTI i risultati ufficiali precedenti per questo evento, 
+    # indipendentemente dal tipo (prove o finali), in modo da non sovrapporli
     db.query(EventResult).filter(
         EventResult.event_id == event_id,
         EventResult.is_official == True,
-        EventResult.result_type == result_type,
     ).delete()
 
     imported = 0
@@ -383,7 +436,56 @@ def delete_event_results(
     db.query(EventResult).filter(
         EventResult.event_id == event_id,
         EventResult.is_official == True,
-        EventResult.result_type == result_type,
     ).delete()
     db.commit()
     return None
+
+@router.get("/events/{event_id}/lap-stats", response_model=List[LapStatsResponse])
+def get_lap_stats(
+    event_id: int,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Ritorna le statistiche sui tempi sul giro (Best, Worst, Avg) per ogni kart,
+    filtrando i giri anomali (es. pit stops) che superano il 150% del best lap assoluto.
+    """
+    from sqlalchemy import func
+    from db.models import LapTime
+
+    # 1. Trova il best lap assoluto
+    best_lap = db.query(func.min(LapTime.lap_time_ms)).filter(
+        LapTime.event_id == event_id,
+        LapTime.lap_time_ms > 0
+    ).scalar()
+
+    if not best_lap:
+        return []
+
+    # 2. Definisci la soglia (150% del best lap)
+    threshold = best_lap * 1.5
+
+    # 3. Calcola le statistiche escludendo i giri oltre la soglia
+    stats = db.query(
+        LapTime.kart_number,
+        func.min(LapTime.lap_time_ms).label('best_lap_ms'),
+        func.max(LapTime.lap_time_ms).label('worst_lap_ms'),
+        func.avg(LapTime.lap_time_ms).label('avg_lap_ms'),
+        func.count(LapTime.lap_time_ms).label('laps_counted')
+    ).filter(
+        LapTime.event_id == event_id,
+        LapTime.lap_time_ms <= threshold
+    ).group_by(
+        LapTime.kart_number
+    ).all()
+
+    return [
+        LapStatsResponse(
+            kart_number=row.kart_number,
+            best_lap_ms=int(row.best_lap_ms) if row.best_lap_ms else None,
+            worst_lap_ms=int(row.worst_lap_ms) if row.worst_lap_ms else None,
+            avg_lap_ms=int(row.avg_lap_ms) if row.avg_lap_ms else None,
+            laps_counted=row.laps_counted
+        )
+        for row in stats
+    ]

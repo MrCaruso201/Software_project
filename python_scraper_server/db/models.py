@@ -257,3 +257,19 @@ class RaceMessage(Base):
     message_type = Column(String, nullable=False)      # 'yellow_flag'|'red_flag'|'green_flag'|'info'|'custom'
     text         = Column(String, nullable=False)      # testo del messaggio
     created_at   = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class LapTime(Base):
+    """
+    Tempo sul giro di un kart durante un evento, salvato osservando i cambiamenti
+    nel live timing.
+    """
+    __tablename__ = "lap_times"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    event_id    = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    kart_number = Column(Integer, nullable=False, index=True)
+    lap_number  = Column(Integer, nullable=False)
+    lap_time_ms = Column(Integer, nullable=False)
+    created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+

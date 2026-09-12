@@ -623,69 +623,92 @@ struct ClassificationSheet: View {
 
     var body: some View {
         NavigationView {
-            ZStack {
-                Color.kartBG.ignoresSafeArea()
-
-                let results = viewModel.classifications[event.id] ?? []
-
-                if results.isEmpty {
-                    VStack(spacing: 14) {
-                        Image(systemName: "trophy.slash")
-                            .font(.system(size: 44))
-                            .foregroundColor(.kartDim)
-                        Text("Classifica non ancora pubblicata")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.kartDim)
-                        Text("L'admin pubblicherà i risultati dopo la gara")
-                            .font(.system(size: 12))
-                            .foregroundColor(.kartDim)
-                            .multilineTextAlignment(.center)
+            mainContent
+                .navigationTitle("Classifica")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Chiudi") { dismiss() }.foregroundColor(.kartAccent)
                     }
-                    .padding(32)
-                } else {
-                    let isTeamRace = results.contains { r in
-                        !(r.teamName ?? "").isEmpty
-                    }
-
-                    ScrollView {
-                        VStack(spacing: 10) {
-                            if isTeamRace {
-                                teamClassification(results)
-                            } else {
-                                individualClassification(results)
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        if let url = pdfURL {
+                            if #available(iOS 16.0, *) {
+                                ShareLink(item: url) {
+                                    Image(systemName: "square.and.arrow.up")
+                                }
+                                .foregroundColor(.kartAccent)
                             }
                         }
-                        .padding(16)
                     }
                 }
-            }
-            .onAppear {
-                let results = viewModel.classifications[event.id] ?? []
-                if !results.isEmpty {
-                    generatePDF(from: results)
+        }
+        .onAppear(perform: handleAppear)
+        .onChange(of: viewModel.classifications[event.id]) { _, newVals in handleClassificationsChange(newResults: newVals) }
+        .onChange(of: viewModel.eventLapStats[event.id]) { _, newVals in handleLapStatsChange(newStats: newVals) }
+        .onChange(of: viewModel.eventPenalties[event.id]) { _, newVals in handlePenaltiesChange(newPens: newVals) }
+    }
+    
+    private func handleAppear() {
+        let results = viewModel.classifications[event.id] ?? []
+        let token = authState.currentToken ?? ""
+        viewModel.fetchLapStats(serverURL: server.httpURL, eventId: event.id, token: token)
+        viewModel.fetchPenalties(serverURL: server.httpURL, eventId: event.id, token: token)
+        if !results.isEmpty {
+            generatePDF(from: results)
+        }
+    }
+    
+    private func handleClassificationsChange(newResults: [EventResult]?) {
+        if let newResults = newResults, !newResults.isEmpty {
+            generatePDF(from: newResults)
+        }
+    }
+    
+    private func handleLapStatsChange(newStats: [LapStatsResponse]?) {
+        let results = viewModel.classifications[event.id] ?? []
+        if !results.isEmpty { generatePDF(from: results) }
+    }
+    
+    private func handlePenaltiesChange(newPens: [RacePenalty]?) {
+        let results = viewModel.classifications[event.id] ?? []
+        if !results.isEmpty { generatePDF(from: results) }
+    }
+    
+    @ViewBuilder
+    private var mainContent: some View {
+        ZStack {
+            Color.kartBG.ignoresSafeArea()
+
+            let results = viewModel.classifications[event.id] ?? []
+
+            if results.isEmpty {
+                VStack(spacing: 14) {
+                    Image(systemName: "trophy.slash")
+                        .font(.system(size: 44))
+                        .foregroundColor(.kartDim)
+                    Text("Classifica non ancora pubblicata")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.kartDim)
+                    Text("L'admin pubblicherà i risultati dopo la gara")
+                        .font(.system(size: 12))
+                        .foregroundColor(.kartDim)
+                        .multilineTextAlignment(.center)
                 }
-            }
-            .onChange(of: viewModel.classifications[event.id]) { _, newResults in
-                if let newResults = newResults, !newResults.isEmpty {
-                    generatePDF(from: newResults)
+                .padding(32)
+            } else {
+                let isTeamRace = results.contains { r in
+                    !(r.teamName ?? "").isEmpty
                 }
-            }
-            .navigationTitle("Classifica")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Chiudi") { dismiss() }.foregroundColor(.kartAccent)
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if let url = pdfURL {
-                        if #available(iOS 16.0, *) {
-                            ShareLink(item: url) {
-                                Image(systemName: "square.and.arrow.up")
-                            }
-                            .foregroundColor(.kartAccent)
+
+                ScrollView {
+                    VStack(spacing: 10) {
+                        if isTeamRace {
+                            teamClassification(results)
+                        } else {
+                            individualClassification(results)
                         }
                     }
+                    .padding(16)
                 }
             }
         }
@@ -694,7 +717,9 @@ struct ClassificationSheet: View {
     private func generatePDF(from results: [EventResult]) {
         if #available(iOS 16.0, *) {
             let isTeamRace = results.contains { r in !(r.teamName ?? "").isEmpty }
-            pdfURL = ClassificationPDFGenerator.generatePDF(for: event, results: results, isTeamRace: isTeamRace)
+            let stats = viewModel.eventLapStats[event.id] ?? []
+            let penalties = viewModel.eventPenalties[event.id] ?? []
+            pdfURL = ClassificationPDFGenerator.generatePDF(for: event, results: results, lapStats: stats, penalties: penalties, isTeamRace: isTeamRace)
         }
     }
 

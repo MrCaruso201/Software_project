@@ -42,7 +42,7 @@ nonisolated struct LiveKartAssignment: Identifiable, Codable, Sendable {
 
 // MARK: - Race Penalty
 
-nonisolated struct RacePenalty: Identifiable, Codable, Sendable {
+nonisolated struct RacePenalty: Identifiable, Codable, Sendable, Equatable {
     let id: Int
     let eventId: Int
     let kartNumber: Int

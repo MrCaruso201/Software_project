@@ -44,6 +44,7 @@ class ScraperSession:
         self.loop = loop
         self.subscriber_count = 0
         self.last_payload: Optional[Dict] = None
+        self.last_lap_counts: Dict[int, int] = {}
         self.running = False
         self.thread: Optional[threading.Thread] = None
         self._stop_timer: Optional[asyncio.TimerHandle] = None
@@ -135,6 +136,10 @@ class ScraperSession:
                         last_hash = h
                         self.last_payload = payload
                         save_json(payload, path)
+                        
+                        from scraper.lap_tracker import process_payload_for_laps
+                        self.last_lap_counts = process_payload_for_laps(self.url, payload, self.last_lap_counts)
+                        
                         print(
                             f"📊 [{self.url}] Dati aggiornati: "
                             f"{len(payload['rows'])} righe"

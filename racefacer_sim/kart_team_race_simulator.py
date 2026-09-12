@@ -42,7 +42,7 @@ BASE_URL    = "https://simulator"
 # min_stint / max_stint: durata minima/massima dello stint in secondi.
 TEAMS: List[Dict] = [
     {
-        "name": "Topini",
+        "name": "Team1",
         "kart": "101",
         "min_stint": 600,
         "max_stint": 1200,
@@ -53,7 +53,7 @@ TEAMS: List[Dict] = [
         ],
     },
     {
-        "name": "Red Karts",
+        "name": "Team2",
         "kart": "102",
         "min_stint": 600,
         "max_stint": 1200,
@@ -64,7 +64,7 @@ TEAMS: List[Dict] = [
         ],
     },
     {
-        "name": "Pit Stop FC",
+        "name": "Team3",
         "kart": "103",
         "min_stint": 700,
         "max_stint": 1100,
@@ -74,7 +74,7 @@ TEAMS: List[Dict] = [
         ],
     },
     {
-        "name": "Thunder Bulls",
+        "name": "Team4",
         "kart": "104",
         "min_stint": 500,
         "max_stint": 1300,
@@ -85,7 +85,7 @@ TEAMS: List[Dict] = [
         ],
     },
     {
-        "name": "Veloce Racing",
+        "name": "Team5",
         "kart": "105",
         "min_stint": 600,
         "max_stint": 1200,

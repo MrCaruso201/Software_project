@@ -19,6 +19,10 @@ class AnalisiViewModel: ObservableObject {
 
     /// Classifiche complete di singoli eventi (fetched on-demand)
     @Published var classifications: [Int: [EventResult]]         = [:]
+    
+    /// Dati aggiuntivi per il PDF
+    @Published var eventLapStats: [Int: [LapStatsResponse]]      = [:]
+    @Published var eventPenalties: [Int: [RacePenalty]]          = [:]
 
     private var cachedPast: [(event: RaceEvent, reg: EventRegistrationResponse)]?
     private var cachedUpcoming: [(event: RaceEvent, reg: EventRegistrationResponse)]?
@@ -249,6 +253,26 @@ class AnalisiViewModel: ObservableObject {
               token: token,
               type: [EventResult].self) { [weak self] result in
             if let res = result { self?.classifications[eventId] = res }
+        }
+    }
+    
+    /// Carica le statistiche dei giri (on-demand per il PDF)
+    func fetchLapStats(serverURL: URL?, eventId: Int, token: String?) {
+        guard let serverURL, let token else { return }
+        fetch(url: serverURL.appendingPathComponent("events/\(eventId)/lap-stats"),
+              token: token,
+              type: [LapStatsResponse].self) { [weak self] result in
+            if let res = result { self?.eventLapStats[eventId] = res }
+        }
+    }
+    
+    /// Carica le penalità della gara (on-demand per il PDF)
+    func fetchPenalties(serverURL: URL?, eventId: Int, token: String?) {
+        guard let serverURL, let token else { return }
+        fetch(url: serverURL.appendingPathComponent("live/\(eventId)/penalties"),
+              token: token,
+              type: [RacePenalty].self) { [weak self] result in
+            if let res = result { self?.eventPenalties[eventId] = res }
         }
     }
 

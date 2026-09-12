@@ -336,10 +336,14 @@ def assign_kart(
         LiveKartAssignment.kart_number == body.kart_number
     ).first()
     if existing_kart and existing_kart.team_id != body.team_id:
-        raise HTTPException(
-            status_code=409, 
-            detail=f"Il kart {body.kart_number} è già assegnato al team {existing_kart.team_name or existing_kart.team_id}!"
-        )
+        if existing_kart.team_id == "unassigned":
+            # Consenti la sovrascrittura di un kart fittizio (placeholder per la telemetria)
+            db.delete(existing_kart)
+        else:
+            raise HTTPException(
+                status_code=409, 
+                detail=f"Il kart {body.kart_number} è già assegnato al team {existing_kart.team_name or existing_kart.team_id}!"
+            )
 
     db.flush()
 

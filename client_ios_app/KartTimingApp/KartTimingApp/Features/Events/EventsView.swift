@@ -36,7 +36,7 @@ struct EventsView: View {
     
     var todayEvents: [RaceEvent] {
         return filteredEvents
-            .filter { Calendar.current.isDateInToday($0.dateObject ?? .distantPast) }
+            .filter { Calendar.current.isDateInToday($0.dateObject ?? .distantPast) && $0.status != "finished" }
             .sorted { ($0.dateObject ?? .distantFuture) < ($1.dateObject ?? .distantFuture) }
     }
 
@@ -44,6 +44,7 @@ struct EventsView: View {
         let now = Date()
         return filteredEvents
             .filter { 
+                if $0.status == "finished" { return false }
                 let date = $0.dateObject ?? .distantFuture
                 return date > now && !Calendar.current.isDateInToday(date)
             }
@@ -54,6 +55,7 @@ struct EventsView: View {
         let now = Date()
         return filteredEvents
             .filter { 
+                if $0.status == "finished" { return true }
                 let date = $0.dateObject ?? .distantFuture
                 return date < now && !Calendar.current.isDateInToday(date)
             }

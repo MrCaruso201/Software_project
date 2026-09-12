@@ -39,3 +39,11 @@ class SelfDeclaredResultRequest(BaseModel):
 class CSVImportResponse(BaseModel):
     imported: int
     errors: List[str]
+
+
+class LapStatsResponse(BaseModel):
+    kart_number: int
+    best_lap_ms: Optional[int] = None
+    worst_lap_ms: Optional[int] = None
+    avg_lap_ms: Optional[int] = None
+    laps_counted: int
