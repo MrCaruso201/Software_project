@@ -27,7 +27,15 @@ struct PitWallLiveView: View {
                                 .cornerRadius(8)
                             }
                             
-                            ForEach(timing.displayRows) { item in
+                            let sortedRows = timing.displayRows.sorted { item1, item2 in
+                                let kart1Str = getKartNumber(from: item1.values, headers: timing.headers) ?? "0"
+                                let kart2Str = getKartNumber(from: item2.values, headers: timing.headers) ?? "0"
+                                let k1 = Int(kart1Str) ?? Int.max
+                                let k2 = Int(kart2Str) ?? Int.max
+                                return k1 < k2
+                            }
+                            
+                            ForEach(sortedRows) { item in
                                 let row = item.values
                                 if let kartNumStr = getKartNumber(from: row, headers: timing.headers),
                                    let kartNum = Int(kartNumStr) {
