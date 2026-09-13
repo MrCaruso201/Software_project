@@ -250,9 +250,9 @@ def _seed_penalty_types() -> None:
         {"code": "stint_time",     "name": "Tempo stint non rispettato",    "action": "time_added",    "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 30},
         {"code": "pit_stop_time",  "name": "Tempo pit stop non rispettato", "action": "time_added",    "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 40},
         {"code": "weight",         "name": "Peso non rispettato",           "action": "time_added",    "default_seconds": 30, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 50},
-        {"code": "track_limits_10s","name": "Track Limits (+10s)",          "action": "time_added",    "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 55},
+        {"code": "track_limits",            "name": "Track Limits",                 "action": "time_added",    "default_seconds": 10, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 55},
         # ── Avvisi (auto-penalty) ─────────────────────────────────────────────
-        {"code": "warning_track_limits",      "name": "Avviso (Track Limits)",      "action": "warning", "default_seconds": None, "warning_threshold": 3, "auto_penalty_code": "track_limits_10s",   "sort_order": 60},
+        {"code": "warning_track_limits",      "name": "Avviso (Track Limits)",      "action": "warning", "default_seconds": None, "warning_threshold": 3, "auto_penalty_code": "track_limits",       "sort_order": 60},
         {"code": "warning_aggressive_driving","name": "Avviso (Guida Aggressiva)",  "action": "warning", "default_seconds": None, "warning_threshold": 3, "auto_penalty_code": "aggressive_driving", "sort_order": 70},
         # ── Bandiere ──────────────────────────────────────────────────────────
         {"code": "black_flag",     "name": "Bandiera Nera (Espulsione)",    "action": "drive_through", "default_seconds": None, "warning_threshold": None, "auto_penalty_code": None,              "sort_order": 80},

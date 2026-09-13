@@ -458,6 +458,31 @@ def get_penalty_types(
     return db.query(PenaltyType).filter(PenaltyType.is_active == True).order_by(PenaltyType.sort_order).all()
 
 
+@router.patch("/live/penalty-types/{type_id}", response_model=PenaltyTypeResponse)
+def update_penalty_type(
+    type_id: int,
+    body: PenaltyTypeUpdate,
+    user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Aggiorna i parametri (default_seconds e warning_threshold) di un tipo di penalità. Solo admin."""
+    if user_payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Non autorizzato (solo admin)")
+        
+    p_type = db.query(PenaltyType).filter(PenaltyType.id == type_id).first()
+    if not p_type:
+        raise HTTPException(status_code=404, detail="Tipo di penalità non trovato")
+        
+    if body.default_seconds is not None:
+        p_type.default_seconds = body.default_seconds
+    if body.warning_threshold is not None:
+        p_type.warning_threshold = body.warning_threshold
+        
+    db.commit()
+    db.refresh(p_type)
+    return p_type
+
+
 @router.get("/live/{event_id}/penalties", response_model=List[PenaltyResponse])
 def get_penalties(
     event_id: int,

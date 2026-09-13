@@ -129,6 +129,14 @@ class LiveViewModel: ObservableObject {
         }
     }
 
+    func fetchPenaltyTypesOnly() async {
+        if let data = await fetchRawData(path: "/live/penalty-types") {
+            if let types = try? JSONDecoder().decode([PenaltyType].self, from: data) {
+                self.penaltyTypes = types
+            }
+        }
+    }
+
     func fetchAll() async { await refresh(pitOnly: false) }
 
     private func refresh(pitOnly: Bool) async {
@@ -368,6 +376,29 @@ class LiveViewModel: ObservableObject {
         req.httpMethod = "DELETE"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         try await performFlagMutation(req, scopes: ["penalties"])
+    }
+
+    func updatePenaltyType(id: Int, defaultSeconds: Int?, warningThreshold: Int?) async throws {
+        guard let url = endpoint("/live/penalty-types/\(id)"),
+              let token = token else { throw URLError(.badURL) }
+        var req = URLRequest(url: url)
+        req.httpMethod = "PATCH"
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        var body: [String: Any] = [:]
+        if let ds = defaultSeconds { body["default_seconds"] = ds }
+        if let wt = warningThreshold { body["warning_threshold"] = wt }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode >= 200 && http.statusCode < 300 else {
+            let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore aggiornamento tipo penalità"
+            throw NSError(domain: "", code: (resp as? HTTPURLResponse)?.statusCode ?? 500, userInfo: [NSLocalizedDescriptionKey: msg])
+        }
+        
+        // Refetch per aggiornare la lista
+        await fetchAll()
     }
 
     private static func messageScopes(type: String, text: String) -> Set<String> {

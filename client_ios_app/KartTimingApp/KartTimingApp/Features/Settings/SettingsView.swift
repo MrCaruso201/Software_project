@@ -85,6 +85,29 @@ struct SettingsView: View {
                         .padding(.horizontal, 16)
 
                         NavigationLink {
+                            GestionePenalitaView(server: appEnv.server(token: authState.currentToken ?? ""))
+                                .environmentObject(authState)
+                                .environmentObject(appEnv)
+                        } label: {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .font(.title3)
+                                Text("Gestione penalità")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(.kartForeground)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(Color.kartPanel)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.kartBorder(opacity: 0.1), lineWidth: 1)
+                            )
+                        }
+                        .padding(.horizontal, 16)
+
+                        NavigationLink {
                             AdminKartodromoView(server: appEnv.server(token: authState.currentToken ?? ""))
                                 .environmentObject(authState)
                         } label: {
