@@ -410,17 +410,9 @@ struct EventFormView: View {
         title    = ev.title
         location = ev.location
 
-        let isoFull  = ISO8601DateFormatter(); isoFull.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let isoBasic = ISO8601DateFormatter()
-        let dfT      = DateFormatter(); dfT.dateFormat      = "yyyy-MM-dd'T'HH:mm:ss"
-        let dfT2     = DateFormatter(); dfT2.dateFormat     = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
-        let dfSpace  = DateFormatter(); dfSpace.dateFormat  = "yyyy-MM-dd HH:mm:ss"
-
-        if      let d = isoFull.date(from: ev.eventDate)  { eventDate = d }
-        else if let d = isoBasic.date(from: ev.eventDate) { eventDate = d }
-        else if let d = dfT.date(from: ev.eventDate)      { eventDate = d }
-        else if let d = dfT2.date(from: ev.eventDate)     { eventDate = d }
-        else if let d = dfSpace.date(from: ev.eventDate)  { eventDate = d }
+        if let d = ev.dateObject {
+            eventDate = d
+        }
 
         if let v = ev.registrationCost   { registrationCost   = String(v) }
         if let v = ev.maxParticipants    { maxParticipants    = String(v) }
@@ -440,7 +432,7 @@ struct EventFormView: View {
 
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        fmt.timeZone   = TimeZone.current
+        fmt.timeZone   = TimeZone(abbreviation: "UTC")
 
         var data: [String: Any] = [
             "title":      title,

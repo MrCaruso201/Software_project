@@ -511,7 +511,7 @@ struct TimingView: View {
                         
                         LazyVGrid(columns: gridItems, alignment: .leading, spacing: 12) {
                             ForEach(allDetails, id: \.index) { item in
-                                if !["driver", "pilota", "name", "nome", "pilot"].contains(item.header.lowercased()) {
+                                if !["driver", "pilota", "name", "nome", "pilot", "pit"].contains(item.header.lowercased()) {
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(item.header.uppercased())
                                             .font(.system(size: 9, weight: .bold, design: .monospaced))
