@@ -371,8 +371,9 @@ class LiveViewModel: ObservableObject {
     }
 
     private static func messageScopes(type: String, text: String) -> Set<String> {
+        let textLower = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let changesTimers = ["red_flag", "green_flag", "checkered_flag"].contains(type)
-            || (type == "custom" && text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "gara iniziata")
+            || (type == "custom" && (textLower == "gara iniziata" || textLower == "turno iniziato"))
         return changesTimers ? ["messages", "pit"] : ["messages"]
     }
 
@@ -414,7 +415,7 @@ class LiveViewModel: ObservableObject {
 
         for msg in broadcast {
             switch msg.messageType {
-            case "custom" where msg.text.lowercased() == "gara iniziata":
+            case "custom" where msg.text.lowercased() == "gara iniziata" || msg.text.lowercased() == "turno iniziato":
                 newStart = msg.parsedDate
                 newEnd = nil   // reset: gara ripartita
             case "checkered_flag":

@@ -16,7 +16,7 @@ struct GestioneLiveView: View {
             $0.messageType == "red_flag" ||
             $0.messageType == "green_flag" ||
             $0.messageType == "checkered_flag" ||
-            ($0.messageType == "custom" && $0.text.lowercased() == "gara iniziata")
+            ($0.messageType == "custom" && ($0.text.lowercased() == "gara iniziata" || $0.text.lowercased() == "turno iniziato"))
         }
         
         return flagMessages.sorted(by: {
@@ -60,6 +60,7 @@ struct GestioneLiveView: View {
     @State private var genericMessageText = ""
     
     @State private var showCheckeredFlagConfirm = false
+    @State private var showRedFlagConfirm = false
 
     // Nota penalità kart
     @State private var showNoteInput = false
@@ -131,14 +132,22 @@ struct GestioneLiveView: View {
                 }
             }
         }
-        .alert("Termina Gara", isPresented: $showCheckeredFlagConfirm) {
+        .alert("Termina Turno", isPresented: $showCheckeredFlagConfirm) {
             Button("Termina", role: .destructive) {
                 viewModel.raceEndTime = Date()
-                sendGlobalMessage(.checkeredFlag, text: "Gara terminata. Rientrate ai box.")
+                sendGlobalMessage(.checkeredFlag, text: "Turno terminato. Rientrate ai box.")
             }
             Button("Annulla", role: .cancel) { }
         } message: {
-            Text("Sei sicuro di voler terminare la gara?")
+            Text("Sei sicuro di voler terminare il turno?")
+        }
+        .alert("Bandiera Rossa", isPresented: $showRedFlagConfirm) {
+            Button("Conferma", role: .destructive) {
+                sendGlobalMessage(.redFlag, text: "Bandiera Rossa")
+            }
+            Button("Annulla", role: .cancel) { }
+        } message: {
+            Text("Sei sicuro di voler esporre la bandiera rossa?")
         }
         .alert("Messaggio", isPresented: $showGenericMessageAlert) {
             TextField("Scrivi il messaggio...", text: $genericMessageText)
@@ -169,12 +178,9 @@ struct GestioneLiveView: View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("CONTROLLO GARA")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(.kartDim)
-                    Text(isStarted ? "In corso" : isFinished ? "Terminata" : "In attesa")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundColor(isStarted ? .kartGreen : isFinished ? .kartDim : .kartForeground)
+                    Text("BANDIERA ATTUALE")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.kartForeground)
                 }
                 Spacer()
 
@@ -276,24 +282,24 @@ struct GestioneLiveView: View {
         VStack(spacing: 12) {
             sectionHeader(text: "MESSAGGIO GLOBALE", icon: "antenna.radiowaves.left.and.right")
 
-            // Griglia 2x2 bandiere
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                globalMessageButton(title: "Bandiera Gialla", icon: "flag.fill", color: .yellow) {
-                    sendGlobalMessage(.yellowFlag, text: "Bandiera Gialla")
+            if viewModel.raceStartTime == nil || viewModel.raceEndTime != nil || currentGlobalFlag == "red_flag" {
+                globalMessageButton(title: "Inizia Turno", icon: "play.fill", color: .green) {
+                    viewModel.raceStartTime = Date()
+                    viewModel.raceEndTime = nil
+                    sendGlobalMessage(.custom, text: "Turno Iniziato")
                 }
-                globalMessageButton(title: "Bandiera Rossa", icon: "flag.fill", color: .red) {
-                    sendGlobalMessage(.redFlag, text: "Bandiera Rossa")
-                }
-                globalMessageButton(title: "Bandiera Verde", icon: "flag.fill", color: .green) {
-                    sendGlobalMessage(.greenFlag, text: "Bandiera Verde")
-                }
-                if viewModel.raceStartTime == nil || viewModel.raceEndTime != nil || currentGlobalFlag == "red_flag" {
-                    globalMessageButton(title: "Inizia Gara", icon: "play.fill", color: .green) {
-                        viewModel.raceStartTime = Date()
-                        viewModel.raceEndTime = nil
-                        sendGlobalMessage(.custom, text: "Gara Iniziata")
+            } else {
+                // Griglia 2x2 bandiere
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    globalMessageButton(title: "Bandiera Verde", icon: "flag.fill", color: .green) {
+                        sendGlobalMessage(.greenFlag, text: "Bandiera Verde")
                     }
-                } else {
+                    globalMessageButton(title: "Bandiera Gialla", icon: "flag.fill", color: .yellow) {
+                        sendGlobalMessage(.yellowFlag, text: "Bandiera Gialla")
+                    }
+                    globalMessageButton(title: "Bandiera Rossa", icon: "flag.fill", color: .red) {
+                        showRedFlagConfirm = true
+                    }
                     globalMessageButton(title: "Bandiera a Scacchi", icon: "flag.checkered.2.crossed", color: Color(white: 0.85)) {
                         showCheckeredFlagConfirm = true
                     }

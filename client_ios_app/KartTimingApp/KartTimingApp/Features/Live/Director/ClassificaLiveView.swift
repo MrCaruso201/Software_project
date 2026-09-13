@@ -63,7 +63,7 @@ struct ClassificaLiveView: View {
             $0.messageType == "red_flag" ||
             $0.messageType == "green_flag" ||
             $0.messageType == "checkered_flag" ||
-            ($0.messageType == "custom" && $0.text.lowercased() == "gara iniziata")
+            ($0.messageType == "custom" && ($0.text.lowercased() == "gara iniziata" || $0.text.lowercased() == "turno iniziato"))
         }.sorted(by: {
             guard let d1 = $0.parsedDate, let d2 = $1.parsedDate else { return false }
             return d1 < d2

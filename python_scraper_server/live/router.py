@@ -648,8 +648,9 @@ def send_message(
         LiveKartAssignment.team_id != "unassigned"
     ).all()
     
+    text_lower = body.text.strip().lower()
     is_gara_iniziata = (
-        body.message_type == "custom" and body.text.strip().lower() == "gara iniziata"
+        body.message_type == "custom" and (text_lower == "gara iniziata" or text_lower == "turno iniziato")
     )
     
     automatic_penalty = False

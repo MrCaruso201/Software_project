@@ -11,7 +11,7 @@ private extension RaceMessage {
         case "red_flag":    return .red
         case "green_flag":  return .green
         case "checkered_flag": return .white
-        case "custom" where text.lowercased() == "gara iniziata": return .green
+        case "custom" where (text.lowercased() == "gara iniziata" || text.lowercased() == "turno iniziato"): return .green
         default:            return nil
         }
     }
@@ -19,7 +19,7 @@ private extension RaceMessage {
     var flagIcon: String? {
         switch messageType {
         case "yellow_flag", "red_flag", "green_flag": return "flag.fill"
-        case "custom" where text.lowercased() == "gara iniziata": return "flag.fill"
+        case "custom" where (text.lowercased() == "gara iniziata" || text.lowercased() == "turno iniziato"): return "flag.fill"
         case "checkered_flag": return "flag.checkered.2.crossed"
         default: return nil
         }
@@ -37,7 +37,7 @@ private extension RaceMessage {
         case "red_flag":    return "ROSSA"
         case "green_flag":  return "VERDE"
         case "checkered_flag": return "A SCACCHI"
-        case "custom" where text.lowercased() == "gara iniziata": return "IN CORSO"
+        case "custom" where (text.lowercased() == "gara iniziata" || text.lowercased() == "turno iniziato"): return "IN CORSO"
         default:            return ""
         }
     }
@@ -87,7 +87,7 @@ struct PilotLiveView: View {
             .filter {
                 $0.isBroadcast && (
                     ["yellow_flag", "red_flag", "green_flag", "checkered_flag"].contains($0.messageType)
-                    || ($0.messageType == "custom" && $0.text.lowercased() == "gara iniziata")
+                    || ($0.messageType == "custom" && ($0.text.lowercased() == "gara iniziata" || $0.text.lowercased() == "turno iniziato"))
                 )
             }
             .sorted {
@@ -107,7 +107,7 @@ struct PilotLiveView: View {
     
     private var isGaraIniziata: Bool {
         guard let msg = currentFlagMessage else { return false }
-        return msg.messageType == "green_flag" || (msg.messageType == "custom" && msg.text.lowercased() == "gara iniziata")
+        return msg.messageType == "green_flag" || (msg.messageType == "custom" && (msg.text.lowercased() == "gara iniziata" || msg.text.lowercased() == "turno iniziato"))
     }
     
     private var hasLapTimes: Bool {

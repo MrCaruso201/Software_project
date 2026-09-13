@@ -62,7 +62,7 @@ struct TeamLiveView: View {
             .filter {
                 $0.isBroadcast && (
                     ["yellow_flag", "red_flag", "green_flag", "checkered_flag"].contains($0.messageType)
-                    || ($0.messageType == "custom" && $0.text.lowercased() == "gara iniziata")
+                    || ($0.messageType == "custom" && ($0.text.lowercased() == "gara iniziata" || $0.text.lowercased() == "turno iniziato"))
                 )
             }
             .sorted {
