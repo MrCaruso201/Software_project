@@ -182,17 +182,16 @@ def update_event_status(
                     message=f"L'evento {event.title} è appena iniziato! Apri l'app per seguire il live timing."
                 )
         
-        # 3. Avvia (o riavvia) i timer stint — solo kart con assegnazione reale
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        registered_karts = db.query(LiveKartAssignment).filter(
-            LiveKartAssignment.event_id == event_id,
-            LiveKartAssignment.team_id != "unassigned"
-        ).all()
-        for k in registered_karts:
-            k.is_in_pit = False
-            k.stint_penalty_assessed = False
-            k.stint_elapsed_seconds = 0
-            k.stint_last_resume = now
+            # 3. Inizializza i timer stint senza avviarli
+            registered_karts = db.query(LiveKartAssignment).filter(
+                LiveKartAssignment.event_id == event_id,
+                LiveKartAssignment.team_id != "unassigned"
+            ).all()
+            for k in registered_karts:
+                k.is_in_pit = False
+                k.stint_penalty_assessed = False
+                k.stint_elapsed_seconds = 0
+                k.stint_last_resume = None
 
     if body.status is not None:
         event.status = body.status
