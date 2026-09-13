@@ -269,7 +269,7 @@ def download_release_pdf(
     
     pdf_bytes = generate_release_pdf(
         event_title=event.title,
-        event_date=event.event_date.strftime("%d/%m/%Y %H:%M") if event.event_date else "",
+        event_date=event.event_date.strftime("%d/%m/%Y") if event.event_date else "",
         event_location=event.location or "",
         release_text=event.release_form_text,
         first_name=first_name,

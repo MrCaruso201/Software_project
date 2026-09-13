@@ -87,6 +87,13 @@ nonisolated struct RaceEvent: Identifiable, Codable, Sendable {
         return eventDate
     }
     
+    var formattedDateNoTime: String {
+        if let date = dateObject {
+            return Self.formatNoTime(date)
+        }
+        return eventDate
+    }
+    
     var dateObject: Date? {
         Self.parseDate(from: eventDate)
     }
@@ -125,6 +132,13 @@ nonisolated struct RaceEvent: Identifiable, Codable, Sendable {
     private static func format(_ date: Date) -> String {
         let outFormatter = DateFormatter()
         outFormatter.dateFormat = "d MMM yyyy, HH:mm"
+        outFormatter.locale = Locale(identifier: "it_IT")
+        return outFormatter.string(from: date)
+    }
+
+    private static func formatNoTime(_ date: Date) -> String {
+        let outFormatter = DateFormatter()
+        outFormatter.dateFormat = "d MMM yyyy"
         outFormatter.locale = Locale(identifier: "it_IT")
         return outFormatter.string(from: date)
     }

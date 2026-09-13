@@ -22,7 +22,7 @@ struct ClassificationPDFView: View {
                     .foregroundColor(.black)
                     .multilineTextAlignment(.center)
                 
-                Text("\(event.location) • \(event.formattedDate)")
+                Text("\(event.location) • \(event.formattedDateNoTime)")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.black.opacity(0.8))
             }
