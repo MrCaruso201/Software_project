@@ -39,7 +39,19 @@ async def websocket_endpoint(websocket: WebSocket):
 
     try:
         while True:
-            raw = await websocket.receive_text()
+            # Rivalida anche connessioni inattive: account eliminati e token scaduti
+            # non devono continuare a ricevere il live indefinitamente.
+            try:
+                raw = await asyncio.wait_for(websocket.receive_text(), timeout=5)
+            except asyncio.TimeoutError:
+                raw = None
+            user_payload = await verify_websocket_token(websocket)
+            if user_payload is None:
+                unsubscribe_client(websocket)
+                return
+            user_role = user_payload.get("role", Role.VIEWER)
+            if raw is None:
+                continue
             msg = json.loads(raw)
             command = msg.get("command")
 

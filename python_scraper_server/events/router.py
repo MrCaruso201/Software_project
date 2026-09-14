@@ -4,11 +4,11 @@ Router FastAPI per gli eventi.
 Endpoints:
 
 ── Eventi (CRUD base) ──────────────────────────────────────────────
-  POST   /events/                                              → crea evento (⚠️ nessun controllo di autenticazione/ruolo)
+  POST   /events/                                              → crea evento (race_director/admin)
   GET    /events/                                               → lista eventi (⚠️ pubblico, nessuna autenticazione richiesta)
   GET    /events/{event_id}                                     → dettaglio evento (⚠️ pubblico, nessuna autenticazione richiesta)
-  PATCH  /events/{event_id}                                     → modifica evento (⚠️ pubblico, nessuna autenticazione richiesta)
-  DELETE /events/{event_id}                                     → elimina evento (⚠️ pubblico, nessuna autenticazione richiesta)
+  PATCH  /events/{event_id}                                     → modifica evento (race_director/admin)
+  DELETE /events/{event_id}                                     → elimina evento (race_director/admin)
 
 ── Iscrizioni utente ────────────────────────────────────────────────
   POST   /events/{event_id}/register                            → iscrizione a un evento (utente autenticato)
@@ -73,7 +73,7 @@ from events.schemas import (
     AdminAssignTeamRequest, AdminCreateTeamFromIndividualsRequest,
     SignReleaseRequest, SignedReleaseResponse
 )
-from auth.dependencies import get_current_user
+from auth.dependencies import get_current_user, require_role
 from auth.roles import Role, has_permission
 
 def resolve_user_by_identifier(db: Session, identifier: str) -> Optional[User]:
@@ -95,7 +95,7 @@ def _populate_has_signed_release(regs, db: Session):
 
 router = APIRouter(prefix="/events", tags=["events"])
 
-@router.post("/", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=EventResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role(Role.RACE_DIRECTOR))])
 def create_event(event: EventCreate, db: Session = Depends(get_db)):
     event_data = event.model_dump()
 
@@ -142,7 +142,7 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Event not found")
     return event
 
-@router.patch("/{event_id}", response_model=EventResponse)
+@router.patch("/{event_id}", response_model=EventResponse, dependencies=[Depends(require_role(Role.RACE_DIRECTOR))])
 def update_event(event_id: int, event_update: EventUpdate, db: Session = Depends(get_db)):
     db_event = db.query(Event).filter(Event.id == event_id).first()
     if not db_event:
@@ -192,7 +192,7 @@ def update_event(event_id: int, event_update: EventUpdate, db: Session = Depends
     db.refresh(db_event)
     return db_event
 
-@router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role(Role.RACE_DIRECTOR))])
 def delete_event(event_id: int, db: Session = Depends(get_db)):
     db_event = db.query(Event).filter(Event.id == event_id).first()
     if not db_event:

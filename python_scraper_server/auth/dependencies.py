@@ -15,21 +15,36 @@ from jose import JWTError
 
 from auth.jwt import verify_access_token
 from auth.roles import Role, has_permission
+from db.database import get_db
+from db.models import User
+from sqlalchemy.orm import Session
 
 
-async def get_current_user(authorization: str = Header(...)) -> dict:
+def resolve_current_user(token: str, db: Session) -> dict:
+    payload = verify_access_token(token)
+    try:
+        user_id = int(payload["sub"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise JWTError("Identità non valida") from exc
+    user = db.get(User, user_id, populate_existing=True)
+    if user is None:
+        raise JWTError("Account non più disponibile")
+    return {**payload, "role": user.role}
+
+
+async def get_current_user(authorization: str | None = Header(default=None), db: Session = Depends(get_db)) -> dict:
     """
     Estrae e verifica il JWT dall'header 'Authorization: Bearer <token>'.
     Lancia 401 se il token manca, è malformato o scaduto.
     """
-    if not authorization.startswith("Bearer "):
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token mancante o formato non valido (atteso: Bearer <token>)",
         )
     token = authorization.removeprefix("Bearer ")
     try:
-        return verify_access_token(token)
+        return resolve_current_user(token, db)
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

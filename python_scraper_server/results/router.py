@@ -244,12 +244,7 @@ async def import_results_from_csv(
     if reader.fieldnames is None:
         raise HTTPException(status_code=400, detail="CSV vuoto o privo di intestazione")
 
-    # Cancella TUTTI i risultati ufficiali precedenti per questo evento, 
-    # indipendentemente dal tipo (prove o finali), in modo da non sovrapporli
-    db.query(EventResult).filter(
-        EventResult.event_id == event_id,
-        EventResult.is_official == True,
-    ).delete()
+    pending_results = []
 
     imported = 0
     errors: list[str] = []
@@ -397,7 +392,7 @@ async def import_results_from_csv(
         if not user_id:
             errors.append(f"Riga {i}: '{monitor_name or 'Kart ' + str(kart_number)}' non ha trovato associazioni valide (salvato senza account)")
 
-        db.add(EventResult(
+        pending_results.append(EventResult(
             event_id=event_id,
             user_id=user_id,
             driver_name=driver_name,
@@ -414,6 +409,17 @@ async def import_results_from_csv(
         ))
         imported += 1
 
+    if not pending_results:
+        raise HTTPException(status_code=400, detail="Il CSV non contiene risultati validi; classifica precedente conservata.")
+
+    # Cancella TUTTI i risultati ufficiali precedenti per questo evento,
+    # indipendentemente dal tipo (prove o finali), in modo da non sovrapporli
+    db.query(EventResult).filter(
+        EventResult.event_id == event_id,
+        EventResult.is_official == True,
+    ).delete()
+
+    db.add_all(pending_results)
     db.commit()
     print(f"📊  Classifica importata per evento {event_id}: {imported} risultati, {len(errors)} errori")
     return CSVImportResponse(imported=imported, errors=errors)

@@ -15,7 +15,8 @@ from typing import Optional
 from fastapi import WebSocket
 from jose import JWTError
 
-from auth.jwt import verify_access_token
+from auth.dependencies import resolve_current_user
+from db.database import SessionLocal
 
 
 async def verify_websocket_token(websocket: WebSocket) -> Optional[dict]:
@@ -26,8 +27,7 @@ async def verify_websocket_token(websocket: WebSocket) -> Optional[dict]:
         Il payload JWT (dict con 'sub', 'role', 'exp', ...) se valido.
         None se il token è assente, invalido o scaduto (dopo aver chiuso la connessione).
 
-    Punto di estensione: qui si possono aggiungere controlli aggiuntivi
-    (es. verifica che l'utente esista ancora nel DB, che non sia bannato, ecc.)
+    Controlla anche l'esistenza dell'account e legge il ruolo attuale dal DB.
     """
     token = websocket.query_params.get("token")
     if not token:
@@ -35,8 +35,8 @@ async def verify_websocket_token(websocket: WebSocket) -> Optional[dict]:
         return None
 
     try:
-        payload = verify_access_token(token)
-        return payload
+        with SessionLocal() as db:
+            return resolve_current_user(token, db)
     except JWTError:
         await websocket.close(code=4401)
         return None
