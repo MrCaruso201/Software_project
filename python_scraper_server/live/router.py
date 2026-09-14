@@ -656,6 +656,18 @@ def send_message(
             detail=f"Tipo messaggio non valido. Valori accettati: {VALID_MESSAGE_TYPES}"
         )
 
+    text_lower = body.text.strip().lower()
+    is_gara_iniziata = (
+        body.message_type == "custom" and (text_lower == "gara iniziata" or text_lower == "turno iniziato")
+    )
+    if body.target_kart is not None and (
+        body.message_type in ("red_flag", "green_flag", "checkered_flag") or is_gara_iniziata
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="I comandi di controllo del turno devono essere messaggi globali, senza target_kart."
+        )
+
     message = RaceMessage(
         event_id=event_id,
         target_kart=body.target_kart,
@@ -673,10 +685,6 @@ def send_message(
         LiveKartAssignment.team_id != "unassigned"
     ).all()
     
-    text_lower = body.text.strip().lower()
-    is_gara_iniziata = (
-        body.message_type == "custom" and (text_lower == "gara iniziata" or text_lower == "turno iniziato")
-    )
     
     automatic_penalty = False
     for kart in karts:

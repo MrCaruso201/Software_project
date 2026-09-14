@@ -37,8 +37,7 @@ async def broadcast_to_url(url: str, message: dict) -> None:
         try:
             await ws.send_text(data)
         except Exception:
-            client_url.pop(ws, None)
-            client_event.pop(ws, None)
+            unsubscribe_client(ws)
 
 async def broadcast_to_event(event_id: int, message: dict) -> None:
     """Invia il messaggio solo ai client iscritti a questo evento."""
@@ -49,8 +48,7 @@ async def broadcast_to_event(event_id: int, message: dict) -> None:
         try:
             await ws.send_text(data)
         except Exception:
-            client_url.pop(ws, None)
-            client_event.pop(ws, None)
+            unsubscribe_client(ws)
 
 
 # ---------------------------------------------------------------------------

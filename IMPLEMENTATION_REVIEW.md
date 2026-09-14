@@ -64,7 +64,12 @@ Verifica: test HTTP tramite ASGI e test dei gestori su SQLite in memoria in
 
 ## Live timing e connessioni
 
-- [ ] **R04 — P1: impedire che un messaggio destinato a un kart cambi i timer di tutti.**
+- [x] **R04 — P1: impedire che un messaggio destinato a un kart cambi i timer di tutti.**
+  **Corretto:** il server rifiuta con HTTP 400 rosso/verde/scacchi e i comandi custom
+  di inizio turno se `target_kart` è presente, prima di salvare messaggi o modificare
+  timer. I broadcast e i messaggi informativi mirati restano supportati.
+  Verificato in `tests/test_live_message_scope.py`; suite completa: 22 test superati.
+  La descrizione seguente documenta il difetto originario.
   **Evidenza:** `send_message` in [live/router.py](python_scraper_server/live/router.py)
   salva `target_kart`, ma applica le transizioni rosso/verde/scacchi e il comando
   custom di inizio turno a tutti i kart senza verificare che il messaggio sia globale
@@ -77,7 +82,12 @@ Verifica: test HTTP tramite ASGI e test dei gestori su SQLite in memoria in
   in alternativa, rifiutare esplicitamente queste combinazioni di tipo e destinatario.
   **Stato della verifica:** analisi statica server/client; scenario API da eseguire in isolamento.
 
-- [ ] **R05 — P2: rilasciare lo scraper anche quando fallisce un invio WebSocket.**
+- [x] **R05 — P2: rilasciare lo scraper anche quando fallisce un invio WebSocket.**
+  **Corretto:** entrambi i broadcast chiamano `unsubscribe_client` in caso di errore.
+  Test aggiunti in `tests/test_ws_manager.py`: rilascio e avvio del periodo di grazia
+  una sola volta, conservazione degli altri client e gestione dei client iscritti
+  soltanto a un evento. Suite completa: 19 test superati su risorse isolate.
+  La descrizione seguente documenta il difetto originario.
   **Evidenza:** `broadcast_to_url` e `broadcast_to_event` in
   [ws/manager.py](python_scraper_server/ws/manager.py) eliminano direttamente
   `client_url`/`client_event` nel ramo di errore senza chiamare `unsubscribe_client`.
