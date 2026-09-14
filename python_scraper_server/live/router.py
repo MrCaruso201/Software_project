@@ -47,7 +47,7 @@ from auth.dependencies import get_current_user
 from auth.roles import Role, has_permission
 from live.schemas import (
     KartAssignmentCreate, KartAssignmentResponse,
-    PenaltyCreate, PenaltyResponse, PenaltyTypeResponse,
+    PenaltyCreate, PenaltyResponse, PenaltyTypeResponse, PenaltyTypeUpdate,
     MessageCreate, MessageResponse,
     MyKartResponse, EventStatusUpdate, KartPitUpdate
 )
