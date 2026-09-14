@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 
 from db.database import SessionLocal
-from db.models import Event, LiveKartAssignment, RacePenalty
+from db.models import Event, LiveKartAssignment, RacePenalty, PenaltyType
 from ws.manager import broadcast_to_event
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,10 @@ def assess_stint(db, event, assignment, now):
         elapsed += max(0, (now - assignment.stint_last_resume).total_seconds())
     if elapsed <= limit * 60:
         return False
+    penalty_type = db.query(PenaltyType).filter(PenaltyType.code == "stint_time").first()
+    if penalty_type is None:
+        return False
+    seconds = penalty_type.default_seconds
     # Claim and penalty belong to the same transaction, including across workers.
     claimed = db.query(LiveKartAssignment).filter(
         LiveKartAssignment.id == assignment.id,
@@ -31,8 +35,8 @@ def assess_stint(db, event, assignment, now):
         return False
     db.add(RacePenalty(
         event_id=event.id, kart_number=assignment.kart_number,
-        penalty_type="stint_time", seconds=15,
-        note=f"Automatica: superato il limite stint di {limit} minuti (+15s).",
+        penalty_type="stint_time", seconds=seconds,
+        note=f"Automatica: superato il limite stint di {limit} minuti (+{seconds or 0}s).",
     ))
     return True
 

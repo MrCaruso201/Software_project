@@ -378,7 +378,7 @@ class LiveViewModel: ObservableObject {
         try await performFlagMutation(req, scopes: ["penalties"])
     }
 
-    func updatePenaltyType(id: Int, defaultSeconds: Int?, warningThreshold: Int?) async throws {
+    func updatePenaltyType(id: Int, defaultSeconds: Int?, warningThreshold: Int?) async throws -> PenaltyType {
         guard let url = endpoint("/live/penalty-types/\(id)"),
               let token = token else { throw URLError(.badURL) }
         var req = URLRequest(url: url)
@@ -397,8 +397,11 @@ class LiveViewModel: ObservableObject {
             throw NSError(domain: "", code: (resp as? HTTPURLResponse)?.statusCode ?? 500, userInfo: [NSLocalizedDescriptionKey: msg])
         }
         
-        // Refetch per aggiornare la lista
-        await fetchAll()
+        let updated = try JSONDecoder().decode(PenaltyType.self, from: data)
+        if let index = penaltyTypes.firstIndex(where: { $0.id == updated.id }) {
+            penaltyTypes[index] = updated
+        }
+        return updated
     }
 
     private static func messageScopes(type: String, text: String) -> Set<String> {

@@ -76,7 +76,7 @@ nonisolated struct RacePenalty: Identifiable, Codable, Sendable, Equatable {
         case "drop_position": return "Drop 1 Position"
         case "warning_track_limits": return "Avviso (Track Limits)"
         case "warning_aggressive_driving": return "Avviso (Guida Aggressiva)"
-        case "track_limits": return seconds != nil ? "Track Limits (+\(seconds!)s)" : "Track Limits"
+        case "track_limits", "track_limits_10s": return seconds != nil ? "Track Limits (+\(seconds!)s)" : "Track Limits"
         case "black_flag": return "Bandiera Nera (Espulsione)"
         case "blue_flag": return "Bandiera Blu (Doppiaggio)"
         default: return "Penalità"

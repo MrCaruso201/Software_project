@@ -241,7 +241,7 @@ def _seed_kartodromi() -> None:
 
 def _seed_penalty_types() -> None:
     """Popola la tabella penalty_types con le penalità standard."""
-    from db.models import PenaltyType
+    from db.models import PenaltyType, RacePenalty
     _DEFAULT_PENALTIES = [
         # code, name, action, default_seconds, warning_threshold, auto_penalty_code, sort_order
         # ── Penalità ─────────────────────────────────────────────────────────────
@@ -267,6 +267,23 @@ def _seed_penalty_types() -> None:
 
     db: Session = SessionLocal()
     try:
+        # Migra il vecchio codice, preservando configurazione e penalità storiche.
+        legacy = db.query(PenaltyType).filter(PenaltyType.code == "track_limits_10s").first()
+        current = db.query(PenaltyType).filter(PenaltyType.code == "track_limits").first()
+        if legacy:
+            if current:
+                # Se esistono entrambi, prevale la configurazione del codice nuovo.
+                db.delete(legacy)
+            else:
+                legacy.code = "track_limits"
+        db.query(RacePenalty).filter(RacePenalty.penalty_type == "track_limits_10s").update(
+            {RacePenalty.penalty_type: "track_limits"}, synchronize_session=False
+        )
+        db.query(PenaltyType).filter(PenaltyType.auto_penalty_code == "track_limits_10s").update(
+            {PenaltyType.auto_penalty_code: "track_limits"}, synchronize_session=False
+        )
+        db.flush()
+
         # Rimuovi codici obsoleti (solo se non usati da penalità esistenti)
         for code in _OBSOLETE_CODES:
             obsolete = db.query(PenaltyType).filter(PenaltyType.code == code).first()
@@ -276,11 +293,9 @@ def _seed_penalty_types() -> None:
         for data in _DEFAULT_PENALTIES:
             existing = db.query(PenaltyType).filter(PenaltyType.code == data["code"]).first()
             if existing:
-                # Update existing in case fields changed (e.g. seconds or threshold)
+                # Aggiorna i metadati, preservando i valori configurati dall'admin.
                 existing.name = data["name"]
                 existing.action = data["action"]
-                existing.default_seconds = data["default_seconds"]
-                existing.warning_threshold = data["warning_threshold"]
                 existing.auto_penalty_code = data["auto_penalty_code"]
                 existing.sort_order = data["sort_order"]
             else:

@@ -177,6 +177,7 @@ struct PenaltyTypeEditorRow: View {
                     }
                 }
             }
+            .disabled(isSaving)
             
             if let err = errorMsg {
                 Text(err)
@@ -220,7 +221,9 @@ struct PenaltyTypeEditorRow: View {
         errorMsg = nil
         Task {
             do {
-                try await viewModel.updatePenaltyType(id: pType.id, defaultSeconds: ds, warningThreshold: wt)
+                let updated = try await viewModel.updatePenaltyType(id: pType.id, defaultSeconds: ds, warningThreshold: wt)
+                defaultSecondsStr = updated.defaultSeconds.map { String($0) } ?? ""
+                warningThresholdStr = updated.warningThreshold.map { String($0) } ?? ""
                 isChanged = false
             } catch {
                 errorMsg = error.localizedDescription

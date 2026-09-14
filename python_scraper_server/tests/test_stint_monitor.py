@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi import BackgroundTasks
 
-from db.models import Base, Event, LiveKartAssignment, RacePenalty
+from db.models import Base, Event, LiveKartAssignment, RacePenalty, PenaltyType
 from live.stint_monitor import assess_stint, scan_stints
 from live.router import update_kart_pit_status, delete_penalty
 from live.schemas import KartPitUpdate
@@ -18,6 +18,7 @@ class StintPenaltyTests(unittest.TestCase):
         Base.metadata.create_all(self.engine)
         self.factory = sessionmaker(bind=self.engine, autoflush=False)
         self.db = self.factory()
+        self.db.add(PenaltyType(code="stint_time", name="Stint", action="time_added", default_seconds=42))
         self.now = datetime.now(timezone.utc).replace(tzinfo=None)
         self.event = Event(title="Test", event_date=self.now, location="Track",
                            max_stint_duration=1, race_status="running")
@@ -37,7 +38,8 @@ class StintPenaltyTests(unittest.TestCase):
         self.assertTrue(assess_stint(self.db, self.event, self.kart, self.now + timedelta(seconds=1)))
         self.db.commit()
         penalty = self.db.query(RacePenalty).one()
-        self.assertEqual((penalty.penalty_type, penalty.seconds), ("stint_time", 15))
+        self.assertEqual((penalty.penalty_type, penalty.seconds), ("stint_time", 42))
+        self.assertIn("+42s", penalty.note)
         delete_penalty(self.event.id, penalty.id, BackgroundTasks(), {"role": "admin"}, self.db, None)
         self.assertFalse(assess_stint(self.db, self.event, self.kart, self.now + timedelta(seconds=30)))
         self.assertEqual(self.db.query(RacePenalty).count(), 0)
@@ -48,7 +50,7 @@ class StintPenaltyTests(unittest.TestCase):
         tasks = BackgroundTasks()
         update_kart_pit_status(self.event.id, 7, KartPitUpdate(is_in_pit=True), tasks,
                               {"role": "admin"}, self.db, None)
-        self.assertEqual(self.db.query(RacePenalty).one().seconds, 15)
+        self.assertEqual(self.db.query(RacePenalty).one().seconds, 42)
         self.assertTrue(self.kart.stint_penalty_assessed)
         self.assertTrue(any(t.args[1].get("change") == "penalties" for t in tasks.tasks))
         update_kart_pit_status(self.event.id, 7, KartPitUpdate(is_in_pit=False), BackgroundTasks(),
