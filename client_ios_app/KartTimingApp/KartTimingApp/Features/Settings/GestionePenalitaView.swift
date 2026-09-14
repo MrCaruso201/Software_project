@@ -85,11 +85,9 @@ struct GestionePenalitaView: View {
         }
         .navigationTitle("Gestione Penalità")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
+        .task {
             viewModel.configure(serverURL: server.httpURL, token: authState.currentToken, eventId: 0)
-            Task {
-                await viewModel.fetchPenaltyTypesOnly()
-            }
+            await viewModel.fetchPenaltyTypesOnly()
         }
         .onDisappear {
             viewModel.stopPolling()
@@ -264,6 +262,8 @@ struct PenaltyTypeEditorRow: View {
                 defaultSecondsStr = updated.defaultSeconds.map { String($0) } ?? ""
                 warningThresholdStr = updated.warningThreshold.map { String($0) } ?? ""
                 isChanged = false
+            } catch is CancellationError {
+                // La vista o il contesto non sono più attivi.
             } catch {
                 errorMsg = error.localizedDescription
             }

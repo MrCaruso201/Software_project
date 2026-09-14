@@ -50,6 +50,8 @@ private extension RaceMessage {
 struct PilotLiveView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var flashTask: Task<Void, Never>?
+    @State private var blueFlagTask: Task<Void, Never>?
+    @State private var dropPositionTask: Task<Void, Never>?
     @StateObject private var gpsSpeed = GPSSpeedMonitor()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) var dismiss
@@ -276,6 +278,10 @@ struct PilotLiveView: View {
             }
         }
         .onDisappear {
+            blueFlagTask?.cancel()
+            dropPositionTask?.cancel()
+            showingBlueFlagScreen = false
+            showingDropPositionScreen = false
             flashTask?.cancel()
             flashOpacity = 0
             gpsSpeed.stop()
@@ -550,8 +556,13 @@ struct PilotLiveView: View {
                 if age < 5 {
                     showingBlueFlagScreen = true
                     let remainingTime = 5 - age
-                    DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
-                        showingBlueFlagScreen = false
+                    blueFlagTask?.cancel()
+                    blueFlagTask = Task { @MainActor in
+                        do {
+                            try await Task.sleep(for: .seconds(remainingTime))
+                            try Task.checkCancellation()
+                            showingBlueFlagScreen = false
+                        } catch { }
                     }
                 }
             }
@@ -567,8 +578,13 @@ struct PilotLiveView: View {
                 if age < 10 {
                     showingDropPositionScreen = true
                     let remainingTime = 10 - age
-                    DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
-                        showingDropPositionScreen = false
+                    dropPositionTask?.cancel()
+                    dropPositionTask = Task { @MainActor in
+                        do {
+                            try await Task.sleep(for: .seconds(remainingTime))
+                            try Task.checkCancellation()
+                            showingDropPositionScreen = false
+                        } catch { }
                     }
                 }
             }

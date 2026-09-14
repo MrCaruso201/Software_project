@@ -9,6 +9,7 @@ class AuthState: ObservableObject {
     @Published var isGuestSession: Bool = false
 
     static let shared = AuthState()
+    private var sessionGeneration = UUID()
 
     init() {
         // Al lancio, verifica se c'è un token salvato nel Keychain.
@@ -28,6 +29,7 @@ class AuthState: ObservableObject {
     }
 
     func setLoginData(accessToken: String, refreshToken: String, guestSession: Bool = false) {
+        sessionGeneration = UUID()
         KeychainService.save(key: "access_token", value: accessToken)
         KeychainService.save(key: "refresh_token", value: refreshToken)
         if let user = decodeJWT(accessToken) {
@@ -38,6 +40,7 @@ class AuthState: ObservableObject {
     }
 
     func logout() {
+        sessionGeneration = UUID()
         if let refreshToken = KeychainService.load(key: "refresh_token") {
             Task {
                 await AuthService.logout(refreshToken: refreshToken)
@@ -57,16 +60,18 @@ class AuthState: ObservableObject {
             return nil
         }
 
+        let generation = sessionGeneration
         do {
             let newAccess = try await AuthService.refreshToken(refreshToken)
+            guard generation == sessionGeneration, !Task.isCancelled else { return nil }
             KeychainService.save(key: "access_token", value: newAccess)
             if let user = decodeJWT(newAccess) {
                 self.currentUser = user
             }
             return newAccess
         } catch {
-            print("Refresh fallito, faccio logout: \(error.localizedDescription)")
-            self.logout()
+            guard generation == sessionGeneration, !Task.isCancelled else { return nil }
+            if case AuthError.refreshRejected = error { self.logout() }
             return nil
         }
     }

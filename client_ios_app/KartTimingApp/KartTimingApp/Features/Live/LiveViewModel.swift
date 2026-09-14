@@ -108,6 +108,8 @@ class LiveViewModel: ObservableObject {
     func stopPolling() {
         cancellables.removeAll()
         generation = UUID()
+        isLoadingPenaltyTypes = false
+        penaltyTypesError = nil
         refreshTask?.cancel()
         refreshTask = nil
         refreshPending = false
@@ -133,9 +135,10 @@ class LiveViewModel: ObservableObject {
 
     func fetchPenaltyTypesOnly() async {
         guard !isLoadingPenaltyTypes else { return }
+        let currentGeneration = generation
         isLoadingPenaltyTypes = true
         penaltyTypesError = nil
-        defer { isLoadingPenaltyTypes = false }
+        defer { if generation == currentGeneration { isLoadingPenaltyTypes = false } }
         do {
             guard let url = endpoint("/live/penalty-types"), let token else {
                 throw URLError(.userAuthenticationRequired)
@@ -143,11 +146,13 @@ class LiveViewModel: ObservableObject {
             var request = URLRequest(url: url)
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             let (data, response) = try await NetworkService.shared.data(for: request)
+            guard generation == currentGeneration, !Task.isCancelled else { return }
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 throw URLError(.badServerResponse)
             }
             penaltyTypes = try JSONDecoder().decode([PenaltyType].self, from: data)
         } catch {
+            guard generation == currentGeneration, !Task.isCancelled, !(error is CancellationError) else { return }
             penaltyTypesError = "Impossibile caricare i tipi di penalità. " + error.localizedDescription
         }
     }
@@ -394,6 +399,7 @@ class LiveViewModel: ObservableObject {
     }
 
     func updatePenaltyType(id: Int, defaultSeconds: Int?, warningThreshold: Int?) async throws -> PenaltyType {
+        let currentGeneration = generation
         guard let url = endpoint("/live/penalty-types/\(id)"),
               let token = token else { throw URLError(.badURL) }
         var req = URLRequest(url: url)
@@ -407,6 +413,7 @@ class LiveViewModel: ObservableObject {
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         let (data, resp) = try await NetworkService.shared.data(for: req)
+        guard generation == currentGeneration, !Task.isCancelled else { throw CancellationError() }
         guard let http = resp as? HTTPURLResponse, http.statusCode >= 200 && http.statusCode < 300 else {
             let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore aggiornamento tipo penalità"
             throw NSError(domain: "", code: (resp as? HTTPURLResponse)?.statusCode ?? 500, userInfo: [NSLocalizedDescriptionKey: msg])

@@ -3,6 +3,7 @@ import Foundation
 enum AuthError: Error, LocalizedError {
     case invalidURL
     case requestFailed(String)
+    case refreshRejected
     case invalidCredentials
     case unknown
 
@@ -10,6 +11,7 @@ enum AuthError: Error, LocalizedError {
         switch self {
         case .invalidURL: return "URL non valido"
         case .requestFailed(let msg): return msg
+        case .refreshRejected: return "Sessione scaduta: accedi nuovamente"
         case .invalidCredentials: return "Credenziali non valide"
         case .unknown: return "Errore sconosciuto"
         }
@@ -81,8 +83,9 @@ struct AuthService {
         let (data, response) = try await NetworkService.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw AuthError.unknown }
 
-        if httpResponse.statusCode != 200 {
-            throw AuthError.requestFailed("Refresh token scaduto o invalido")
+        if httpResponse.statusCode == 401 { throw AuthError.refreshRejected }
+        guard httpResponse.statusCode == 200 else {
+            throw AuthError.requestFailed("Servizio temporaneamente non disponibile")
         }
 
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
