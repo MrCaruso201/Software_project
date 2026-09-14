@@ -85,6 +85,18 @@ def resolve_user_by_identifier(db: Session, identifier: str) -> Optional[User]:
         return db.query(User).filter(func.lower(User.username) == username.lower()).first()
     return db.query(User).filter(func.lower(User.email) == identifier.lower()).first()
 
+def _validate_team_members(db, identifiers, leader_identifier):
+    seen = set()
+    for identifier in [leader_identifier, *identifiers]:
+        if not identifier or not identifier.strip():
+            continue
+        user = resolve_user_by_identifier(db, identifier)
+        key = ("user", user.id) if user else ("email", identifier.strip().lower())
+        if key in seen:
+            raise HTTPException(status_code=400, detail="Un partecipante è ripetuto nella squadra (anche come caposquadra).")
+        seen.add(key)
+
+
 def _populate_has_signed_release(regs, db: Session):
     for r in regs:
         if hasattr(r, 'user_id') and hasattr(r, 'event_id') and r.user_id and r.event_id:
@@ -149,6 +161,8 @@ def update_event(event_id: int, event_update: EventUpdate, db: Session = Depends
         raise HTTPException(status_code=404, detail="Event not found")
     
     update_data = event_update.model_dump(exclude_unset=True)
+    if "status" in update_data:
+        raise HTTPException(status_code=400, detail="Usa /events/{event_id}/status per modificare lo stato evento.")
 
     # Verifica se il testo della liberatoria sta cambiando
     text_changed = False
@@ -167,6 +181,9 @@ def update_event(event_id: int, event_update: EventUpdate, db: Session = Depends
         else:
             # days_before_deadline azzerato esplicitamente: rimuove anche la deadline
             update_data["registration_deadline"] = None
+
+    elif "event_date" in update_data and "registration_deadline" not in update_data and db_event.days_before_deadline is not None:
+        update_data["registration_deadline"] = update_data["event_date"] - timedelta(days=db_event.days_before_deadline)
 
     for key, value in update_data.items():
         setattr(db_event, key, value)
@@ -229,13 +246,16 @@ def register_for_event(
 
     if creating_team:
         # Gara a squadre: creazione team
-        expected_members = event.max_people_per_group - 1  # escluso il leader
-        if len(team_data.member_emails) > expected_members:
+        expected_members = event.max_people_per_group - 1 if event.max_people_per_group is not None else None  # escluso il leader
+        if expected_members is not None and len(team_data.member_emails) > expected_members:
             raise HTTPException(
                 status_code=400,
                 detail=f"Troppi membri: massimo {event.max_people_per_group} per squadra"
             )
         
+        leader_user = db.get(User, user_id)
+        _validate_team_members(db, team_data.member_emails, leader_user.email)
+
         # Controlla se il leader è già iscritto
         existing = db.query(EventRegistration).filter(
             EventRegistration.user_id == user_id,
@@ -524,28 +544,35 @@ def update_team_registration(
         raise HTTPException(status_code=403, detail="Solo il capogruppo o un admin può modificare il team")
         
     # Rimosso check se confermata: permettiamo modifiche anche da pagata
-    expected_members = event.max_people_per_group - 1
-    if len(team_data.member_emails) > expected_members:
+    expected_members = event.max_people_per_group - 1 if event.max_people_per_group is not None else None
+    if expected_members is not None and len(team_data.member_emails) > expected_members:
         raise HTTPException(
             status_code=400,
             detail=f"Troppi membri: massimo {event.max_people_per_group} per squadra"
         )
         
-    # Salva vecchi membri per notificarli
+    leader_identifier = team_data.leader_email if is_admin and team_data.leader_email else leader_reg.member_email
+    _validate_team_members(db, team_data.member_emails, leader_identifier)
     old_members = db.query(EventRegistration).filter(
+        EventRegistration.event_id == event_id,
         EventRegistration.team_id == team_id,
         EventRegistration.is_team_leader == False
     ).all()
     old_emails = {m.member_email.lower(): m.user_id for m in old_members if m.member_email}
-
-    # Elimina vecchi membri non leader
-    for m in old_members:
-        db.delete(m)
-        
-    # Fondamentale per evitare errori di UNIQUE constraint:
-    # diciamo ad SQLAlchemy di eseguire le DELETE prima di accodare eventuali INSERT
+    desired_emails = set()
+    for identifier in team_data.member_emails:
+        if identifier.strip():
+            user = resolve_user_by_identifier(db, identifier)
+            desired_emails.add((user.email if user else identifier.strip()).lower())
+    retained = {}
+    for member in old_members:
+        key = (member.member_email or "").lower()
+        if key in desired_emails:
+            retained[key] = member
+        else:
+            db.delete(member)
     db.flush()
-    
+
     # Aggiorna nome team e preferenze
     leader_reg.team_name = team_data.team_name.strip()
     leader_reg.accepts_extra_pilots = team_data.accepts_extra_pilots
@@ -592,16 +619,15 @@ def update_team_registration(
                     detail=f"L'utente {final_email} è già iscritto a questo evento in un'altra squadra"
                 )
                 
-        member_reg = EventRegistration(
-            user_id=member_user_id,
-            event_id=event_id,
-            team_name=team_data.team_name.strip(),
-            team_id=team_id,
-            is_team_leader=False,
-            member_email=final_email,
-            status=leader_reg.status
-        )
-        db.add(member_reg)
+        member_reg = retained.get(final_email.lower())
+        if member_reg is None:
+            member_reg = EventRegistration(
+                user_id=member_user_id, event_id=event_id, team_id=team_id,
+                is_team_leader=False, member_email=final_email, status=leader_reg.status
+            )
+            db.add(member_reg)
+        member_reg.team_name = team_data.team_name.strip()
+        member_reg.accepts_extra_pilots = team_data.accepts_extra_pilots
 
     db.commit()
     

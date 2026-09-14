@@ -191,3 +191,86 @@ Verifica: test HTTP tramite ASGI e test dei gestori su SQLite in memoria in
   Non è stata eseguita una build iOS o una prova end-to-end.
 - Scraper dei singoli provider, simulatore, PDF e tutti i casi limite delle iscrizioni
   richiedono un ulteriore passaggio dedicato; non sono coperti in modo esaustivo.
+
+## Secondo passaggio — eventi e iscrizioni
+
+**Aggiornamento:** R11–R15 corretti. I membri mantenuti conservano le righe e i
+pesi; il massimo assente è trattato come illimitato. Gli identificatori duplicati
+sono rifiutati dopo la risoluzione email/username, prima delle modifiche.
+La sola nuova data ricalcola la deadline relativa, salvo deadline esplicita nella
+stessa richiesta; le regole già presenti per `days_before_deadline` restano valide.
+La PATCH generica rifiuta `status` con HTTP 400 e indica l'endpoint dedicato.
+Verifica in `tests/test_event_registration_integrity.py`: suite completa **36 test
+superati** su database isolati. Le descrizioni sotto documentano i difetti originari.
+
+Verifica successiva a R01–R10. La suite esistente passa ancora: **29 test**.
+Le riproduzioni aggiuntive sono state eseguite chiamando i gestori su SQLite in
+memoria, con notifiche sostituite da mock, senza avviare il server reale.
+Nessuna modifica al codice applicativo durante questo passaggio.
+
+- [x] **R11 — P1: una modifica della squadra cancella il peso dei membri rimasti.**
+  **Riferimento:** `update_team_registration` in
+  [events/router.py](python_scraper_server/events/router.py), circa righe 536–612.
+  Il gestore elimina tutti i membri non leader e ricrea le iscrizioni anche quando
+  cambia soltanto il nome squadra. Nelle nuove righe non copia `weight` né
+  `accepts_extra_pilots`; cambia inoltre l'identità della riga d'iscrizione.
+  **Riprodotto:** membro con peso 75; rinomina della squadra con gli stessi membri;
+  peso risultante `None`. La conferma del team non impedisce questa modifica.
+  **Correzione proposta:** aggiornare i membri mantenuti, inserire solo gli aggiunti
+  ed eliminare solo i rimossi, preservando gli attributi delle iscrizioni esistenti.
+  **Test futuro:** rinomina e modifica composizione devono conservare peso e ID
+  dei membri che restano nella squadra.
+
+- [x] **R12 — P2: la scadenza relativa non segue una modifica della sola data evento.**
+  **Riferimento:** `update_event` in
+  [events/router.py](python_scraper_server/events/router.py), circa righe 160–169.
+  La deadline viene ricalcolata soltanto quando la PATCH contiene `days_before_deadline`.
+  **Riprodotto:** evento 20 ottobre, anticipo 3 giorni, deadline 17 ottobre;
+  PATCH con sola nuova data 30 ottobre: la deadline resta 17 invece di 27 ottobre.
+  **Ambito:** richiesta API parziale; il form iOS attuale invia anche
+  `days_before_deadline`, quindi il normale salvataggio del form può non mostrare il problema.
+  **Correzione proposta:** al cambio data ricalcolare la deadline se esiste un anticipo
+  configurato, definendo la precedenza quando viene inviata anche una deadline esplicita.
+
+- [x] **R13 — P2: evento a squadre senza massimo accettato dallo schema ma non dal gestore.**
+  **Riferimenti:** `EventCreate`/`EventBase` in
+  [events/schemas.py](python_scraper_server/events/schemas.py); `register_for_event`
+  e `update_team_registration` in [events/router.py](python_scraper_server/events/router.py).
+  `min_people_per_group=2` basta a identificare un evento a squadre, ma
+  `max_people_per_group` può essere `None`. Il gestore calcola poi `None - 1`.
+  **Riprodotto:** creazione team in questa configurazione genera `TypeError`,
+  che sul percorso HTTP diventa un errore server invece di una risposta di validazione.
+  **Correzione proposta:** definire se il massimo è obbligatorio oppure illimitato;
+  validare coerentemente creazione/modifica evento e gestione squadre.
+
+- [x] **R14 — P2: membri duplicati producono un errore database non gestito.**
+  **Riferimenti:** `register_for_event` in
+  [events/router.py](python_scraper_server/events/router.py), circa righe 272–318;
+  `SessionLocal` ha `autoflush=False` e le iscrizioni hanno unicità `(user_id, event_id)`.
+  I controlli interrogano solo righe già persistite: non vedono leader e membri
+  appena accodati nella stessa richiesta. Manca la deduplicazione dopo la risoluzione
+  degli identificatori (email e username possono indicare la stessa persona).
+  **Riprodotto:** includere il leader nella lista membri genera `IntegrityError`
+  al commit, non un errore 400 comprensibile. La transazione non va a buon fine.
+  **Correzione proposta:** risolvere e validare prima l'intera lista, rifiutando
+  leader incluso e utenti ripetuti; mantenere il vincolo DB per le richieste concorrenti.
+
+- [x] **R15 — P2: due percorsi di modifica dello stato evento hanno effetti diversi.**
+  **Riferimenti:** `EventUpdate.status` in
+  [events/schemas.py](python_scraper_server/events/schemas.py), `update_event` in
+  [events/router.py](python_scraper_server/events/router.py) e `update_event_status`
+  in [live/router.py](python_scraper_server/live/router.py).
+  La PATCH generica `/events/{id}` accetta `status` come stringa libera e lo salva
+  direttamente. `/events/{id}/status` valida i valori e gestisce inizializzazione
+  stint, iscrizioni non confermate, notifiche e broadcast.
+  **Scenario API:** impostare `started` con la PATCH generica salta gli effetti di
+  avvio; un successivo comando sul percorso live vede l'evento già iniziato e può
+  saltare ulteriormente le operazioni riservate al primo avvio.
+  **Stato:** confermato dal confronto statico dei due percorsi, non riprodotto in UI.
+  L'autorizzazione aggiunta con R01 resta efficace: riguarda chiamanti autorizzati.
+  **Correzione proposta:** unificare la transizione o vietare `status` nella PATCH
+  generica, con errore esplicito invece di ignorarlo silenziosamente.
+
+Questo passaggio non copre esaustivamente scraper provider, PDF, concorrenza delle
+iscrizioni o lifecycle iOS. Il superamento dei test esistenti non esclude problemi
+nei percorsi ancora privi di test.
