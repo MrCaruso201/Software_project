@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TimingView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let server: DiscoveredServer
     var isTabActive: Bool = true
     @Environment(\.scenePhase) private var scenePhase
@@ -391,6 +392,11 @@ struct TimingView: View {
             return (headers[i], row[i])
         }
 
+        Button {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 1)) {
+                expandedDriverId = isExpanded ? nil : driverId
+            }
+        } label: {
         ZStack {
             RoundedRectangle(cornerRadius: 12)
                 .fill(isLeader
@@ -532,15 +538,10 @@ struct TimingView: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                if isExpanded {
-                    expandedDriverId = nil
-                } else {
-                    expandedDriverId = driverId
-                }
-            }
         }
+        .buttonStyle(KartPressButtonStyle())
+        .accessibilityValue(isExpanded ? "Dettagli aperti" : "Dettagli chiusi")
+
     }
 
     // ── Empty state ───────────────────────────────────────────────────────

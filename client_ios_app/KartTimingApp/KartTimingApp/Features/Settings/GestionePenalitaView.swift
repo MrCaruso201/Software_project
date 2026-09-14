@@ -29,7 +29,7 @@ struct GestionePenalitaView: View {
                     ProgressView()
                         .tint(.kartAccent)
                     Text("Caricamento tipi penalità...")
-                        .font(.system(size: 14))
+                        .font(.body)
                         .foregroundColor(.kartDim)
                         .padding(.top, 8)
                 }
@@ -52,7 +52,7 @@ struct GestionePenalitaView: View {
                         if !actualPenalties.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("PENALITÀ")
-                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .font(.subheadline)
                                     .foregroundColor(.kartDim)
                                 
                                 VStack(spacing: 16) {
@@ -67,7 +67,7 @@ struct GestionePenalitaView: View {
                         if !warningPenalties.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("WARNING (AVVISI)")
-                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .font(.subheadline)
                                     .foregroundColor(.kartDim)
                                 
                                 VStack(spacing: 16) {
@@ -99,6 +99,7 @@ struct GestionePenalitaView: View {
 
 struct PenaltyTypeEditorRow: View {
     let pType: PenaltyType
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject var viewModel: LiveViewModel
     
     @State private var defaultSecondsStr: String = ""
@@ -109,13 +110,14 @@ struct PenaltyTypeEditorRow: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            let headerLayout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12)) : AnyLayout(HStackLayout())
+            headerLayout {
                 Image(systemName: pType.systemIcon)
-                    .font(.system(size: 20))
+                    .font(.title3)
                     .foregroundColor(Color(uiColor: pType.isWarning ? .lightGray : .systemRed))
                 
                 Text(pType.name)
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.headline)
                     .foregroundColor(.kartForeground)
                 
                 Spacer()
@@ -128,14 +130,17 @@ struct PenaltyTypeEditorRow: View {
                             ProgressView().scaleEffect(0.8)
                         } else {
                             Text("Salva")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.subheadline)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(Color.kartAccent)
+                                .background(Color.kartAction)
                                 .foregroundColor(.white)
                                 .cornerRadius(6)
                         }
                     }
+                    .frame(minWidth: 44, minHeight: 44)
+                    .buttonStyle(KartPressButtonStyle())
+                    .accessibilityLabel("Salva " + pType.name)
                     .disabled(isSaving)
                 }
             }
@@ -158,8 +163,9 @@ struct PenaltyTypeEditorRow: View {
                                 checkChanged()
                             }
                         ))
+                        .accessibilityLabel((pType.isWarning ? "Soglia avvisi, " : "Secondi, ") + pType.name)
                         .keyboardType(.numberPad)
-                        .font(.system(size: 14))
+                        .font(.body)
                         .padding(8)
                         .background(Color.kartPanel)
                         .cornerRadius(8)
@@ -181,8 +187,9 @@ struct PenaltyTypeEditorRow: View {
                                 checkChanged()
                             }
                         ))
+                        .accessibilityLabel((pType.isWarning ? "Soglia avvisi, " : "Secondi, ") + pType.name)
                         .keyboardType(.numberPad)
-                        .font(.system(size: 14))
+                        .font(.body)
                         .padding(8)
                         .background(Color.kartPanel)
                         .cornerRadius(8)
@@ -194,7 +201,7 @@ struct PenaltyTypeEditorRow: View {
             
             if let err = errorMsg {
                 Text(err)
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .foregroundColor(.kartRed)
             }
         }
@@ -224,9 +231,11 @@ struct PenaltyTypeEditorRow: View {
         let currentDs = pType.defaultSeconds.map { String($0) } ?? ""
         let currentWt = pType.warningThreshold.map { String($0) } ?? ""
         isChanged = (defaultSecondsStr != currentDs) || (warningThresholdStr != currentWt)
+        validateInput()
     }
     
-    private func saveChanges() {
+    private func validateInput() {
+        errorMsg = nil
         let secondsText = defaultSecondsStr.trimmingCharacters(in: .whitespacesAndNewlines)
         let ds = Int(secondsText)
         if !secondsText.isEmpty && (ds == nil || ds! < 0) {
@@ -240,6 +249,13 @@ struct PenaltyTypeEditorRow: View {
             return
         }
         
+    }
+
+    private func saveChanges() {
+        validateInput()
+        guard errorMsg == nil else { return }
+        let ds = Int(defaultSecondsStr.trimmingCharacters(in: .whitespacesAndNewlines))
+        let wt = Int(warningThresholdStr.trimmingCharacters(in: .whitespacesAndNewlines))
         isSaving = true
         errorMsg = nil
         Task {

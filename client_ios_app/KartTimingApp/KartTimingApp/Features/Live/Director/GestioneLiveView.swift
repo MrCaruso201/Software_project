@@ -4,6 +4,7 @@ import SwiftUI
 /// - In modalità "Broadcast": mostra i 4 pulsanti bandiera (visibili a tutti)
 /// - In modalità "kart selezionato": mostra l'elenco di penalità/avvisi assegnabili
 struct GestioneLiveView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let event: RaceEvent
     @ObservedObject var viewModel: LiveViewModel
     @EnvironmentObject var manager: KartTimingManager
@@ -199,7 +200,7 @@ struct GestioneLiveView: View {
     private var targetPicker: some View {
         Menu {
             Button {
-                withAnimation { selectedTarget = .broadcast }
+                withAnimation(reduceMotion ? nil : .default) { selectedTarget = .broadcast }
             } label: {
                 Label("Broadcast (tutti)", systemImage: "antenna.radiowaves.left.and.right")
             }
@@ -208,7 +209,7 @@ struct GestioneLiveView: View {
 
             ForEach(allAvailableKarts) { kart in
                 Button {
-                    withAnimation {
+                    withAnimation(reduceMotion ? nil : .default) {
                         selectedTarget = .kart(kart.kartNumber, kart.teamName)
                         // reset selezione tipo penalità
                         selectedType = viewModel.penaltyTypes.first
@@ -511,7 +512,7 @@ struct GestioneLiveView: View {
         }()
 
         return Button(action: {
-            withAnimation(.spring(response: 0.25)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 1)) {
                 selectedType = pType
                 // Pre-popola i secondi solo se c'è un valore di default
                 if let defSec = pType.defaultSeconds {
@@ -552,8 +553,8 @@ struct GestioneLiveView: View {
             .cornerRadius(12)
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSelected ? accentCol : accentCol.opacity(0.4), lineWidth: 1))
         }
-        .buttonStyle(.plain)
-        .animation(.spring(response: 0.25), value: isSelected)
+        .buttonStyle(KartPressButtonStyle())
+        .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 1), value: isSelected)
     }
 
     private func globalMessageButton(title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {

@@ -48,6 +48,8 @@ private extension RaceMessage {
 /// Vista personale del pilota in gara.
 /// Layout identico a TimingPilotView (landscape locked) + flash bandiera + badge penalità.
 struct PilotLiveView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var flashTask: Task<Void, Never>?
     @StateObject private var gpsSpeed = GPSSpeedMonitor()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) var dismiss
@@ -212,6 +214,9 @@ struct PilotLiveView: View {
                 }
             }
         }
+        .onChange(of: reduceMotion) { _, enabled in
+            if enabled { flashTask?.cancel(); flashOpacity = 0 }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { gpsSpeed.start() } else { gpsSpeed.stop() }
         }
@@ -231,11 +236,11 @@ struct PilotLiveView: View {
                 if duration >= (maxSeconds - 120) && duration < maxSeconds && !myKart.isInPit {
                     if !hasShownStintWarningForCurrentStint {
                         hasShownStintWarningForCurrentStint = true
-                        withAnimation {
+                        withAnimation(reduceMotion ? nil : .default) {
                             showingStintWarningScreen = true
                         }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-                            withAnimation {
+                            withAnimation(reduceMotion ? nil : .default) {
                                 showingStintWarningScreen = false
                             }
                         }
@@ -271,6 +276,8 @@ struct PilotLiveView: View {
             }
         }
         .onDisappear {
+            flashTask?.cancel()
+            flashOpacity = 0
             gpsSpeed.stop()
             // Riabilita il blocco automatico quando si esce dalla vista pilota.
             UIApplication.shared.isIdleTimerDisabled = false
@@ -569,14 +576,21 @@ struct PilotLiveView: View {
     }
 
     private func triggerFlash(color: Color, flashIndex: Int) {
-        guard flashIndex < 3 else { return }
+        flashTask?.cancel()
+        flashOpacity = 0
+        // La bandiera resta leggibile nel badge anche senza il flash.
+        guard !reduceMotion else { return }
         flashColor = color
-        withAnimation(.easeIn(duration: 0.15)) { flashOpacity = 0.55 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.easeOut(duration: 0.2)) { flashOpacity = 0 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                triggerFlash(color: color, flashIndex: flashIndex + 1)
-            }
+        flashTask = Task { @MainActor in
+            do {
+                for _ in 0..<3 {
+                    try Task.checkCancellation()
+                    withAnimation(.easeIn(duration: 0.15)) { flashOpacity = 0.55 }
+                    try await Task.sleep(for: .milliseconds(300))
+                    withAnimation(.easeOut(duration: 0.2)) { flashOpacity = 0 }
+                    try await Task.sleep(for: .milliseconds(350))
+                }
+            } catch { }
         }
     }
 
@@ -590,14 +604,14 @@ struct PilotLiveView: View {
             let age = latestMsg.parsedDate.map { Date().timeIntervalSince($0) } ?? 0
             if age < 20 {
                 currentTextMessage = latestMsg
-                withAnimation {
+                withAnimation(reduceMotion ? nil : .default) {
                     showingTextMessage = true
                 }
                 
                 let remainingTime = 20 - age
                 DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
                     if currentTextMessage?.id == latestMsg.id {
-                        withAnimation {
+                        withAnimation(reduceMotion ? nil : .default) {
                             showingTextMessage = false
                         }
                     }
