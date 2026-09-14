@@ -47,13 +47,19 @@ async def websocket_endpoint(websocket: WebSocket):
                 raw = None
             user_payload = await verify_websocket_token(websocket)
             if user_payload is None:
-                unsubscribe_client(websocket)
                 return
             user_role = user_payload.get("role", Role.VIEWER)
             if raw is None:
                 continue
-            msg = json.loads(raw)
-            command = msg.get("command")
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                await websocket.send_text(json.dumps({"type": "error", "message": "JSON non valido"}))
+                continue
+            if not isinstance(msg, dict) or not isinstance(msg.get("command"), str):
+                await websocket.send_text(json.dumps({"type": "error", "message": "Atteso un oggetto JSON con command di tipo stringa"}))
+                continue
+            command = msg["command"]
 
             # ------------------------------------------------------------------
             # Comando: set_url  (accessibile a tutti gli utenti autenticati)
@@ -66,7 +72,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     }))
 
                 else:
-                    new_url = msg.get("url", "").strip()
+                    if not isinstance(msg.get("url"), str):
+                        await websocket.send_text(json.dumps({"type": "error", "message": "URL non valido: attesa una stringa"}))
+                        continue
+                    new_url = msg["url"].strip()
 
                     if not new_url.startswith("http"):
                         await websocket.send_text(json.dumps({
@@ -118,14 +127,18 @@ async def websocket_endpoint(websocket: WebSocket):
             # ------------------------------------------------------------------
             elif command == "subscribe_event":
                 event_id = msg.get("event_id")
-                if isinstance(event_id, int):
+                if type(event_id) is int and event_id > 0:
                     from ws.manager import subscribe_client_to_event
                     subscribe_client_to_event(websocket, event_id)
                     print(f"🔗 Client iscritto all'evento {event_id}")
+                else:
+                    await websocket.send_text(json.dumps({"type": "error", "message": "event_id deve essere un intero positivo"}))
 
             else:
-                print(f"Comando sconosciuto: {command}")
+                await websocket.send_text(json.dumps({"type": "error", "message": "Comando sconosciuto"}))
 
     except WebSocketDisconnect:
+        pass
+    finally:
         unsubscribe_client(websocket)
         print(f"📴 Client disconnesso. Totale client: {len(client_url)}")

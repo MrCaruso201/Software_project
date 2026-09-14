@@ -99,7 +99,13 @@ Verifica: test HTTP tramite ASGI e test dei gestori su SQLite in memoria in
   che mappe e contatore siano ripuliti una sola volta, anche alla successiva disconnessione.
   **Stato della verifica:** analisi statica del percorso di rilascio.
 
-- [ ] **R06 — P2: garantire la pulizia WebSocket anche per messaggi malformati.**
+- [x] **R06 — P2: garantire la pulizia WebSocket anche per messaggi malformati.**
+  **Corretto:** JSON e campi dei comandi vengono validati con risposta di errore;
+  il client può inviare un comando valido successivo. Un blocco `finally` rilascia
+  le sottoscrizioni anche per errori inattesi, cancellazione e revoca del token.
+  Test in `tests/test_ws_router.py`: input malformati, recupero, errori di invio/ricezione
+  e cancellazione. Suite completa: 26 test superati.
+  La descrizione seguente documenta il difetto originario.
   **Evidenza:** [ws/router.py](python_scraper_server/ws/router.py) esegue `json.loads`,
   `.get` e `.strip` sugli input; intercetta soltanto `WebSocketDisconnect` e non ha
   un `finally` che richiami `unsubscribe_client`.
@@ -112,7 +118,11 @@ Verifica: test HTTP tramite ASGI e test dei gestori su SQLite in memoria in
 
 ## Penalità e client iOS
 
-- [ ] **R07 — P2: validare anche i secondi delle penalità.**
+- [x] **R07 — P2: validare anche i secondi delle penalità.**
+  **Corretto:** secondi interi >= 0 validati nelle API di configurazione e assegnazione,
+  con controllo nei due form iOS. Zero resta ammesso; dati storici non modificati.
+  Suite: 28 test superati; controllo sintattico Swift superato.
+  La descrizione seguente documenta il difetto originario.
   **Evidenza:** `PenaltyTypeUpdate.default_seconds` e `PenaltyCreate.seconds` in
   [live/schemas.py](python_scraper_server/live/schemas.py) sono interi opzionali
   senza limite inferiore. Il vincolo introdotto per `warning_threshold` non li copre.
@@ -123,7 +133,11 @@ Verifica: test HTTP tramite ASGI e test dei gestori su SQLite in memoria in
   i secondi di penalità dalla soglia avvisi, che richiede almeno 1.
   **Verifica da aggiungere:** rifiuto API e messaggio comprensibile nel form iOS.
 
-- [ ] **R08 — P2: usare il rinnovo token anche nel salvataggio dei tipi di penalità.**
+- [x] **R08 — P2: usare il rinnovo token anche nel salvataggio dei tipi di penalità.**
+  **Corretto:** `updatePenaltyType` usa ora `NetworkService.shared.data(for:)`,
+  che rinnova il token su HTTP 401 e ripete la richiesta con il nuovo token.
+  Controllo sintattico Swift superato; rinnovo reale da verificare su app/server.
+  La descrizione seguente documenta il difetto originario.
   **Evidenza:** `updatePenaltyType` in
   [LiveViewModel.swift](client_ios_app/KartTimingApp/KartTimingApp/Features/Live/LiveViewModel.swift)
   (circa riga 394) usa `URLSession.shared.data` direttamente, mentre

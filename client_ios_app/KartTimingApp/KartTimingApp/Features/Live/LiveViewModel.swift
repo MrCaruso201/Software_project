@@ -391,7 +391,7 @@ class LiveViewModel: ObservableObject {
         if let wt = warningThreshold { body["warning_threshold"] = wt }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await NetworkService.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, http.statusCode >= 200 && http.statusCode < 300 else {
             let msg = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "Errore aggiornamento tipo penalità"
             throw NSError(domain: "", code: (resp as? HTTPURLResponse)?.statusCode ?? 500, userInfo: [NSLocalizedDescriptionKey: msg])

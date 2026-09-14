@@ -47,13 +47,13 @@ class PenaltyTypeResponse(BaseModel):
         from_attributes = True
 
 class PenaltyTypeUpdate(BaseModel):
-    default_seconds: Optional[int] = None
+    default_seconds: Optional[int] = Field(default=None, ge=0, strict=True)
     warning_threshold: Optional[int] = Field(default=None, ge=1, strict=True)
 
 class PenaltyCreate(BaseModel):
     kart_number: int
     penalty_type: str   # Deve corrispondere a penalty_types.code
-    seconds: Optional[int] = None
+    seconds: Optional[int] = Field(default=None, ge=0, strict=True)
     note: Optional[str] = None
 
 class PenaltyResponse(BaseModel):

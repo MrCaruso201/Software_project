@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from db.database import _seed_penalty_types
 from db.models import Base, Event, PenaltyType, RacePenalty
-from live.schemas import PenaltyTypeUpdate
+from live.schemas import PenaltyTypeUpdate, PenaltyCreate
 
 
 class PenaltyThresholdValidationTests(unittest.TestCase):
@@ -74,3 +74,17 @@ class PenaltyConfigurationTests(unittest.TestCase):
         self.seed()
         self.assertEqual(self.db.query(PenaltyType).filter_by(code="track_limits_10s").count(), 0)
         self.assertEqual(self.db.query(PenaltyType).filter_by(code="track_limits").one().default_seconds, 29)
+
+
+class PenaltySecondsValidationTests(unittest.TestCase):
+    def test_rejects_negative_and_non_integer_seconds(self):
+        for value in (-10, -1, 1.5, True, "invalid"):
+            for model, data in ((PenaltyTypeUpdate, {"default_seconds": value}),
+                                (PenaltyCreate, {"kart_number": 7, "penalty_type": "custom", "seconds": value})):
+                with self.subTest(model=model.__name__, value=value), self.assertRaises(ValidationError):
+                    model(**data)
+
+    def test_accepts_zero_positive_and_optional_seconds(self):
+        for value in (None, 0, 1, 30):
+            self.assertEqual(PenaltyTypeUpdate(default_seconds=value).default_seconds, value)
+            self.assertEqual(PenaltyCreate(kart_number=7, penalty_type="custom", seconds=value).seconds, value)

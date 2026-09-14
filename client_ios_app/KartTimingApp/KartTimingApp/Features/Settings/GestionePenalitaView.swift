@@ -214,7 +214,12 @@ struct PenaltyTypeEditorRow: View {
     }
     
     private func saveChanges() {
-        let ds = Int(defaultSecondsStr)
+        let secondsText = defaultSecondsStr.trimmingCharacters(in: .whitespacesAndNewlines)
+        let ds = Int(secondsText)
+        if !secondsText.isEmpty && (ds == nil || ds! < 0) {
+            errorMsg = "I secondi devono essere un numero intero maggiore o uguale a 0."
+            return
+        }
         let thresholdText = warningThresholdStr.trimmingCharacters(in: .whitespacesAndNewlines)
         let wt = Int(thresholdText)
         if !thresholdText.isEmpty && (wt == nil || wt! < 1) {

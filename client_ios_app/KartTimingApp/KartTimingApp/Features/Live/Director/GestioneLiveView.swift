@@ -618,8 +618,8 @@ struct GestioneLiveView: View {
         guard case .kart(let kartNumber, _) = selectedTarget else { return }
 
         let sec: Int? = selected.requiresSeconds ? Int(seconds) : nil
-        if selected.requiresSeconds && sec == nil {
-            penaltyError = "Inserisci un numero di secondi valido."
+        if selected.requiresSeconds && (sec == nil || sec! < 0) {
+            penaltyError = "Inserisci un numero intero di secondi maggiore o uguale a 0."
             return
         }
         isLoading = true
