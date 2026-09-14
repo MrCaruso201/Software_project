@@ -14,6 +14,8 @@ class LiveViewModel: ObservableObject {
         }
     }
     @Published var penaltyTypes: [PenaltyType] = []
+    @Published var isLoadingPenaltyTypes = false
+    @Published var penaltyTypesError: String?
     @Published var messages: [RaceMessage] = []
     @Published var driverSwap = DriverSwapSelection()
     @Published var myKart: MyKartResponse = MyKartResponse() {
@@ -130,10 +132,23 @@ class LiveViewModel: ObservableObject {
     }
 
     func fetchPenaltyTypesOnly() async {
-        if let data = await fetchRawData(path: "/live/penalty-types") {
-            if let types = try? JSONDecoder().decode([PenaltyType].self, from: data) {
-                self.penaltyTypes = types
+        guard !isLoadingPenaltyTypes else { return }
+        isLoadingPenaltyTypes = true
+        penaltyTypesError = nil
+        defer { isLoadingPenaltyTypes = false }
+        do {
+            guard let url = endpoint("/live/penalty-types"), let token else {
+                throw URLError(.userAuthenticationRequired)
             }
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            let (data, response) = try await NetworkService.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+            penaltyTypes = try JSONDecoder().decode([PenaltyType].self, from: data)
+        } catch {
+            penaltyTypesError = "Impossibile caricare i tipi di penalità. " + error.localizedDescription
         }
     }
 

@@ -150,7 +150,8 @@ Verifica: test HTTP tramite ASGI e test dei gestori su SQLite in memoria in
   il salvataggio attraverso il normale meccanismo di rinnovo.
   **Stato della verifica:** confronto statico dei percorsi di rete; non eseguito su iOS.
 
-- [ ] **R09 — P2: mostrare e consentire il recupero dagli errori di caricamento delle penalità.**
+- [x] **R09 — P2: mostrare e consentire il recupero dagli errori di caricamento delle penalità.**
+  **Corretto:** Caricamento dedicato, errore visibile con pulsante Riprova e stato lista vuota. Controllo sintattico Swift superato; prova UI ancora da eseguire. La descrizione seguente documenta il difetto originario.
   **Evidenza:** `fetchPenaltyTypesOnly` e `fetchRawData` in
   [LiveViewModel.swift](client_ios_app/KartTimingApp/KartTimingApp/Features/Live/LiveViewModel.swift)
   ignorano errori HTTP, rete e decodifica; la vista
@@ -165,7 +166,8 @@ Verifica: test HTTP tramite ASGI e test dei gestori su SQLite in memoria in
 
 ## Statistiche
 
-- [ ] **R10 — P2: eliminare l'ambiguità dell'endpoint statistiche giri duplicato.**
+- [x] **R10 — P2: eliminare l'ambiguità dell'endpoint statistiche giri duplicato.**
+  **Corretto:** Rimossa la seconda route; mantenuta la soglia per kart del percorso HTTP preesistente. Test della route unica, statistiche per kart e risultato vuoto in test_lap_stats.py. Suite completa: 29 test superati. La descrizione seguente documenta il difetto originario.
   **Evidenza:** [results/router.py](python_scraper_server/results/router.py) registra
   due GET `/events/{event_id}/lap-stats`, alle righe 152 e 443.
   Il primo calcola la soglia del 150% sul miglior giro di ciascun kart;

@@ -24,7 +24,7 @@ struct GestionePenalitaView: View {
         ZStack {
             Color.kartBG.ignoresSafeArea()
             
-            if viewModel.penaltyTypes.isEmpty {
+            if viewModel.isLoadingPenaltyTypes {
                 VStack {
                     ProgressView()
                         .tint(.kartAccent)
@@ -33,6 +33,19 @@ struct GestionePenalitaView: View {
                         .foregroundColor(.kartDim)
                         .padding(.top, 8)
                 }
+            } else if let error = viewModel.penaltyTypesError {
+                VStack(spacing: 16) {
+                    Text(error)
+                        .foregroundColor(.kartRed)
+                        .multilineTextAlignment(.center)
+                    Button("Riprova") {
+                        Task { await viewModel.fetchPenaltyTypesOnly() }
+                    }
+                }
+                .padding()
+            } else if visiblePenalties.isEmpty {
+                Text("Nessun tipo di penalità disponibile.")
+                    .foregroundColor(.kartDim)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
