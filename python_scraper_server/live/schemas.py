@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # ── Kart Assignment ──────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ class PenaltyTypeResponse(BaseModel):
 
 class PenaltyTypeUpdate(BaseModel):
     default_seconds: Optional[int] = None
-    warning_threshold: Optional[int] = None
+    warning_threshold: Optional[int] = Field(default=None, ge=1, strict=True)
 
 class PenaltyCreate(BaseModel):
     kart_number: int

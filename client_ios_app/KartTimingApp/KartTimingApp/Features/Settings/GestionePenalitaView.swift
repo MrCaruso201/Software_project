@@ -215,7 +215,12 @@ struct PenaltyTypeEditorRow: View {
     
     private func saveChanges() {
         let ds = Int(defaultSecondsStr)
-        let wt = Int(warningThresholdStr)
+        let thresholdText = warningThresholdStr.trimmingCharacters(in: .whitespacesAndNewlines)
+        let wt = Int(thresholdText)
+        if !thresholdText.isEmpty && (wt == nil || wt! < 1) {
+            errorMsg = "La soglia deve essere un numero intero maggiore o uguale a 1."
+            return
+        }
         
         isSaving = true
         errorMsg = nil

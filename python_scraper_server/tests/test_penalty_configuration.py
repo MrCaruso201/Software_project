@@ -4,9 +4,23 @@ from unittest.mock import patch
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from pydantic import ValidationError
 
 from db.database import _seed_penalty_types
 from db.models import Base, Event, PenaltyType, RacePenalty
+from live.schemas import PenaltyTypeUpdate
+
+
+class PenaltyThresholdValidationTests(unittest.TestCase):
+    def test_rejects_invalid_thresholds(self):
+        for value in (-3, -1, 0, 1.5, True, "invalid"):
+            with self.subTest(value=value), self.assertRaises(ValidationError):
+                PenaltyTypeUpdate(warning_threshold=value)
+
+    def test_accepts_positive_thresholds_and_unchanged_value(self):
+        for value in (1, 3, 100, None):
+            self.assertEqual(PenaltyTypeUpdate(warning_threshold=value).warning_threshold, value)
+        self.assertIsNone(PenaltyTypeUpdate().warning_threshold)
 
 
 class PenaltyConfigurationTests(unittest.TestCase):
