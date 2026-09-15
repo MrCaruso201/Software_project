@@ -178,7 +178,7 @@ struct AuthService {
     }
     
     // MARK: - Upload Avatar
-    static func uploadAvatar(imageData: Data, token: String) async throws {
+    static func uploadAvatar(imageData: Data, token: String) async throws -> String {
         guard let url = URL(string: "\(baseURL)/auth/me/avatar") else { throw AuthError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -203,6 +203,10 @@ struct AuthService {
             let errorMsg = parseErrorMessage(data: data)
             throw AuthError.requestFailed(errorMsg)
         }
+        struct AvatarResponse: Decodable {
+            let profile_picture_url: String
+        }
+        return try JSONDecoder().decode(AvatarResponse.self, from: data).profile_picture_url
     }
 }
 

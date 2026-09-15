@@ -25,9 +25,8 @@ struct EditProfileView: View {
     @State private var showDeleteConfirmation = false
 
     private var resolvedAvatarURL: URL? {
-        guard let profilePictureURL = profilePictureURL,
-              let token = authState.currentToken else { return nil }
-        return URL(string: appEnv.server(token: token).httpURL?.absoluteString.replacingOccurrences(of: "/api", with: "") ?? "")?.appendingPathComponent(String(profilePictureURL.dropFirst()))
+        guard let token = authState.currentToken else { return nil }
+        return authState.avatarURL(path: profilePictureURL, serverURL: appEnv.server(token: token).httpURL)
     }
 
     var body: some View {
@@ -102,8 +101,8 @@ struct EditProfileView: View {
                                         throw URLError(.cannotDecodeContentData)
                                     }
                                     let prepared = try await AvatarPreparation.jpeg(from: data)
+                                    try await uploadAvatar(data: prepared)
                                     if let image = UIImage(data: prepared) { avatarImage = Image(uiImage: image) }
-                                    await uploadAvatar(data: prepared)
                                 } catch {
                                     errorMessage = error.localizedDescription
                                 }
@@ -346,19 +345,14 @@ struct EditProfileView: View {
             }
         }
     }
-    private func uploadAvatar(data: Data) async {
-        guard let token = authState.currentToken else { return }
-        await MainActor.run { isUploadingAvatar = true }
-        
-        do {
-            try await AuthService.uploadAvatar(imageData: data, token: token)
-            await MainActor.run { isUploadingAvatar = false }
-        } catch {
-            await MainActor.run {
-                isUploadingAvatar = false
-                errorMessage = error.localizedDescription
-            }
-        }
+    private func uploadAvatar(data: Data) async throws {
+        guard let token = authState.currentToken else { throw URLError(.userAuthenticationRequired) }
+        let userID = authState.currentUser?.id
+        errorMessage = nil
+        let path = try await AuthService.uploadAvatar(imageData: data, token: token)
+        guard authState.currentUser?.id == userID, authState.isLoggedIn else { return }
+        profilePictureURL = path
+        authState.didUploadAvatar(path: path)
     }
 }
 
@@ -372,12 +366,27 @@ nonisolated private enum AvatarPreparation {
                 kCGImageSourceThumbnailMaxPixelSize: 512,
                 kCGImageSourceShouldCacheImmediately: true
               ] as CFDictionary) else { throw URLError(.cannotDecodeContentData) }
-        let output = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil) else {
-            throw URLError(.cannotCreateFile)
+        // Riduce prima la qualità, poi le dimensioni per rispettare il budget.
+        var thumbnail = image
+        while true {
+            for quality in [0.75, 0.6, 0.45] {
+                let output = NSMutableData()
+                guard let destination = CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil) else {
+                    throw URLError(.cannotCreateFile)
+                }
+                CGImageDestinationAddImage(destination, thumbnail, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
+                guard CGImageDestinationFinalize(destination) else { throw URLError(.cannotCreateFile) }
+                if output.length <= 100 * 1024 { return output as Data }
+            }
+            let size = max(thumbnail.width, thumbnail.height) / 2
+            guard size >= 64,
+                  let smaller = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceCreateThumbnailWithTransform: true,
+                    kCGImageSourceThumbnailMaxPixelSize: size,
+                    kCGImageSourceShouldCacheImmediately: true
+                  ] as CFDictionary) else { throw URLError(.cannotCreateFile) }
+            thumbnail = smaller
         }
-        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.82] as CFDictionary)
-        guard CGImageDestinationFinalize(destination) else { throw URLError(.cannotCreateFile) }
-        return output as Data
     }
 }

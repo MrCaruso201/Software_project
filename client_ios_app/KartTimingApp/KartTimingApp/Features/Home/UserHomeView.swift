@@ -90,8 +90,7 @@ struct UserHomeView: View {
     private var profileCard: some View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
-                if let profilePictureURL = viewModel.profile?.profilePictureURL,
-                   let url = URL(string: server.httpURL?.absoluteString.replacingOccurrences(of: "/api", with: "") ?? "")?.appendingPathComponent(String(profilePictureURL.dropFirst())) {
+                if let url = authState.avatarURL(path: viewModel.profile?.profilePictureURL, serverURL: server.httpURL) {
                     AsyncImage(url: url) { phase in
                         if let img = phase.image {
                             img.resizable()
