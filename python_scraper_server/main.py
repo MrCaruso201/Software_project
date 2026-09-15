@@ -52,6 +52,7 @@ from scraper.storage import clear_saved_timing_data
 from ws.router import router as ws_router
 from discovery.bonjour import start_bonjour, stop_bonjour
 from events.router import router as events_router
+from events.lifecycle import close_expired_events, monitor_event_expiration
 from kartodromi.router import router as kartodromi_router
 from results.router import router as results_router
 from notifications.router import router as notifications_router
@@ -68,14 +69,19 @@ from services.pdf_router import router as pdf_router
 async def lifespan(app: FastAPI):
     """Startup e shutdown dell'applicazione."""
     init_db()                   # crea le tabelle DB se non esistono
+    await close_expired_events()
     clear_saved_timing_data()   # pulizia di eventuali residui da uno stop non pulito
     await start_bonjour()
     from notifications.reminders import monitor_event_reminders
     reminders = asyncio.create_task(monitor_event_reminders())
     monitor = asyncio.create_task(monitor_stints())
+    expiration = asyncio.create_task(monitor_event_expiration())
     try:
         yield
     finally:
+        expiration.cancel()
+        with suppress(asyncio.CancelledError):
+            await expiration
         reminders.cancel()
         with suppress(asyncio.CancelledError):
             await reminders
