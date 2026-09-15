@@ -82,7 +82,7 @@ struct AssegnazioneKartView: View {
                     }
                 }
             }
-            Button("Annulla", role: .cancel) { }
+            Button("Annulla", role: .cancel) { }.tint(.kartForeground)
         } message: {
             Text("Inserisci il numero del kart e il nome esatto che appare sul monitor dei tempi in pista.")
         }
@@ -111,7 +111,7 @@ struct AssegnazioneKartView: View {
                     }
                 }
             }
-            Button("Annulla", role: .cancel) { }
+            Button("Annulla", role: .cancel) { }.tint(.kartForeground)
         } message: {
             Text("Inserisci il peso del pilota.")
         }

@@ -230,7 +230,7 @@ struct ClassificaLiveView: View {
         }
         .alert("Nuova Tab", isPresented: $showAddTabAlert) {
             TextField("Nome (es. Prove Libere)", text: $newTabName)
-            Button("Annulla", role: .cancel) { newTabName = "" }
+            Button("Annulla", role: .cancel) { newTabName = "" }.tint(.kartForeground)
             Button("Aggiungi") {
                 let trimmed = newTabName.trimmingCharacters(in: .whitespaces)
                 if !trimmed.isEmpty {
@@ -245,7 +245,7 @@ struct ClassificaLiveView: View {
             Text("Inserisci il nome per la nuova classifica.")
         }
         .alert("Elimina tab", isPresented: $showDeleteTabAlert) {
-            Button("Annulla", role: .cancel) { }
+            Button("Annulla", role: .cancel) { }.tint(.kartForeground)
             Button("Elimina", role: .destructive) {
                 deleteCurrentTab()
             }

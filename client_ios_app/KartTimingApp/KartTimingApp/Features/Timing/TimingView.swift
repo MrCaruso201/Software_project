@@ -195,7 +195,7 @@ struct TimingView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Annulla") { showTrackPicker = false }
+                    Button("Annulla") { showTrackPicker = false }.foregroundColor(.kartForeground)
                 }
             }
             .overlay {

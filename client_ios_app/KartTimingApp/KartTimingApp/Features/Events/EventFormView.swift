@@ -334,7 +334,7 @@ struct EventFormView: View {
         .sensoryFeedback(.success, trigger: showSavedBanner) { _, saved in saved }
         .alert("Elimina Evento", isPresented: $showDeleteConfirm) {
             Button("Elimina", role: .destructive) { deleteEvent() }
-            Button("Annulla", role: .cancel) { }
+            Button("Annulla", role: .cancel) { }.tint(.kartForeground)
         } message: {
             Text("Sei sicuro di voler eliminare questo evento? L'azione non può essere annullata.")
         }

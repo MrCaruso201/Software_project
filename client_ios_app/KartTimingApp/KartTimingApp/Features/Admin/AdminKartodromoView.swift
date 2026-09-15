@@ -138,7 +138,7 @@ struct AdminKartodromoView: View {
         }
         .alert("Elimina circuito", isPresented: $showDeleteAlert, presenting: kartodromoToDelete) { k in
             Button("Elimina", role: .destructive) { deleteKartodromo(k) }
-            Button("Annulla", role: .cancel) {}
+            Button("Annulla", role: .cancel) {}.tint(.kartForeground)
         } message: { k in
             Text("Sei sicuro di voler eliminare «\(k.nome)»? L'operazione è irreversibile.")
         }

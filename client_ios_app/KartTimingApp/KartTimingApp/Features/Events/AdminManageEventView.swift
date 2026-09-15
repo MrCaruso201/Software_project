@@ -199,7 +199,7 @@ struct AdminManageEventView: View {
                 guard let s = pendingStatus else { return }
                 Task { await toggleEventStatus(to: s) }
             }
-            Button("Annulla", role: .cancel) { }
+            Button("Annulla", role: .cancel) { }.tint(.kartForeground)
         }
         .fullScreenCover(isPresented: $showLive) {
             LiveRootView(server: server, event: localEvent)

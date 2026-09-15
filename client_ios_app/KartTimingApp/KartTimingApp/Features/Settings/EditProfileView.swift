@@ -219,7 +219,7 @@ struct EditProfileView: View {
             Text("Le tue informazioni sono state salvate con successo.")
         }
         .alert("Elimina Account", isPresented: $showDeleteConfirmation) {
-            Button("Annulla", role: .cancel) { }
+            Button("Annulla", role: .cancel) { }.tint(.kartForeground)
             Button("Elimina", role: .destructive) {
                 deleteAccount()
             }

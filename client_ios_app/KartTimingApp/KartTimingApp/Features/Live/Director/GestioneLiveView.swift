@@ -138,7 +138,7 @@ struct GestioneLiveView: View {
                 viewModel.raceEndTime = Date()
                 sendGlobalMessage(.checkeredFlag, text: "Turno terminato. Rientrate ai box.")
             }
-            Button("Annulla", role: .cancel) { }
+            Button("Annulla", role: .cancel) { }.tint(.kartForeground)
         } message: {
             Text("Sei sicuro di voler terminare il turno?")
         }
@@ -146,14 +146,14 @@ struct GestioneLiveView: View {
             Button("Conferma", role: .destructive) {
                 sendGlobalMessage(.redFlag, text: "Bandiera Rossa")
             }
-            Button("Annulla", role: .cancel) { }
+            Button("Annulla", role: .cancel) { }.tint(.kartForeground)
         } message: {
             Text("Sei sicuro di voler esporre la bandiera rossa?")
         }
         .alert("Messaggio", isPresented: $showGenericMessageAlert) {
             TextField("Scrivi il messaggio...", text: $genericMessageText)
             Button("Invia") { sendTargetedMessage(.custom, text: genericMessageText) }
-            Button("Annulla", role: .cancel) { }
+            Button("Annulla", role: .cancel) { }.tint(.kartForeground)
         }
         .alert("Errore", isPresented: .init(
             get: { actionError != nil },

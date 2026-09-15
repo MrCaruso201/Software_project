@@ -49,13 +49,13 @@ struct UploadResultsView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                         .font(.system(size: 14, weight: .semibold))
                 }
             }
             .alert("Cancella Classifica", isPresented: $showDeleteConfirm) {
                 Button("Cancella", role: .destructive) { Task { await deleteResults() } }
-                Button("Annulla", role: .cancel) {}
+                Button("Annulla", role: .cancel) {}.tint(.kartForeground)
             } message: {
                 Text("Stai per eliminare tutti i risultati ufficiali di \"\(event.title)\". Questa operazione non è reversibile.")
             }

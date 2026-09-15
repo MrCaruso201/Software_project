@@ -74,7 +74,7 @@ struct AdminEventRegistrationsView: View {
             if showAsSheet {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                 }
             }
         }
@@ -1025,7 +1025,7 @@ struct AdminTeamSelectionSheet: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Annulla") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -1141,7 +1141,7 @@ struct AdminCreateTeamFormSheet: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Annulla") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                 }
             }
         }

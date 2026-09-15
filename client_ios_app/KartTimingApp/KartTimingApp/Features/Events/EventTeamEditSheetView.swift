@@ -116,7 +116,7 @@ struct EventTeamEditSheetView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                 }
             }
             .onAppear {

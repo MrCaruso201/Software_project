@@ -81,13 +81,13 @@ struct UserEventView: View {
                 registrationTab
                     .tabItem { Label("Iscrizione", systemImage: "pencil.and.list.clipboard") }
             }
-            .tint(.kartAccent)
+            .tint(.kartNavigationTint)
             .navigationTitle(localEvent.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                         .font(.system(size: 14, weight: .semibold))
                 }
                 ToolbarItem(placement: .principal) {

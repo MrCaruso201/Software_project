@@ -45,14 +45,14 @@ struct DirectorLiveView: View {
                     .tabItem { Label("Messaggi", systemImage: "bubble.left.and.bubble.right.fill") }
                     .tag(4)
             }
-            .tint(.kartAccent)
+            .tint(.kartNavigationTint)
             .navigationTitle(viewModel.currentSessionName ?? event.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // ── Chiudi ────────────────────────────────────────────
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                 }
 
                 // ── Titolo evento ────────────────────────────────────

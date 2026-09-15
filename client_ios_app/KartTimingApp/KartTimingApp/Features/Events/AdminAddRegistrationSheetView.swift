@@ -77,7 +77,7 @@ struct AdminAddRegistrationSheetView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Annulla") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                 }
             }
             .onAppear {

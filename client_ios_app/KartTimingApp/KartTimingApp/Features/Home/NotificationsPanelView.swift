@@ -54,7 +54,7 @@ struct NotificationsPanelView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Chiudi") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                 }
             }
             .sheet(item: $activePaymentEvent) { event in

@@ -31,6 +31,11 @@ struct KartTimingApp: App {
 
     init() {
         KeyboardDismissManager.shared.setupGlobalTapToDismissKeyboard()
+        // Colore adattivo per le azioni standard di alert e action sheet.
+        // UIKit mantiene il rosso per le azioni con ruolo destructive.
+        UIView.appearance(whenContainedInInstancesOf: [UIAlertController.self]).tintColor = UIColor { traits in
+            traits.userInterfaceStyle == .dark ? .white : .black
+        }
     }
 
     var body: some Scene {
@@ -46,6 +51,7 @@ struct KartTimingApp: App {
                         .environmentObject(appEnv)
                 }
             }
+            .tint(.kartForeground)
             .preferredColorScheme(theme.colorScheme)
         }
         .onChange(of: scenePhase) { _, newPhase in

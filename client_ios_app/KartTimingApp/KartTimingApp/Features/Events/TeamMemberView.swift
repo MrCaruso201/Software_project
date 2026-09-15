@@ -93,13 +93,13 @@ struct TeamMemberView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                 }
             }
             .onAppear { fetchTeam() }
             .alert("Abbandona squadra", isPresented: $showLeaveConfirm) {
                 Button("Abbandona", role: .destructive) { performLeave() }
-                Button("Annulla", role: .cancel) {}
+                Button("Annulla", role: .cancel) {}.tint(.kartForeground)
             } message: {
                 Text("Sei sicuro di voler abbandonare questa squadra? Non potrai essere reiscritto automaticamente.")
             }

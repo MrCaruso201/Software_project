@@ -628,7 +628,7 @@ struct ClassificationSheet: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Chiudi") { dismiss() }.foregroundColor(.kartAccent)
+                        Button("Chiudi") { dismiss() }.foregroundColor(.kartForeground)
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         if let url = pdfURL {
@@ -1060,7 +1060,7 @@ struct AddCircuitTimeSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Annulla") { dismiss() }.foregroundColor(.kartAccent)
+                    Button("Annulla") { dismiss() }.foregroundColor(.kartForeground)
                 }
             }
         }

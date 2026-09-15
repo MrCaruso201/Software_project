@@ -367,7 +367,7 @@ struct DevModeToggle: View {
                         Text("\(host):\(port)")
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
                     }
-                    .foregroundColor(.kartWarning)
+                    .foregroundColor(.kartForeground)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(Color.orange.opacity(0.12))
@@ -442,7 +442,8 @@ struct ServerSelectionView: View {
                         isEnabled = false
                         isPresented = false
                     }
-                    .foregroundColor(.kartWarning)
+                    .foregroundColor(.kartForeground)
+                    .tint(.kartForeground)
                 }
             }
         }

@@ -92,14 +92,14 @@ struct AdminEventView: View {
                 .tabItem { Label("Modifica", systemImage: "pencil.circle.fill") }
                 .tag(4)
             }
-            .tint(.kartAccent)
+            .tint(.kartNavigationTint)
             .navigationTitle(localEvent.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // ── Chiudi ────────────────────────────────────────────────
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
-                        .foregroundColor(.kartAccent)
+                        .foregroundColor(.kartForeground)
                         .font(.system(size: 14, weight: .semibold))
                 }
 

@@ -87,7 +87,8 @@ struct KartodromoFormView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annulla") { dismiss() }
-                        .foregroundColor(.red)
+                        .foregroundColor(.kartForeground)
+                        .tint(.kartForeground)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSaving {

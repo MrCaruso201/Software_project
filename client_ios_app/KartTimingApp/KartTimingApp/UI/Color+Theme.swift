@@ -79,10 +79,8 @@ extension Color {
         light: UIColor(red: 0.22, green: 0.18, blue: 0.08, alpha: 1),
         dark: UIColor(Color.yellow)
     )
-    static let kartNavigationTint = adaptive(
-        light: UIColor(red: 1.0, green: 0.82, blue: 0.0, alpha: 1),
-        dark: UIColor(red: 1.0, green: 0.82, blue: 0.0, alpha: 1)
-    )
+    // I controlli di navigazione e i popup ereditano questo colore.
+    static let kartNavigationTint = kartForeground
 
     // Bordi dei messaggi più definiti sui pannelli chiari.
     static func kartMessageBorder(_ color: Color, opacity: Double) -> Color {
