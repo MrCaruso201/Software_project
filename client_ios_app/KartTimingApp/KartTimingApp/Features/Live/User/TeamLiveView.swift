@@ -106,7 +106,7 @@ struct TeamLiveView: View {
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartForeground)
                         Spacer()
-                        Text("Min. \(minLimit, specifier: "%.0f") kg")
+                        Text("Min. \(minLimit, specifier: "%.1f") kg")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartDim)
                     }

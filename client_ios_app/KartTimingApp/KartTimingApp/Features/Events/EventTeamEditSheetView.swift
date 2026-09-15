@@ -27,10 +27,18 @@ struct EventTeamEditSheetView: View {
     private var minAdditionalMembers: Int { max(0, (event.minPeoplePerGroup ?? 1) - 1) }
 
     private var canSave: Bool {
-        !teamName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !leaderEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        (memberEmails.count >= minAdditionalMembers &&
-        memberEmails.prefix(minAdditionalMembers).allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+        let leader = leaderEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let members = memberEmails
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+        let identifiers = [leader] + members
+
+        return !isFetching && !isSaving && registration.teamId != nil &&
+            !teamName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !leader.isEmpty &&
+            members.count >= minAdditionalMembers &&
+            members.count <= maxAdditionalMembers &&
+            Set(identifiers).count == identifiers.count
     }
 
     var body: some View {
@@ -78,15 +86,15 @@ struct EventTeamEditSheetView: View {
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
-                                        .background(Color.kartGreen)
+                                        .background(Color.gray.opacity(0.4))
                                         .cornerRadius(10)
                                 } else {
                                     Text("Salva Modifiche")
                                         .font(.system(size: 16, weight: .bold))
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
-                                        .background(Color.kartGreen)
-                                        .foregroundColor(.white)
+                                        .background(canSave ? Color.kartGreen : Color.gray.opacity(0.4))
+                                        .foregroundColor(canSave ? .white : .secondary)
                                         .cornerRadius(10)
                                 }
                             }
