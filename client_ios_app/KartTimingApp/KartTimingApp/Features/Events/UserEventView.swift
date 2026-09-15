@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Vista dedicata all'evento per utenti normali (e raceDirector).
-/// NavigationStack + TabView con 2 tab: Info, Iscrizione.
+/// NavigationStack + TabView: Info per tutti, Iscrizione esclusa per raceDirector.
 struct UserEventView: View {
     let server: DiscoveredServer
     let event: RaceEvent
@@ -43,6 +43,8 @@ struct UserEventView: View {
 
     // MARK: - Computed helpers
 
+    private var showsRegistration: Bool { authState.currentUser?.role != .raceDirector }
+
     private var reg: EventRegistrationResponse? { viewModel.userRegistrations[localEvent.id] }
     private var status: String? { reg?.status }
     private var isPending: Bool    { status == "pending_payment" }
@@ -78,8 +80,10 @@ struct UserEventView: View {
                 .tabItem { Label("Info", systemImage: "info.circle.fill") }
 
                 // ── Tab 2: Iscrizione ─────────────────────────────────────
-                registrationTab
-                    .tabItem { Label("Iscrizione", systemImage: "pencil.and.list.clipboard") }
+                if showsRegistration {
+                    registrationTab
+                        .tabItem { Label("Iscrizione", systemImage: "pencil.and.list.clipboard") }
+                }
             }
             .tint(.kartNavigationTint)
             .navigationTitle(localEvent.title)
@@ -90,10 +94,12 @@ struct UserEventView: View {
                         .foregroundColor(.kartForeground)
                         .font(.system(size: 14, weight: .semibold))
                 }
-                ToolbarItem(placement: .principal) {
-                    Text(registrationBadgeLabel)
-                        .font(.system(size: 10, weight: .black, design: .monospaced))
-                        .foregroundColor(registrationBadgeColor)
+                if showsRegistration {
+                    ToolbarItem(placement: .principal) {
+                        Text(registrationBadgeLabel)
+                            .font(.system(size: 10, weight: .black, design: .monospaced))
+                            .foregroundColor(registrationBadgeColor)
+                    }
                 }
             }
         }
@@ -466,4 +472,3 @@ struct UserEventView: View {
         }
     }
 }
-
