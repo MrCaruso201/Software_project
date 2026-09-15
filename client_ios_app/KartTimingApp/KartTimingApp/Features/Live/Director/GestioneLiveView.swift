@@ -47,6 +47,7 @@ struct GestioneLiveView: View {
     }
 
     @State private var selectedTarget: Target = .broadcast
+    @State private var isSingleKart = false
     @State private var actionError: String? = nil
     
     // Penalità kart
@@ -67,7 +68,7 @@ struct GestioneLiveView: View {
     @State private var showNoteInput = false
 
     struct AvailableKart: Identifiable {
-        let id = UUID()
+        var id: Int { kartNumber }
         let kartNumber: Int
         let teamName: String?
     }
@@ -121,11 +122,15 @@ struct GestioneLiveView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        switch selectedTarget {
-                        case .broadcast:
+                        if !isSingleKart {
                             broadcastSection
-                        case .kart:
+                        } else if selectedKartNumber != nil {
                             kartPenaltySection
+                        } else {
+                            Text(allAvailableKarts.isEmpty ? "Nessun kart disponibile" : "Seleziona un numero kart dall’elenco")
+                                .font(.system(size: 14))
+                                .foregroundColor(.kartDim)
+                                .padding(.vertical, 24)
                         }
                     }
                     .padding(16)
@@ -195,86 +200,66 @@ struct GestioneLiveView: View {
         .background(Color.kartPanel)
     }
 
-    // MARK: - Target Picker (Menu a tendina)
+    // MARK: - Selezione destinatario
 
     private var targetPicker: some View {
-        Menu {
-            Button {
-                withAnimation(reduceMotion ? nil : .default) { selectedTarget = .broadcast }
-            } label: {
-                Label("Broadcast (tutti)", systemImage: "antenna.radiowaves.left.and.right")
+        VStack(spacing: 12) {
+            Picker("Destinatario", selection: $isSingleKart) {
+                Text("Broadcast").tag(false)
+                Text("Singolo kart").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: isSingleKart) { _, _ in
+                selectedTarget = .broadcast
+                resetPenaltySelection()
             }
 
-            Divider()
-
-            ForEach(allAvailableKarts) { kart in
-                Button {
-                    withAnimation(reduceMotion ? nil : .default) {
-                        selectedTarget = .kart(kart.kartNumber, kart.teamName)
-                        // reset selezione tipo penalità
-                        selectedType = viewModel.penaltyTypes.first
-                        if let defSec = viewModel.penaltyTypes.first?.defaultSeconds {
-                            seconds = String(defSec)
-                        } else {
-                            seconds = ""
+            if isSingleKart {
+                Menu {
+                    ForEach(allAvailableKarts) { kart in
+                        Button {
+                            withAnimation(reduceMotion ? nil : .default) {
+                                selectedTarget = .kart(kart.kartNumber, kart.teamName)
+                                resetPenaltySelection()
+                            }
+                        } label: {
+                            Text("#\(kart.kartNumber)")
                         }
-                        note = ""
-                        penaltyError = nil
                     }
                 } label: {
-                    Label("#\(kart.kartNumber)\(kart.teamName.map { " — \($0)" } ?? "")",
-                          systemImage: "flag.fill")
-                }
-            }
-        } label: {
-            HStack(spacing: 10) {
-                Group {
-                    switch selectedTarget {
-                    case .broadcast:
-                        Image(systemName: "antenna.radiowaves.left.and.right")
+                    HStack {
+                        Text(selectedKartNumber.map { String($0) } ?? "Seleziona kart")
+                            .font(.system(size: 16, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartAccent)
-                    case .kart(let n, _):
-                        Text("#\(n)")
-                            .font(.system(size: 16, weight: .black, design: .monospaced))
-                            .foregroundColor(.kartAccent)
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.kartDim)
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(Color.kartPanel)
+                    .cornerRadius(14)
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1))
                 }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(targetTitle)
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.kartForeground)
-                    Text(targetSubtitle)
-                        .font(.system(size: 11))
-                        .foregroundColor(.kartDim)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.kartDim)
+                .disabled(allAvailableKarts.isEmpty)
+                .accessibilityLabel("Numero kart")
+                .accessibilityValue(selectedKartNumber.map { String($0) } ?? "Nessun kart selezionato")
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color.kartPanel)
-            .cornerRadius(14)
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1))
+        }
+        .onChange(of: allAvailableKarts.map(\.kartNumber)) { _, numbers in
+            if let number = selectedKartNumber, !numbers.contains(number) {
+                selectedTarget = .broadcast
+                resetPenaltySelection()
+            }
         }
     }
 
-    private var targetTitle: String {
-        switch selectedTarget {
-        case .broadcast: return "Broadcast"
-        case .kart(_, let name): return name ?? "Kart Selezionato"
-        }
-    }
-
-    private var targetSubtitle: String {
-        switch selectedTarget {
-        case .broadcast: return "Messaggio a tutti i partecipanti"
-        case .kart(let n, _): return "Assegna penalità al kart #\(n)"
-        }
+    private func resetPenaltySelection() {
+        selectedType = viewModel.penaltyTypes.first
+        seconds = viewModel.penaltyTypes.first?.defaultSeconds.map { String($0) } ?? ""
+        note = ""
+        penaltyError = nil
     }
 
     // MARK: - Sezione Broadcast
