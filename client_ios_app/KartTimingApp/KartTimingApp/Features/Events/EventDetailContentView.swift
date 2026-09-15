@@ -16,6 +16,22 @@ struct EventDetailContentView: View {
 
     // MARK: - Computed
 
+    private var kartodromo: Kartodromo? {
+        let trackName = event.location.components(separatedBy: " - ").first ?? event.location
+        return kartodromoVM.kartodromi.first(where: { $0.nome == trackName || $0.nome == event.location })
+    }
+
+    private var circuitWebsiteURL: URL? {
+        guard let website = kartodromo?.sitoWeb.trimmingCharacters(in: .whitespacesAndNewlines),
+              !website.isEmpty else { return nil }
+        let address = website.contains("://") ? website : "https://\(website)"
+        guard let url = URL(string: address),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              let host = url.host, !host.isEmpty else { return nil }
+        return url
+    }
+
     private var hasPartecipantiContent: Bool {
         event.maxParticipants != nil
             || (event.isTeamEvent && (event.minPeoplePerGroup != nil || event.maxPeoplePerGroup != nil))
@@ -38,6 +54,27 @@ struct EventDetailContentView: View {
 
                     // -- Hero
                     heroCard
+
+                    if let websiteURL = circuitWebsiteURL {
+                        Link(destination: websiteURL) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "globe")
+                                Text("Sito del circuito")
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                            }
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.kartAccent)
+                            .padding(16)
+                            .background(Color.kartPanel)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.kartAccent.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
 
                     // -- Immagine circuito
                     circuitImageSection
@@ -191,12 +228,6 @@ struct EventDetailContentView: View {
 
     @ViewBuilder
     private var circuitImageSection: some View {
-        let kartodromo: Kartodromo? = {
-            let locParts = event.location.components(separatedBy: " - ")
-            let trackName = locParts.first ?? event.location
-            return kartodromoVM.kartodromi.first(where: { $0.nome == trackName || $0.nome == event.location })
-        }()
-
         if let k = kartodromo, let imageUrl = k.imageUrl {
             let baseURL = server.httpURL?.absoluteString
                 .replacingOccurrences(of: "/api", with: "") ?? ""
