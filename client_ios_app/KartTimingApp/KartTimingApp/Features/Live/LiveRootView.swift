@@ -15,6 +15,8 @@ struct LiveRootView: View {
     @StateObject private var viewModel = LiveViewModel()
     @StateObject private var timingManager = KartTimingManager()
     @State private var trackLoadError: String? = nil
+    @State private var isLoadingConnection = false
+    @State private var connectionTask: Task<Void, Never>?
 
     private var isDirector: Bool {
         let role = authState.currentUser?.role
@@ -30,6 +32,26 @@ struct LiveRootView: View {
                 UserLiveView(event: event, viewModel: viewModel, isUserRegistered: isUserRegistered)
                     .environmentObject(timingManager)
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if !timingManager.isConnected {
+                HStack(spacing: 12) {
+                    Text(trackLoadError ?? (isLoadingConnection || timingManager.isConnecting
+                        ? "Connessione in corso…" : "Connessione live interrotta"))
+                        .font(.footnote)
+                    Spacer()
+                    Button(action: connectTimingManager) {
+                        Label("Riconnetti", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(isLoadingConnection || timingManager.isConnecting)
+                    .tint(.kartAccent)
+                }
+                .padding(12)
+                .background(Color.kartPanel)
+            }
+        }
+        .onChange(of: timingManager.isConnected) { _, connected in
+            if connected { Task { await viewModel.fetchAll() } }
         }
         .onAppear {
             viewModel.configure(
@@ -47,30 +69,39 @@ struct LiveRootView: View {
             connectTimingManager()
         }
         .onDisappear {
+            connectionTask?.cancel()
+            connectionTask = nil
+            isLoadingConnection = false
             viewModel.stopPolling()
             timingManager.disconnect()
         }
     }
 
     private func connectTimingManager() {
-        guard let token = authState.currentToken else { return }
+        guard !isLoadingConnection, !timingManager.isConnecting,
+              let token = authState.currentToken else { return }
+        trackLoadError = nil
+        isLoadingConnection = true
         let base = AppEnvironment.shared.baseURL
-        Task {
+        connectionTask = Task { @MainActor in
+            defer { isLoadingConnection = false }
             do {
                 let kartodromi = try await KartodromoService.fetchKartodromi(
                     baseURL: base,
                     accessToken: token
                 )
-                if let matched = kartodromi.first(where: { $0.nome == event.location }) {
+                try Task.checkCancellation()
+                if let matched = kartodromi.first(where: {
+                    $0.nome == event.location || "\($0.nome) - \($0.luogo)" == event.location
+                }) {
                     timingManager.connect(to: server)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        timingManager.sendCommand("set_url", extra: ["url": matched.url])
-                        timingManager.subscribeToEvent(event.id)
-                    }
+                    timingManager.sendCommand("set_url", extra: ["url": matched.url])
+                    timingManager.subscribeToEvent(event.id)
                 } else {
                     trackLoadError = "Impossibile trovare l'URL per la pista: \(event.location)"
                 }
             } catch {
+                guard !Task.isCancelled else { return }
                 trackLoadError = error.localizedDescription
             }
         }

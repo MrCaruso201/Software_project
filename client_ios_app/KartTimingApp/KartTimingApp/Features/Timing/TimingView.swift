@@ -133,7 +133,7 @@ struct TimingView: View {
             manager.disconnect()
             return
         }
-        if !manager.isConnected { manager.connect(to: server) }
+        if !manager.isConnected && !manager.isConnecting { manager.connect(to: server) }
         manager.sendCommand("set_url", extra: ["url": track.url])
     }
 
@@ -269,12 +269,21 @@ struct TimingView: View {
                 Circle()
                     .fill(manager.isConnected ? Color.kartGreen : Color.kartRed)
                     .frame(width: 7, height: 7)
-                Text(manager.isConnected ? "Connesso" : "Disconnesso")
+                Text(manager.isConnecting ? "Connessione…" : manager.isConnected ? "Connesso" : "Disconnesso")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundColor(manager.isConnected ? .kartGreen : .kartRed)
             }
 
             Spacer()
+
+            if !manager.isConnected, selectedKartodromo != nil {
+                Button(action: updateConnection) {
+                    Label("Riconnetti", systemImage: "arrow.clockwise")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .tint(.kartAccent)
+                .disabled(manager.isConnecting)
+            }
 
             // Scraping live
             if manager.isScrapingActive {

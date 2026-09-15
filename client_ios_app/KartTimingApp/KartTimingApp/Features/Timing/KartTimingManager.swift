@@ -4,6 +4,7 @@ import Combine
 class KartTimingManager: ObservableObject {
     @Published var timing: TimingPayload? = nil
     @Published var isConnected: Bool = false
+    @Published var isConnecting: Bool = false
     @Published var currentURL: String = ""
     @Published var isScrapingActive: Bool = false
     @Published var errorMessage: String? = nil
@@ -27,16 +28,30 @@ class KartTimingManager: ObservableObject {
     private var webSocketSession: URLSession?
     private var webSocketTask: URLSessionWebSocketTask?
     private var currentServer: DiscoveredServer?
+    private var selectedURL: String?
+    private var subscribedEventId: Int?
 
     func connect(to server: DiscoveredServer) {
         disconnect()
+        let server = DiscoveredServer(
+            name: server.name, host: server.host, port: server.port,
+            useTLS: server.useTLS, token: AuthState.shared.currentToken ?? server.token
+        )
         currentServer = server
         guard let url = server.wsURL else { return }
         let session = URLSession(configuration: .default)
         webSocketSession = session
         webSocketTask = session.webSocketTask(with: url)
         webSocketTask?.resume()
-        DispatchQueue.main.async { self.isConnected = true }
+        isConnecting = true
+        errorMessage = nil
+        showError = false
+        if let socket = webSocketTask {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
+                guard let self, self.webSocketTask === socket, self.isConnecting else { return }
+                self.disconnect()
+            }
+        }
         listen()
         // Chiedi subito lo stato
         sendCommand("get_status")
@@ -47,17 +62,23 @@ class KartTimingManager: ObservableObject {
         webSocketTask = nil
         webSocketSession?.invalidateAndCancel()
         webSocketSession = nil
-        DispatchQueue.main.async {
-            self.isConnected = false
-            self.timing = nil
-            self.isScrapingActive = false
-        }
+        isConnected = false
+        isConnecting = false
+        timing = nil
+        isScrapingActive = false
+        currentURL = ""
+        selectedURL = nil
+        subscribedEventId = nil
     }
 
     /// Riconnette al server con un nuovo DiscoveredServer (es. token aggiornato).
     /// Chiamato da AuthState dopo un token refresh per ripristinare la sessione WebSocket.
     func reconnect(to server: DiscoveredServer) {
+        let url = selectedURL
+        let eventId = subscribedEventId
         connect(to: server)
+        if let url { sendCommand("set_url", extra: ["url": url]) }
+        if let eventId { subscribeToEvent(eventId) }
     }
 
     private func listen() {
@@ -74,6 +95,7 @@ class KartTimingManager: ObservableObject {
                 DispatchQueue.main.async {
                     guard self.webSocketTask === socket else { return }
                     self.isConnected = false
+                    self.isConnecting = false
                     self.timing = nil
                     self.isScrapingActive = false
                     self.currentURL = ""
@@ -107,6 +129,8 @@ class KartTimingManager: ObservableObject {
 
         DispatchQueue.main.async {
             guard self.webSocketTask === socket else { return }
+            self.isConnecting = false
+            self.isConnected = true
             switch type {
             case "timing_update":
                 let headers = json["headers"] as? [String] ?? []
@@ -152,6 +176,8 @@ class KartTimingManager: ObservableObject {
     }
 
     func sendCommand(_ command: String, extra: [String: Any] = [:]) {
+        if command == "set_url" { selectedURL = extra["url"] as? String }
+        if command == "subscribe_event" { subscribedEventId = extra["event_id"] as? Int }
         var payload: [String: Any] = ["command": command]
         payload.merge(extra) { _, new in new }
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
