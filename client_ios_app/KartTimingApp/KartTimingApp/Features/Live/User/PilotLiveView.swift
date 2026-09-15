@@ -52,6 +52,7 @@ struct PilotLiveView: View {
     @State private var flashTask: Task<Void, Never>?
     @State private var blueFlagTask: Task<Void, Never>?
     @State private var dropPositionTask: Task<Void, Never>?
+    @State private var textMessageTask: Task<Void, Never>?
     @StateObject private var gpsSpeed = GPSSpeedMonitor()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) var dismiss
@@ -76,6 +77,8 @@ struct PilotLiveView: View {
     @State private var showingTextMessage = false
     @State private var currentTextMessage: RaceMessage? = nil
     @State private var processedTextMessageIds: Set<Int> = []
+    @State private var pendingTextMessages: [Int: RaceMessage] = [:]
+    @State private var textMessageExpirations: [Int: Date] = [:]
 
     @State private var showingStintWarningScreen = false
     @State private var hasShownStintWarningForCurrentStint = false
@@ -132,20 +135,23 @@ struct PilotLiveView: View {
         ZStack {
             Color.kartBG.ignoresSafeArea()
 
-            if showingTextMessage {
+            // Le bandiere interrompono subito gli avvisi con priorità inferiore.
+            if hasBlackFlag {
+                blackFlagState
+            } else if currentFlagMessage?.messageType == "checkered_flag" {
+                checkeredFlagState
+            } else if isGlobalRedFlag {
+                redFlagState
+            } else if isGlobalYellowFlag {
+                yellowFlagState
+            } else if showingBlueFlagScreen {
+                blueFlagState
+            } else if showingTextMessage {
                 textMessageState
             } else if showingDropPositionScreen {
                 dropPositionState
             } else if showingStintWarningScreen {
                 stintWarningState
-            } else if showingBlueFlagScreen {
-                blueFlagState
-            } else if hasBlackFlag {
-                blackFlagState
-            } else if isGlobalRedFlag {
-                redFlagState
-            } else if isGlobalYellowFlag {
-                yellowFlagState
             } else if isGaraIniziata && !hasLapTimes && myKart.kartNumber != nil {
                 greenFlagState
             } else {
@@ -222,11 +228,11 @@ struct PilotLiveView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { gpsSpeed.start() } else { gpsSpeed.stop() }
         }
-        .onChange(of: myKart.messages.last?.id) { _, _ in
+        .onChange(of: myKart.messages.map(\.id)) { _, _ in
             checkForNewFlag(messages: myKart.messages)
             checkForNewTextMessage(messages: myKart.messages)
         }
-        .onChange(of: myKart.penalties.count) { _, _ in
+        .onChange(of: myKart.penalties.map(\.id)) { _, _ in
             checkForNewBlueFlags()
             checkForNewDropPosition()
         }
@@ -280,6 +286,11 @@ struct PilotLiveView: View {
         .onDisappear {
             blueFlagTask?.cancel()
             dropPositionTask?.cancel()
+            textMessageTask?.cancel()
+            showingTextMessage = false
+            currentTextMessage = nil
+            pendingTextMessages.removeAll()
+            textMessageExpirations.removeAll()
             showingBlueFlagScreen = false
             showingDropPositionScreen = false
             flashTask?.cancel()
@@ -611,28 +622,45 @@ struct PilotLiveView: View {
     }
 
     private func checkForNewTextMessage(messages: [RaceMessage]) {
-        guard let latestMsg = messages.last, 
-              (latestMsg.messageType == "info" || latestMsg.messageType == "custom") else { return }
-        
-        if !processedTextMessageIds.contains(latestMsg.id) {
-            processedTextMessageIds.insert(latestMsg.id)
-            
-            let age = latestMsg.parsedDate.map { Date().timeIntervalSince($0) } ?? 0
-            if age < 20 {
-                currentTextMessage = latestMsg
-                withAnimation(reduceMotion ? nil : .default) {
-                    showingTextMessage = true
-                }
-                
-                let remainingTime = 20 - age
-                DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
-                    if currentTextMessage?.id == latestMsg.id {
-                        withAnimation(reduceMotion ? nil : .default) {
-                            showingTextMessage = false
-                        }
-                    }
-                }
-            }
+        let now = Date()
+        for message in messages where message.messageType == "info" || message.messageType == "custom" {
+            // Gli annunci di partenza sono bandiere verdi, non messaggi di testo.
+            guard message.flagFlashColor == nil,
+                  processedTextMessageIds.insert(message.id).inserted else { continue }
+            let expiration = (message.parsedDate ?? now).addingTimeInterval(20)
+            guard expiration > now else { continue }
+            pendingTextMessages[message.id] = message
+            textMessageExpirations[message.id] = expiration
+        }
+        updateTextMessage()
+    }
+
+    private func updateTextMessage() {
+        textMessageTask?.cancel()
+        let now = Date()
+        let expiredIds = textMessageExpirations.filter { $0.value <= now }.map(\.key)
+        for id in expiredIds {
+            pendingTextMessages.removeValue(forKey: id)
+            textMessageExpirations.removeValue(forKey: id)
+        }
+
+        // Un diretto prevale sempre su un broadcast; a parità vince il più recente.
+        currentTextMessage = pendingTextMessages.values.sorted {
+            if $0.isBroadcast != $1.isBroadcast { return !$0.isBroadcast }
+            let firstDate = $0.parsedDate ?? .distantPast
+            let secondDate = $1.parsedDate ?? .distantPast
+            if firstDate != secondDate { return firstDate > secondDate }
+            return $0.id > $1.id
+        }.first
+        showingTextMessage = currentTextMessage != nil
+
+        guard let nextExpiration = textMessageExpirations.values.min() else { return }
+        textMessageTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .seconds(max(0, nextExpiration.timeIntervalSinceNow)))
+                try Task.checkCancellation()
+                updateTextMessage()
+            } catch { }
         }
     }
 
@@ -680,6 +708,24 @@ struct PilotLiveView: View {
         }
     }
     
+    // MARK: - Checkered Flag State
+
+    private var checkeredFlagState: some View {
+        ZStack {
+            Color.white.ignoresSafeArea()
+            VStack(spacing: 24) {
+                Image(systemName: "flag.checkered.2.crossed")
+                    .font(.system(size: 90))
+                Text("BANDIERA A SCACCHI")
+                    .font(.system(size: 60, weight: .black, design: .monospaced))
+                    .minimumScaleFactor(0.4)
+                    .lineLimit(1)
+            }
+            .foregroundColor(.black)
+            .padding(40)
+        }
+    }
+
     // MARK: - Red Flag State
 
     private var redFlagState: some View {
