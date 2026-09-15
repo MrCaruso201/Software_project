@@ -57,6 +57,7 @@ from results.router import router as results_router
 from notifications.router import router as notifications_router
 from live.router import router as live_router
 from live.stint_monitor import monitor_stints
+from services.pdf_router import router as pdf_router
 
 # ---------------------------------------------------------------------------
 # Lifecycle
@@ -108,6 +109,7 @@ app.include_router(events_router)
 app.include_router(kartodromi_router)
 app.include_router(notifications_router)
 app.include_router(live_router)
+app.include_router(pdf_router)
 
 # Serve file statici (come le immagini di profilo e le grafiche dei circuiti)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

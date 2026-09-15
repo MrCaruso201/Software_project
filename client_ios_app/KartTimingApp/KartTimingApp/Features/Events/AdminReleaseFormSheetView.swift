@@ -13,8 +13,6 @@ struct AdminReleaseFormSheetView: View {
     @State private var isSaving = false
     @State private var saveMessage: String? = nil
     
-    @State private var previewPDFData: Data? = nil
-    @State private var showPreviewSheet: Bool = false
     @State private var isPreviewing = false
     @State private var signedReleases: [SignedReleaseResponse] = []
     @State private var isLoadingReleases = true
@@ -175,22 +173,7 @@ struct AdminReleaseFormSheetView: View {
             releaseText = event.releaseFormText ?? ""
             loadSignedReleases()
         }
-        .sheet(isPresented: $showPreviewSheet) {
-            if let data = previewPDFData {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button("Chiudi") {
-                            showPreviewSheet = false
-                        }
-                        .padding()
-                        .foregroundColor(.kartAccent)
-                        .font(.system(size: 16, weight: .bold))
-                    }
-                    PDFViewer(pdfData: data)
-                }
-            }
-        }
+
     }
     
     private func saveReleaseForm() {
@@ -218,8 +201,15 @@ struct AdminReleaseFormSheetView: View {
         viewModel.previewAdminReleaseForm(serverURL: serverURL, eventId: event.id, token: token, text: releaseText) { data, errorMsg in
             isPreviewing = false
             if let data = data {
-                self.previewPDFData = data
-                self.showPreviewSheet = true
+                self.isPreviewing = true
+                Task { @MainActor in
+                    defer { self.isPreviewing = false }
+                    do {
+                        try await PDFBrowser.open(data: data, serverURL: server.httpURL, token: authState.currentToken)
+                    } catch {
+                        self.saveMessage = error.localizedDescription
+                    }
+                }
             } else {
                 self.saveMessage = errorMsg ?? "Errore durante l'anteprima"
             }

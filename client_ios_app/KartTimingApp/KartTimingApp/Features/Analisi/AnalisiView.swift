@@ -620,6 +620,8 @@ struct ClassificationSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var pdfURL: URL? = nil
+    @State private var isOpeningPDF = false
+    @State private var pdfError: String?
 
     var body: some View {
         NavigationView {
@@ -632,16 +634,30 @@ struct ClassificationSheet: View {
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         if let url = pdfURL {
-                            if #available(iOS 16.0, *) {
-                                ShareLink(item: url) {
-                                    Image(systemName: "square.and.arrow.up")
+                            Button {
+                                isOpeningPDF = true
+                                Task { @MainActor in
+                                    defer { isOpeningPDF = false }
+                                    do {
+                                        let data = try Data(contentsOf: url)
+                                        try await PDFBrowser.open(data: data, serverURL: server.httpURL, token: authState.currentToken)
+                                    } catch {
+                                        pdfError = error.localizedDescription
+                                    }
                                 }
-                                .foregroundColor(.kartAccent)
+                            } label: {
+                                if isOpeningPDF { ProgressView() }
+                                else { Label("Apri PDF", systemImage: "doc.richtext") }
                             }
+                            .foregroundColor(.kartAccent)
+                            .disabled(isOpeningPDF)
                         }
                     }
                 }
         }
+        .alert("Impossibile aprire il PDF", isPresented: Binding(get: { pdfError != nil }, set: { if !$0 { pdfError = nil } })) {
+            Button("OK") { pdfError = nil }
+        } message: { Text(pdfError ?? "") }
         .onAppear(perform: handleAppear)
         .onChange(of: viewModel.classifications[event.id]) { _, newVals in handleClassificationsChange(newResults: newVals) }
         .onChange(of: viewModel.eventLapStats[event.id]) { _, newVals in handleLapStatsChange(newStats: newVals) }
