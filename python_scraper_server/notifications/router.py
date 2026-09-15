@@ -27,11 +27,11 @@ from notifications.schemas import NotificationResponse
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
-def _is_event_past(event_date_str: str) -> bool:
+def _is_event_past(event_date_str: datetime | str) -> bool:
     try:
         # Pulisce la stringa per supportare il parsing nativo ISO (Z -> +00:00)
-        safe_str = event_date_str.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(safe_str)
+        dt = (event_date_str if isinstance(event_date_str, datetime)
+              else datetime.fromisoformat(event_date_str.replace("Z", "+00:00")))
         # Se è naive, assumiamo UTC (o l'ora locale del server, ma l'app salva in ISO)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
@@ -91,7 +91,7 @@ def mark_notification_read(
     db.commit()
     return {"message": "Notifica letta"}
 
-def notify_user(db: Session, user_id: int, event_id: int, notif_type: str, title: str, message: str):
+def notify_user(db: Session, user_id: int, event_id: int, notif_type: str, title: str, message: str, *, commit: bool = True):
     """
     Crea una nuova notifica per l'utente, mantenendo lo storico completo.
     """
@@ -108,7 +108,8 @@ def notify_user(db: Session, user_id: int, event_id: int, notif_type: str, title
         created_at=datetime.now(timezone.utc).replace(tzinfo=None)
     )
     db.add(new_notif)
-    db.commit()
+    if commit:
+        db.commit()
 
 @router.delete("/me", status_code=204)
 def delete_all_notifications(user_payload: dict = Depends(get_current_user), db: Session = Depends(get_db)):

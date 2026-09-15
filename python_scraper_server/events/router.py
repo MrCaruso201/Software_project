@@ -124,6 +124,11 @@ def create_event(event: EventCreate, db: Session = Depends(get_db)):
 
     db_event = Event(**event_data)
     db.add(db_event)
+    db.flush()
+    # Persist the event and its inbox entries in the same transaction.
+    for user in db.query(User).filter(User.role.in_(["user", "race_director", "admin"])).all():
+        notify_user(db, user.id, db_event.id, "new_event", "Nuovo evento disponibile",
+                    f'"{db_event.title}" – {db_event.event_date:%d/%m/%Y}', commit=False)
     db.commit()
     db.refresh(db_event)
     return db_event
@@ -993,8 +998,11 @@ def accept_waitlist_registration(event_id: int, registration_id: int, user_paylo
     else:
         reg.status = "pending_payment"
     
-    if reg.user_id:
-        notify_user(db, reg.user_id, event_id, "registration_accepted", "Accettato dall'organizzatore", "L'organizzatore ti ha accettato dalla lista d'attesa!")
+    recipients = (db.query(EventRegistration).filter_by(event_id=event_id, team_id=reg.team_id).all()
+                  if reg.team_id and reg.is_team_leader else [reg])
+    for recipient in recipients:
+        if recipient.user_id:
+            notify_user(db, recipient.user_id, event_id, "registration_accepted", "Accettato dall'organizzatore", "L'organizzatore ti ha accettato dalla lista d'attesa!")
     
     db.commit()
     db.refresh(reg)
@@ -1052,8 +1060,11 @@ def move_to_waitlist_registration(event_id: int, registration_id: int, user_payl
     else:
         reg.status = "waitlist"
         
-    if reg.user_id:
-        notify_user(db, reg.user_id, event_id, "moved_to_waitlist", "Spostato in lista d'attesa", "L'organizzatore ti ha spostato in lista d'attesa per questo evento.")
+    recipients = (db.query(EventRegistration).filter_by(event_id=event_id, team_id=reg.team_id).all()
+                  if reg.team_id and reg.is_team_leader else [reg])
+    for recipient in recipients:
+        if recipient.user_id:
+            notify_user(db, recipient.user_id, event_id, "moved_to_waitlist", "Spostato in lista d'attesa", "L'organizzatore ti ha spostato in lista d'attesa per questo evento.")
     
     db.commit()
     db.refresh(reg)
@@ -1192,8 +1203,9 @@ def admin_register_team(
         db.add(member_reg)
         
     db.commit()
-    if leader_reg.user_id:
-        notify_user(db, leader_reg.user_id, event_id, "admin_registered", "Squadra iscritta dall'organizzatore", "L'organizzatore ha iscritto la tua squadra a questo evento.")
+    for member in db.query(EventRegistration).filter_by(event_id=event_id, team_id=new_team_id).all():
+        if member.user_id:
+            notify_user(db, member.user_id, event_id, "admin_registered", "Squadra iscritta dall'organizzatore", "L'organizzatore ha iscritto la tua squadra a questo evento.")
     db.refresh(leader_reg)
     return leader_reg
 

@@ -20,8 +20,8 @@ struct NotificationsPanelView: View {
                             NotificationRowView(notification: notification) {
                                 // Marca come letta
                                 viewModel.markNotificationRead(id: notification.id)
-                                if let event = notification.associatedEvent {
-                                    NotificationCenter.default.post(name: NSNotification.Name("OpenEventDetail"), object: nil, userInfo: ["eventId": event.id])
+                                if let eventId = notification.associatedEventId {
+                                    NotificationCenter.default.post(name: NSNotification.Name("OpenEventDetail"), object: nil, userInfo: ["eventId": eventId])
                                     dismiss()
                                 }
                             }
@@ -39,6 +39,18 @@ struct NotificationsPanelView: View {
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
+                }
+            }
+            .task { viewModel.refreshNotifications() }
+            .safeAreaInset(edge: .top) {
+                if let error = viewModel.notificationError {
+                    VStack(spacing: 8) {
+                        Text(error).font(.footnote)
+                        Button("Riprova") { viewModel.refreshNotifications() }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.kartPanel)
                 }
             }
             .navigationTitle("Notifiche")

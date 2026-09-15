@@ -9,7 +9,7 @@ nonisolated struct ServerNotification: Codable, Sendable {
     let type: String
     let title: String
     let message: String
-    let isRead: Bool
+    var isRead: Bool
     let createdAt: String
     
     enum CodingKeys: String, CodingKey {
@@ -51,6 +51,11 @@ struct AppNotification: Identifiable {
         case .newEvent(let event):       return event
         case .adminAction(_, let event): return event
         }
+    }
+
+    var associatedEventId: Int? {
+        if case .adminAction(let notification, _) = type { return notification.eventId }
+        return associatedEvent?.id
     }
 
     var iconName: String {

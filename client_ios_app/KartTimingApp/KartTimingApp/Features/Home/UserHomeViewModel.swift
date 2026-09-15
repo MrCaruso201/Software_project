@@ -12,7 +12,10 @@ class UserHomeViewModel: ObservableObject {
 
     @Published var isLoading = true
 
-    private let readIdsKey = "readNotificationIds"
+    @Published var notificationError: String?
+    private var notificationScope: String { "\(currentServerURL?.absoluteString ?? "")_\(profile?.id ?? 0)" }
+    private var readIdsKey: String { "readNotificationIds_\(notificationScope)" }
+    private var clearedIdsKey: String { "clearedNotificationIds_\(notificationScope)" }
 
     // MARK: - Statistiche calcolate
 
@@ -27,7 +30,7 @@ class UserHomeViewModel: ObservableObject {
 
     func fetchData(serverURL: URL?, token: String?, forceRefresh: Bool = false, completion: (() -> Void)? = nil) {
         guard let serverURL = serverURL, let token = token else {
-            Task { @MainActor in self.isLoading = false }
+            Task { @MainActor in self.isLoading = false; completion?() }
             return
         }
 
@@ -71,10 +74,13 @@ class UserHomeViewModel: ObservableObject {
         var reqNotif = URLRequest(url: serverURL.appendingPathComponent("notifications/me"))
         reqNotif.httpMethod = "GET"
         reqNotif.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        NetworkService.shared.dataTask(with: reqNotif, cacheFor: 15, forceRefresh: forceRefresh) { data, _, _ in
+        NetworkService.shared.dataTask(with: reqNotif) { data, _, _ in
             Task { @MainActor in
                 if let data = data, let notifs = try? await BackgroundJSON.decode([ServerNotification].self, from: data) {
                     self.serverNotifications = notifs
+                    self.notificationError = nil
+                } else {
+                    self.notificationError = "Impossibile aggiornare le notifiche. Riprova."
                 }
                 group.leave()
             }
@@ -103,79 +109,76 @@ class UserHomeViewModel: ObservableObject {
 
     // MARK: - Notifiche
 
-    /// Marca una notifica come letta e persiste l'ID in UserDefaults.
+    func refreshNotifications() {
+        fetchData(serverURL: currentServerURL, token: currentToken, forceRefresh: true)
+    }
+
+    private func mutateNotification(path: String, method: String, onSuccess: @escaping () -> Void) {
+        guard let url = currentServerURL, let token = currentToken else {
+            notificationError = "Sessione non disponibile. Accedi nuovamente."
+            return
+        }
+        var request = URLRequest(url: url.appendingPathComponent(path))
+        request.httpMethod = method
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        NetworkService.shared.dataTask(with: request) { _, response, error in
+            Task { @MainActor in
+                guard error == nil, let http = response as? HTTPURLResponse,
+                      (200..<300).contains(http.statusCode) else {
+                    self.notificationError = "Impossibile salvare la modifica alle notifiche. Riprova."
+                    return
+                }
+                self.notificationError = nil
+                onSuccess()
+            }
+        }.resume()
+    }
 
     func deleteAllNotifications() {
-        if let url = currentServerURL, let token = currentToken {
-            var req = URLRequest(url: url.appendingPathComponent("notifications/me"))
-            req.httpMethod = "DELETE"
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            NetworkService.shared.dataTask(with: req).resume()
-        }
-        Task { @MainActor in
-            // Save current IDs to cleared list
-            var clearedIds = Set(UserDefaults.standard.stringArray(forKey: "clearedNotificationIds") ?? [])
-            for notif in self.notifications {
-                clearedIds.insert(notif.id)
-            }
-            UserDefaults.standard.set(Array(clearedIds), forKey: "clearedNotificationIds")
-            
+        let localIds = notifications.filter { !$0.id.hasPrefix("server_") }.map(\.id)
+        mutateNotification(path: "notifications/me", method: "DELETE") {
+            var clearedIds = Set(UserDefaults.standard.stringArray(forKey: self.clearedIdsKey) ?? [])
+            clearedIds.formUnion(localIds)
+            UserDefaults.standard.set(Array(clearedIds), forKey: self.clearedIdsKey)
             self.serverNotifications.removeAll()
             self.buildNotifications()
         }
     }
 
     func markNotificationRead(id: String) {
-        if id.hasPrefix("server_") {
-            let serverIdStr = id.replacingOccurrences(of: "server_", with: "")
-            if let serverId = Int(serverIdStr), let serverURL = currentServerURL, let token = currentToken {
-                var reqRead = URLRequest(url: serverURL.appendingPathComponent("notifications/\(serverId)/read"))
-                reqRead.httpMethod = "POST"
-                reqRead.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                NetworkService.shared.dataTask(with: reqRead) { _, _, _ in }.resume()
+        if id.hasPrefix("server_"), let serverId = Int(id.dropFirst(7)) {
+            mutateNotification(path: "notifications/\(serverId)/read", method: "POST") {
+                if let index = self.serverNotifications.firstIndex(where: { $0.id == serverId }) {
+                    self.serverNotifications[index].isRead = true
+                }
+                self.buildNotifications()
             }
-        }
-        
-        var readIds = Set(UserDefaults.standard.stringArray(forKey: readIdsKey) ?? [])
-        guard !readIds.contains(id) else { return }
-        readIds.insert(id)
-        UserDefaults.standard.set(Array(readIds), forKey: readIdsKey)
-        if let idx = notifications.firstIndex(where: { $0.id == id }) {
-            notifications[idx].isRead = true
+        } else {
+            var readIds = Set(UserDefaults.standard.stringArray(forKey: readIdsKey) ?? [])
+            readIds.insert(id)
+            UserDefaults.standard.set(Array(readIds), forKey: readIdsKey)
+            buildNotifications()
         }
     }
 
-    /// Elimina una singola notifica e nasconde quelle locali se corrispondono
     func deleteSingleNotification(id: String) {
-        if id.hasPrefix("server_") {
-            // È una notifica server, eliminala via API
-            let sIdStr = id.replacingOccurrences(of: "server_", with: "")
-            if let serverNotifId = Int(sIdStr), let url = currentServerURL?.appendingPathComponent("notifications/\(serverNotifId)"), let token = UserDefaults.standard.string(forKey: "jwtToken") {
-                var req = URLRequest(url: url)
-                req.httpMethod = "DELETE"
-                req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                NetworkService.shared.dataTask(with: req).resume()
-                
-                Task { @MainActor in
-                    self.serverNotifications.removeAll(where: { $0.id == serverNotifId })
-                    self.buildNotifications()
-                }
-            }
-        } else {
-            // È una notifica locale, aggiungila ai clearedIds
-            Task { @MainActor in
-                var clearedIds = Set(UserDefaults.standard.stringArray(forKey: "clearedNotificationIds") ?? [])
-                clearedIds.insert(id)
-                UserDefaults.standard.set(Array(clearedIds), forKey: "clearedNotificationIds")
+        if id.hasPrefix("server_"), let serverId = Int(id.dropFirst(7)) {
+            mutateNotification(path: "notifications/\(serverId)", method: "DELETE") {
+                self.serverNotifications.removeAll { $0.id == serverId }
                 self.buildNotifications()
             }
+        } else {
+            var clearedIds = Set(UserDefaults.standard.stringArray(forKey: clearedIdsKey) ?? [])
+            clearedIds.insert(id)
+            UserDefaults.standard.set(Array(clearedIds), forKey: clearedIdsKey)
+            buildNotifications()
         }
     }
 
     /// Costruisce l'array di notifiche dai dati già scaricati.
     func buildNotifications() {
         let readIds = Set(UserDefaults.standard.stringArray(forKey: readIdsKey) ?? [])
-        let clearedIds = Set(UserDefaults.standard.stringArray(forKey: "clearedNotificationIds") ?? [])
+        let clearedIds = Set(UserDefaults.standard.stringArray(forKey: clearedIdsKey) ?? [])
         let now = Date()
         let calendar = Calendar.current
         var result: [AppNotification] = []
@@ -193,7 +196,7 @@ class UserHomeViewModel: ObservableObject {
                 type: .adminAction(serverNotif: serverNotif, event: event),
                 title: serverNotif.title,
                 message: serverNotif.message,
-                isRead: serverNotif.isRead || readIds.contains(stableId),
+                isRead: serverNotif.isRead,
                 timestamp: date
             ))
         }
@@ -205,7 +208,7 @@ class UserHomeViewModel: ObservableObject {
         for eventId in confirmedEventIds {
             if let event = events.first(where: { $0.id == eventId }),
                let date = parseDate(from: event.eventDate) {
-                let daysLeft = calendar.dateComponents([.day], from: now, to: date).day ?? Int.max
+                let daysLeft = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? Int.max
                 if daysLeft >= 0 && daysLeft <= 7 {
                     let stableId = "upcoming_\(eventId)"
                     let dayMsg: String
@@ -223,23 +226,6 @@ class UserHomeViewModel: ObservableObject {
                         timestamp: now
                     ))
                 }
-            }
-        }
-
-        // 4. Nuovi eventi (creati negli ultimi 7 giorni, non iscritto)
-        let registeredEventIds = Set(registrations.map { $0.eventId })
-        let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: now) ?? now
-        for event in events where !registeredEventIds.contains(event.id) {
-            if let createdDate = parseDate(from: event.createdAt), createdDate >= sevenDaysAgo {
-                let stableId = "new_event_\(event.id)"
-                result.append(AppNotification(
-                    id: stableId,
-                    type: .newEvent(event: event),
-                    title: "Nuovo evento disponibile",
-                    message: "\"\(event.title)\" – \(event.formattedDate)",
-                    isRead: readIds.contains(stableId),
-                    timestamp: createdDate
-                ))
             }
         }
 
