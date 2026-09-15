@@ -86,7 +86,7 @@ struct KartodromoFormView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Annulla") { dismiss() }
+                    Button(errorMessage == nil ? "Annulla" : "Chiudi") { dismiss() }
                         .foregroundColor(.kartForeground)
                         .tint(.kartForeground)
                 }
@@ -132,7 +132,13 @@ struct KartodromoFormView: View {
                 token: authState.currentToken
             ) { success in
                 isSaving = false
-                if success { dismiss() } else { errorMessage = "Errore durante il salvataggio." }
+                if success {
+                    dismiss()
+                } else {
+                    errorMessage = viewModel.errorMessage ?? "Errore durante il salvataggio."
+                    // L'errore riguarda il form: la lista deve restare disponibile alla chiusura.
+                    viewModel.errorMessage = nil
+                }
             }
         } else {
             viewModel.create(

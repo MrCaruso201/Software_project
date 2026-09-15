@@ -15,7 +15,7 @@ from auth.roles import Role, has_permission
 from auth.token import verify_websocket_token
 from config import MAX_CONCURRENT_SESSIONS, is_url_allowed
 from scraper.session import sessions
-from ws.manager import client_url, subscribe_client, unsubscribe_client
+from ws.manager import client_url, subscribe_client, unsubscribe_client, updating_urls
 
 router = APIRouter()
 
@@ -88,6 +88,12 @@ async def websocket_endpoint(websocket: WebSocket):
                         await websocket.send_text(json.dumps({
                             "type":    "error",
                             "message": "Dominio non consentito",
+                        }))
+
+                    elif new_url in updating_urls:
+                        await websocket.send_text(json.dumps({
+                            "type": "error",
+                            "message": "Circuito in modifica, riconnettiti al termine del salvataggio",
                         }))
 
                     elif new_url not in sessions and len(sessions) >= MAX_CONCURRENT_SESSIONS:

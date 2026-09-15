@@ -74,6 +74,9 @@ class KartTimingManager: ObservableObject {
                 DispatchQueue.main.async {
                     guard self.webSocketTask === socket else { return }
                     self.isConnected = false
+                    self.timing = nil
+                    self.isScrapingActive = false
+                    self.currentURL = ""
                     if code == 4401, let storedServer {
                         // Token scaduto: prova il refresh e riconnetti con il nuovo token
                         Task {

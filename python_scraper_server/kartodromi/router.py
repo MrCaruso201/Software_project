@@ -14,11 +14,13 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from auth.dependencies import require_role, get_current_user
 from auth.roles import Role
 from db.database import get_db
-from db.models import Kartodromo, KartodromoResult
+from db.models import Event, Kartodromo, KartodromoResult
+from ws.manager import disconnect_clients_for_url, updating_urls
 from kartodromi.schemas import KartodromoCreate, KartodromoUpdate, KartodromoResponse, KartodromoResultRequest, KartodromoResultResponse
 
 router = APIRouter(prefix="/kartodromi", tags=["kartodromi"])
@@ -85,18 +87,35 @@ def create_kartodromo(
 
 
 @router.patch("/{kartodromo_id}", response_model=KartodromoResponse)
-def update_kartodromo(
+async def update_kartodromo(
     kartodromo_id: int,
     kartodromo_update: KartodromoUpdate,
     db: Session = Depends(get_db),
     _user: dict = Depends(require_role(Role.ADMIN)),
 ):
     """Aggiorna un kartodromo esistente. Solo admin."""
+    # Acquisisce il lock di scrittura SQLite prima del controllo live, così un
+    # avvio evento concorrente non può inserirsi tra controllo e salvataggio.
+    await run_in_threadpool(
+        lambda: db.query(Kartodromo).filter(Kartodromo.id == kartodromo_id).update(
+            {Kartodromo.id: Kartodromo.id}, synchronize_session=False
+        )
+    )
     db_k = db.query(Kartodromo).filter(Kartodromo.id == kartodromo_id).first()
     if not db_k:
         raise HTTPException(status_code=404, detail="Kartodromo non trovato")
 
     update_data = kartodromo_update.model_dump(exclude_unset=True)
+
+    live_event = db.query(Event).filter(
+        Event.status == "started",
+        Event.location.in_([db_k.nome, f"{db_k.nome} - {db_k.luogo}"]),
+    ).first()
+    if live_event:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Impossibile modificare il circuito: è presente un evento live attivo. Termina l'evento prima di salvare.",
+        )
 
     # Controlla unicità URL se viene cambiato
     if "url" in update_data:
@@ -111,11 +130,19 @@ def update_kartodromo(
                 detail="Esiste già un kartodromo con questo URL",
             )
 
-    for key, value in update_data.items():
-        setattr(db_k, key, value)
-
-    db.commit()
-    db.refresh(db_k)
+    old_url = db_k.url
+    updating_urls.add(old_url)
+    try:
+        await disconnect_clients_for_url(old_url)
+        for key, value in update_data.items():
+            setattr(db_k, key, value)
+        db.commit()
+        db.refresh(db_k)
+    except TimeoutError:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Disconnessione dei client non completata. Riprova a salvare.")
+    finally:
+        updating_urls.discard(old_url)
     return db_k
 
 

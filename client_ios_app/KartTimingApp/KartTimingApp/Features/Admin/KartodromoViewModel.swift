@@ -113,7 +113,12 @@ class KartodromoViewModel: ObservableObject {
     // MARK: - Update (PATCH /kartodromi/{id})
 
     func update(serverURL: URL?, kartodromoId: Int, data: [String: Any], token: String?, completion: @escaping (Bool) -> Void) {
-        guard let serverURL = serverURL else { completion(false); return }
+        errorMessage = nil
+        guard let serverURL = serverURL else {
+            errorMessage = "Nessun server disponibile"
+            completion(false)
+            return
+        }
         let url = serverURL.appendingPathComponent("kartodromi/\(kartodromoId)")
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
@@ -124,12 +129,16 @@ class KartodromoViewModel: ObservableObject {
         guard let body = try? JSONSerialization.data(withJSONObject: data) else { completion(false); return }
         request.httpBody = body
 
-        NetworkService.shared.dataTask(with: request) { _, response, _ in
+        NetworkService.shared.dataTask(with: request) { responseData, response, error in
             DispatchQueue.main.async {
                 if let http = response as? HTTPURLResponse, http.statusCode == 200 {
                     self.fetchAll(serverURL: serverURL, token: token)
                     completion(true)
                 } else {
+                    let payload = responseData.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+                    self.errorMessage = payload?["detail"] as? String
+                        ?? error?.localizedDescription
+                        ?? "Errore durante il salvataggio."
                     completion(false)
                 }
             }

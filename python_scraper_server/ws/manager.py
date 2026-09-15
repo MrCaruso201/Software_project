@@ -22,6 +22,25 @@ client_url: Dict[WebSocket, str] = {}
 # Mappa: WebSocket attivo -> ID Evento che sta osservando
 client_event: Dict[WebSocket, int] = {}
 
+# URL temporaneamente non sottoscrivibili durante una modifica del circuito.
+updating_urls: set[str] = set()
+
+
+async def disconnect_clients_for_url(url: str) -> None:
+    """Scollega e chiude tutti i socket del circuito prima del salvataggio."""
+    clients = [ws for ws, watched_url in list(client_url.items()) if watched_url == url]
+    for ws in clients:
+        unsubscribe_client(ws)
+
+    async def close(ws):
+        try:
+            await asyncio.wait_for(ws.close(code=1000, reason="Circuito in modifica"), timeout=5)
+        except (RuntimeError, OSError):
+            # Socket già chiuso dal client.
+            pass
+
+    await asyncio.gather(*(close(ws) for ws in clients))
+
 
 # ---------------------------------------------------------------------------
 # Broadcast
