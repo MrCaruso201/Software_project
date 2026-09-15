@@ -61,6 +61,10 @@ nonisolated struct RacePenalty: Identifiable, Codable, Sendable, Equatable {
         case createdAt = "created_at"
     }
 
+    var systemIcon: String {
+        PenaltyType.systemIcon(code: penaltyType)
+    }
+
     var displayLabel: String {
         switch penaltyType {
         case "drive_through": return "Drive-Through"
@@ -213,11 +217,33 @@ nonisolated struct PenaltyType: Identifiable, Codable, Equatable, Sendable {
     }
 
     var systemIcon: String {
+        Self.systemIcon(code: code, action: action)
+    }
+
+    /// Condivide i simboli tra i pulsanti di assegnazione e la cronologia.
+    static func systemIcon(code: String, action: String? = nil) -> String {
+        let resolvedAction: String
+        if let action {
+            resolvedAction = action
+        } else {
+            switch code {
+            case "drive_through", "black_flag": resolvedAction = "drive_through"
+            case "stop_go": resolvedAction = "stop_go"
+            case "time_added", "false_start", "aggressive_driving", "stint_time",
+                 "pit_stop_time", "weight", "directive", "track_limits":
+                resolvedAction = "time_added"
+            case "drop_position", "warning_track_limits", "warning_aggressive_driving", "blue_flag":
+                resolvedAction = "warning"
+            case "custom": resolvedAction = "custom"
+            default: resolvedAction = "generic"
+            }
+        }
         switch code {
         case "black_flag": return "xmark.circle.fill"
+        case "blue_flag": return "flag.fill"
         default: break
         }
-        switch action {
+        switch resolvedAction {
         case "drive_through": return "arrow.right.circle.fill"
         case "stop_go":       return "stop.circle.fill"
         case "time_added":    return "plus.circle.fill"

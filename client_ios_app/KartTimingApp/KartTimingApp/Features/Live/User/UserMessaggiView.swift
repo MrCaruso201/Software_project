@@ -110,20 +110,23 @@ struct UserMessageRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            let iconName: String = {
-                if message.messageType == "checkered_flag" { return "flag.checkered.2.crossed" }
-                return message.isBroadcast ? "antenna.radiowaves.left.and.right" : "flag.fill"
-            }()
-
-            Image(systemName: iconName)
-                .font(.system(size: 16))
-                .foregroundColor(accentColor)
-                .frame(width: 24)
+            if let kart = message.targetKart {
+                Text("#\(kart)")
+                    .font(.system(size: 13, weight: .black, design: .monospaced))
+                    .foregroundColor(.kartAccent)
+                    .frame(width: 36)
+            } else {
+                Image(systemName: message.messageType == "checkered_flag"
+                      ? "flag.checkered.2.crossed" : "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 16))
+                    .foregroundColor(accentColor)
+                    .frame(width: 24)
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    if let kart = message.targetKart {
-                        Text("Kart #\(kart)")
+                    if message.targetKart != nil {
+                        Text("MESSAGGIO DIRETTO")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(.kartAccent)
                             .padding(.horizontal, 6).padding(.vertical, 2)
@@ -172,8 +175,8 @@ struct UserPenaltyLogRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Image(systemName: penalty.isWarning ? "exclamationmark.bubble.fill" : "exclamationmark.triangle.fill")
-                        .foregroundColor(penalty.isWarning ? .kartDim : .kartWarningText)
+                    Image(systemName: penalty.systemIcon)
+                        .foregroundColor(penalty.penaltyType == "blue_flag" ? .blue : (penalty.isWarning ? .kartDim : .kartWarningText))
                         .font(.system(size: 11))
                     Text(penalty.displayLabel)
                         .font(.system(size: 13, weight: .semibold))
