@@ -177,10 +177,8 @@ class UserHomeViewModel: ObservableObject {
 
     /// Costruisce l'array di notifiche dai dati già scaricati.
     func buildNotifications() {
-        let readIds = Set(UserDefaults.standard.stringArray(forKey: readIdsKey) ?? [])
         let clearedIds = Set(UserDefaults.standard.stringArray(forKey: clearedIdsKey) ?? [])
         let now = Date()
-        let calendar = Calendar.current
         var result: [AppNotification] = []
 
         // 0. Server Notifications
@@ -200,35 +198,6 @@ class UserHomeViewModel: ObservableObject {
                 timestamp: date
             ))
         }
-        // Local status notifications (pending_payment, waitlist) have been removed from the Bell menu
-        // so that the Bell menu acts purely as an inbox for admin notifications.
-        
-        // 1. Promemoria eventi imminenti (confermati, entro 7 giorni)
-        let confirmedEventIds = Set(registrations.filter { $0.status == "confirmed" }.map { $0.eventId })
-        for eventId in confirmedEventIds {
-            if let event = events.first(where: { $0.id == eventId }),
-               let date = parseDate(from: event.eventDate) {
-                let daysLeft = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? Int.max
-                if daysLeft >= 0 && daysLeft <= 7 {
-                    let stableId = "upcoming_\(eventId)"
-                    let dayMsg: String
-                    if daysLeft == 0 {
-                        dayMsg = "L'evento è oggi!"
-                    } else {
-                        dayMsg = "L'evento è tra \(daysLeft) giorn\(daysLeft == 1 ? "o" : "i")"
-                    }
-                    result.append(AppNotification(
-                        id: stableId,
-                        type: .upcomingEvent(event: event, daysLeft: daysLeft),
-                        title: "Evento imminente",
-                        message: "\(event.title) – \(dayMsg)",
-                        isRead: readIds.contains(stableId),
-                        timestamp: now
-                    ))
-                }
-            }
-        }
-
         result = result.filter { !clearedIds.contains($0.id) }
         result.sort(by: { $0.timestamp > $1.timestamp })
         self.notifications = result

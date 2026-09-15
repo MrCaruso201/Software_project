@@ -24,6 +24,7 @@ from db.database import get_db
 from db.models import Notification, Event
 from auth.dependencies import get_current_user
 from notifications.schemas import NotificationResponse
+from notifications.reminders import create_due_reminders
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -51,6 +52,8 @@ def get_my_notifications(
     Elimina automaticamente le notifiche per eventi che sono già passati (dal giorno dopo l'evento).
     """
     user_id = int(current_user["sub"])
+    create_due_reminders(db, user_id=user_id)
+    db.commit()
     notifications = db.query(Notification).filter(Notification.user_id == user_id).all()
     
     valid_notifications = []

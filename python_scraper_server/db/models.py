@@ -167,6 +167,14 @@ class SignedRelease(Base):
     )
 
 
+class EventReminderDelivery(Base):
+    __tablename__ = "event_reminder_deliveries"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), primary_key=True)
+    sent_at = Column(DateTime, nullable=False)
+
+
 class Notification(Base):
     """
     Notifica generata dal server per azioni admin (es. spostamento in waitlist, conferma iscrizione).

@@ -78,14 +78,14 @@ struct EventTeamEditSheetView: View {
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
-                                        .background(Color.kartAccent)
+                                        .background(Color.kartGreen)
                                         .cornerRadius(10)
                                 } else {
                                     Text("Salva Modifiche")
                                         .font(.system(size: 16, weight: .bold))
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
-                                        .background(Color.kartAccent)
+                                        .background(Color.kartGreen)
                                         .foregroundColor(.white)
                                         .cornerRadius(10)
                                 }

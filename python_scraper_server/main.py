@@ -69,10 +69,15 @@ async def lifespan(app: FastAPI):
     init_db()                   # crea le tabelle DB se non esistono
     clear_saved_timing_data()   # pulizia di eventuali residui da uno stop non pulito
     await start_bonjour()
+    from notifications.reminders import monitor_event_reminders
+    reminders = asyncio.create_task(monitor_event_reminders())
     monitor = asyncio.create_task(monitor_stints())
     try:
         yield
     finally:
+        reminders.cancel()
+        with suppress(asyncio.CancelledError):
+            await reminders
         monitor.cancel()
         with suppress(asyncio.CancelledError):
             await monitor

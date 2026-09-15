@@ -55,6 +55,7 @@ Endpoints:
 
 import uuid
 from typing import List, Optional
+from notifications.reminders import create_due_reminders
 from fastapi import APIRouter, Body, Depends, HTTPException, status, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -346,6 +347,7 @@ def register_for_event(
             )
             db.add(member_reg)
         
+        create_due_reminders(db, event_id=event_id)
         db.commit()
         
         # Invia notifiche ai membri (dopo aver committato il team)
@@ -383,6 +385,7 @@ def register_for_event(
             
         reg = EventRegistration(user_id=user_id, event_id=event_id, status=initial_status)
         db.add(reg)
+        create_due_reminders(db, event_id=event_id)
         db.commit()
         db.refresh(reg)
         return reg
@@ -643,6 +646,7 @@ def update_team_registration(
         member_reg.team_name = team_data.team_name.strip()
         member_reg.accepts_extra_pilots = team_data.accepts_extra_pilots
 
+    create_due_reminders(db, event_id=event_id)
     db.commit()
     
     new_emails_set = set()
@@ -821,6 +825,7 @@ def confirm_registration(event_id: int, registration_id: int, user_payload: dict
         if reg.user_id:
             notify_user(db, reg.user_id, event_id, "registration_confirmed", "Iscrizione confermata", "L'organizzatore ha confermato la tua iscrizione.")
     
+    create_due_reminders(db, event_id=event_id)
     db.commit()
     db.refresh(reg)
     return reg
@@ -943,6 +948,7 @@ def admin_confirm_team_registration(event_id: int, team_id: str, user_payload: d
     if not updated:
         raise HTTPException(status_code=404, detail="Team registration not found")
     
+    create_due_reminders(db, event_id=event_id)
     db.commit()
     return {"detail": "Team confirmed"}
 
@@ -1004,6 +1010,7 @@ def accept_waitlist_registration(event_id: int, registration_id: int, user_paylo
         if recipient.user_id:
             notify_user(db, recipient.user_id, event_id, "registration_accepted", "Accettato dall'organizzatore", "L'organizzatore ti ha accettato dalla lista d'attesa!")
     
+    create_due_reminders(db, event_id=event_id)
     db.commit()
     db.refresh(reg)
     return reg
@@ -1031,6 +1038,7 @@ def admin_accept_waitlist_team_registration(event_id: int, team_id: str, user_pa
     if not updated:
         raise HTTPException(status_code=404, detail="Team registration not found or not in waitlist")
     
+    create_due_reminders(db, event_id=event_id)
     db.commit()
     return {"detail": "Team moved to pending_payment"}
 
@@ -1132,6 +1140,7 @@ def admin_register_individual(
         member_email=final_email
     )
     db.add(reg)
+    create_due_reminders(db, event_id=event_id)
     db.commit()
     if reg.user_id:
         notify_user(db, reg.user_id, event_id, "admin_registered", "Iscritto dall'organizzatore", "L'organizzatore ti ha aggiunto a questo evento.")
@@ -1202,6 +1211,7 @@ def admin_register_team(
         )
         db.add(member_reg)
         
+    create_due_reminders(db, event_id=event_id)
     db.commit()
     for member in db.query(EventRegistration).filter_by(event_id=event_id, team_id=new_team_id).all():
         if member.user_id:
