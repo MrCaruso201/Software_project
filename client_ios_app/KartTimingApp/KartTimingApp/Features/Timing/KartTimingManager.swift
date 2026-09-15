@@ -8,6 +8,7 @@ class KartTimingManager: ObservableObject {
     @Published var currentURL: String = ""
     @Published var isScrapingActive: Bool = false
     @Published var errorMessage: String? = nil
+    @Published var sourceError: String? = nil
     @Published var showError: Bool = false
     @Published var lastEventUpdate: Date? = nil
     let flagUpdates = PassthroughSubject<FlagUpdate, Never>()
@@ -28,11 +29,13 @@ class KartTimingManager: ObservableObject {
     private var webSocketSession: URLSession?
     private var webSocketTask: URLSessionWebSocketTask?
     private var currentServer: DiscoveredServer?
+    private var heartbeatTimeout: DispatchWorkItem?
+    private var heartbeatScheduled = false
     private var selectedURL: String?
     private var subscribedEventId: Int?
 
-    func connect(to server: DiscoveredServer) {
-        disconnect()
+    func connect(to server: DiscoveredServer, preservingTiming: Bool = false) {
+        disconnect(preservingTiming: preservingTiming)
         let server = DiscoveredServer(
             name: server.name, host: server.host, port: server.port,
             useTLS: server.useTLS, token: AuthState.shared.currentToken ?? server.token
@@ -44,12 +47,13 @@ class KartTimingManager: ObservableObject {
         webSocketTask = session.webSocketTask(with: url)
         webSocketTask?.resume()
         isConnecting = true
+        sourceError = nil
         errorMessage = nil
         showError = false
         if let socket = webSocketTask {
             DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
                 guard let self, self.webSocketTask === socket, self.isConnecting else { return }
-                self.disconnect()
+                self.disconnect(preservingTiming: true)
             }
         }
         listen()
@@ -57,14 +61,17 @@ class KartTimingManager: ObservableObject {
         sendCommand("get_status")
     }
 
-    func disconnect() {
+    func disconnect(preservingTiming: Bool = false) {
+        heartbeatTimeout?.cancel()
+        heartbeatTimeout = nil
+        heartbeatScheduled = false
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
         webSocketSession?.invalidateAndCancel()
         webSocketSession = nil
         isConnected = false
         isConnecting = false
-        timing = nil
+        if !preservingTiming { timing = nil }
         isScrapingActive = false
         currentURL = ""
         selectedURL = nil
@@ -81,6 +88,34 @@ class KartTimingManager: ObservableObject {
         if let eventId { subscribeToEvent(eventId) }
     }
 
+    // Verifica anche le interruzioni di rete che non chiudono subito il socket.
+    private func startHeartbeat(socket: URLSessionWebSocketTask) {
+        guard !heartbeatScheduled else { return }
+        heartbeatScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+            guard let self, self.webSocketTask === socket, self.isConnected else { return }
+            let timeout = DispatchWorkItem { [weak self] in
+                guard let self, self.webSocketTask === socket else { return }
+                self.disconnect(preservingTiming: true)
+            }
+            self.heartbeatTimeout = timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: timeout)
+            socket.sendPing { [weak self] error in
+                DispatchQueue.main.async {
+                    guard let self, self.webSocketTask === socket else { return }
+                    self.heartbeatTimeout?.cancel()
+                    self.heartbeatTimeout = nil
+                    self.heartbeatScheduled = false
+                    if error != nil {
+                        self.disconnect(preservingTiming: true)
+                    } else {
+                        self.startHeartbeat(socket: socket)
+                    }
+                }
+            }
+        }
+    }
+
     private func listen() {
         guard let socket = webSocketTask else { return }
         socket.receive { [weak self] result in
@@ -94,9 +129,10 @@ class KartTimingManager: ObservableObject {
                 let storedServer = self.currentServer
                 DispatchQueue.main.async {
                     guard self.webSocketTask === socket else { return }
+                    self.heartbeatTimeout?.cancel()
+                    self.heartbeatScheduled = false
                     self.isConnected = false
                     self.isConnecting = false
-                    self.timing = nil
                     self.isScrapingActive = false
                     self.currentURL = ""
                     if code == 4401, let storedServer {
@@ -131,6 +167,7 @@ class KartTimingManager: ObservableObject {
             guard self.webSocketTask === socket else { return }
             self.isConnecting = false
             self.isConnected = true
+            self.startHeartbeat(socket: socket)
             switch type {
             case "timing_update":
                 let headers = json["headers"] as? [String] ?? []
@@ -150,7 +187,14 @@ class KartTimingManager: ObservableObject {
             case "error":
                 if let msg = json["message"] as? String {
                     self.errorMessage = msg
-                    self.showError = true
+                    if msg.localizedCaseInsensitiveContains("dominio non consentito") {
+                        self.sourceError = msg
+                        self.timing = nil
+                        self.isScrapingActive = false
+                        self.showError = false
+                    } else {
+                        self.showError = true
+                    }
                 }
 
             case "event_update":
@@ -176,7 +220,12 @@ class KartTimingManager: ObservableObject {
     }
 
     func sendCommand(_ command: String, extra: [String: Any] = [:]) {
-        if command == "set_url" { selectedURL = extra["url"] as? String }
+        if command == "set_url" {
+            selectedURL = extra["url"] as? String
+            sourceError = nil
+            timing = nil
+            isScrapingActive = false
+        }
         if command == "subscribe_event" { subscribedEventId = extra["event_id"] as? Int }
         var payload: [String: Any] = ["command": command]
         payload.merge(extra) { _, new in new }

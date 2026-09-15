@@ -15,6 +15,8 @@ struct TimingView: View {
     @State private var trackSearch = ""
     @State private var kartodromi: [Kartodromo] = []
     @State private var isLoadingTracks = false
+    @State private var isReconnecting = false
+    @State private var reconnectError: String?
     @State private var trackLoadError: String? = nil
     @State private var navigateToPilot = false
 
@@ -25,10 +27,29 @@ struct TimingView: View {
             VStack(spacing: 0) {
                 // Status bar
                 statusBar
+                if let reconnectError {
+                    Text(reconnectError)
+                        .font(.footnote)
+                        .foregroundColor(.kartDim)
+                        .padding(.horizontal)
+                }
 
                 if selectedKartodromo != nil {
                     // Classifica
-                    if let timing = manager.timing, !timing.rows.isEmpty {
+                    if manager.sourceError != nil {
+                        ContentUnavailableView {
+                            Label("Errore di connessione", systemImage: "exclamationmark.shield")
+                        } description: {
+                            Text("Dominio non consentito")
+                        } actions: {
+                            Button(action: reconnectTiming) {
+                                Label("Riconnetti", systemImage: "arrow.clockwise")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.kartAccent)
+                            .disabled(isReconnecting || manager.isConnecting)
+                        }
+                    } else if let timing = manager.timing, !timing.rows.isEmpty {
                         timingTable(timing: timing)
                     } else {
                         emptyState
@@ -135,6 +156,34 @@ struct TimingView: View {
         }
         if !manager.isConnected && !manager.isConnecting { manager.connect(to: server) }
         manager.sendCommand("set_url", extra: ["url": track.url])
+    }
+
+    private func reconnectTiming() {
+        guard !isReconnecting, !manager.isConnecting,
+              let trackId = selectedKartodromo?.id,
+              let token = authState.currentToken else { return }
+        isReconnecting = true
+        reconnectError = nil
+        Task { @MainActor in
+            defer { isReconnecting = false }
+            do {
+                let tracks = try await KartodromoService.fetchKartodromi(
+                    baseURL: AppEnvironment.shared.baseURL, accessToken: token
+                )
+                guard selectedKartodromo?.id == trackId,
+                      isTabActive, scenePhase == .active, isVisible else { return }
+                kartodromi = tracks
+                guard let track = tracks.first(where: { $0.id == trackId }) else {
+                    reconnectError = "Il circuito non è più disponibile. Seleziona un'altra pista."
+                    return
+                }
+                selectedKartodromo = track
+                manager.connect(to: server)
+                manager.sendCommand("set_url", extra: ["url": track.url])
+            } catch {
+                reconnectError = "Impossibile aggiornare il circuito. Riprova a riconnetterti."
+            }
+        }
     }
 
     // ── Track picker sheet ────────────────────────────────────────────────
@@ -269,20 +318,21 @@ struct TimingView: View {
                 Circle()
                     .fill(manager.isConnected ? Color.kartGreen : Color.kartRed)
                     .frame(width: 7, height: 7)
-                Text(manager.isConnecting ? "Connessione…" : manager.isConnected ? "Connesso" : "Disconnesso")
+                Text(manager.isConnecting || isReconnecting ? "Connessione…" : manager.isConnected ? "Connesso" : "Disconnesso")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundColor(manager.isConnected ? .kartGreen : .kartRed)
+                    .fixedSize(horizontal: true, vertical: false)
             }
 
             Spacer()
 
             if !manager.isConnected, selectedKartodromo != nil {
-                Button(action: updateConnection) {
+                Button(action: reconnectTiming) {
                     Label("Riconnetti", systemImage: "arrow.clockwise")
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .tint(.kartAccent)
-                .disabled(manager.isConnecting)
+                .disabled(manager.isConnecting || isReconnecting)
             }
 
             // Scraping live

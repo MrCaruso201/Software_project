@@ -14,6 +14,7 @@ struct LiveRootView: View {
 
     @StateObject private var viewModel = LiveViewModel()
     @StateObject private var timingManager = KartTimingManager()
+    @State private var connectedTrackId: Int?
     @State private var trackLoadError: String? = nil
     @State private var isLoadingConnection = false
     @State private var connectionTask: Task<Void, Never>?
@@ -26,10 +27,13 @@ struct LiveRootView: View {
     var body: some View {
         Group {
             if isDirector {
-                DirectorLiveView(event: event, viewModel: viewModel)
+                DirectorLiveView(event: event, viewModel: viewModel,
+                    isReconnecting: isLoadingConnection, reconnect: connectTimingManager)
                     .environmentObject(timingManager)
             } else {
-                UserLiveView(event: event, viewModel: viewModel, isUserRegistered: isUserRegistered)
+                UserLiveView(event: event, viewModel: viewModel,
+                    isReconnecting: isLoadingConnection, reconnect: connectTimingManager,
+                    isUserRegistered: isUserRegistered)
                     .environmentObject(timingManager)
             }
         }
@@ -92,8 +96,10 @@ struct LiveRootView: View {
                 )
                 try Task.checkCancellation()
                 if let matched = kartodromi.first(where: {
-                    $0.nome == event.location || "\($0.nome) - \($0.luogo)" == event.location
+                    if let connectedTrackId { return $0.id == connectedTrackId }
+                    return $0.nome == event.location || "\($0.nome) - \($0.luogo)" == event.location
                 }) {
+                    connectedTrackId = matched.id
                     timingManager.connect(to: server)
                     timingManager.sendCommand("set_url", extra: ["url": matched.url])
                     timingManager.subscribeToEvent(event.id)

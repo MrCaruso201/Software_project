@@ -12,6 +12,8 @@ struct ClassificaLiveView: View {
 
     /// Binding settato a `true` dal parent (DirectorLiveView) per triggerare l'export.
     @Binding var exportRequested: Bool
+    var isReconnecting: Bool
+    var reconnect: () -> Void
 
     @State private var expandedDriverId: String? = nil
 
@@ -196,6 +198,19 @@ struct ClassificaLiveView: View {
                             .font(.system(size: 14))
                         Spacer()
                     }
+                } else if manager.sourceError != nil {
+                    ContentUnavailableView {
+                            Label("Errore di connessione", systemImage: "exclamationmark.shield")
+                        } description: {
+                            Text("Dominio non consentito")
+                        } actions: {
+                            Button(action: reconnect) {
+                                Label("Riconnetti", systemImage: "arrow.clockwise")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.kartAccent)
+                            .disabled(isReconnecting || manager.isConnecting)
+                        }
                 } else if let timing = manager.timing, !timing.rows.isEmpty {
                     timingTable(timing: timing)
                 } else {
@@ -517,6 +532,7 @@ struct ClassificaLiveView: View {
                 Text(manager.isConnected ? "Connesso WS" : "Disconnesso WS")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundColor(manager.isConnected ? .kartGreen : .kartRed)
+                    .fixedSize(horizontal: true, vertical: false)
             }
 
             Spacer()

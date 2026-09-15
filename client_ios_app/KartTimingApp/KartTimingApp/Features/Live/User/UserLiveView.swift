@@ -4,6 +4,8 @@ import SwiftUI
 struct UserLiveView: View {
     let event: RaceEvent
     @ObservedObject var viewModel: LiveViewModel
+    var isReconnecting: Bool
+    var reconnect: () -> Void
     /// Se false (utente non iscritto all'evento), mostra solo la Classifica
     /// e nasconde sia il tab "Team View" sia il pulsante Pilot View.
     var isUserRegistered: Bool = true
@@ -18,7 +20,7 @@ struct UserLiveView: View {
         NavigationStack {
             TabView {
                 // ── Tab 1: Classifica ─────────────────────────────────
-                ClassificaLiveView(isDirector: false, viewModel: viewModel, exportRequested: .constant(false))
+                ClassificaLiveView(isDirector: false, viewModel: viewModel, exportRequested: .constant(false), isReconnecting: isReconnecting, reconnect: reconnect)
                     .tabItem { Label("Classifica", systemImage: "list.number") }
 
                 // ── Tab 2: Team View (solo utenti registrati) ──────────

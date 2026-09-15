@@ -4,6 +4,8 @@ import SwiftUI
 struct DirectorLiveView: View {
     let event: RaceEvent
     @ObservedObject var viewModel: LiveViewModel
+    var isReconnecting: Bool
+    var reconnect: () -> Void
 
     @EnvironmentObject var authState: AuthState
     @Environment(\.dismiss) private var dismiss
@@ -21,7 +23,7 @@ struct DirectorLiveView: View {
         NavigationStack {
             TabView(selection: $selectedTab) {
                 // ── Tab 1: Classifica ─────────────────────────────────
-                ClassificaLiveView(isDirector: true, viewModel: viewModel, exportRequested: $csvExportRequested)
+                ClassificaLiveView(isDirector: true, viewModel: viewModel, exportRequested: $csvExportRequested, isReconnecting: isReconnecting, reconnect: reconnect)
                     .tabItem { Label("Classifica", systemImage: "list.number") }
                     .tag(0)
 
