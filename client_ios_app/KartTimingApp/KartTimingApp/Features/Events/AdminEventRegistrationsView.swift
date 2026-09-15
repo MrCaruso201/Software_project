@@ -167,17 +167,23 @@ struct AdminEventRegistrationsView: View {
     // MARK: - Individual View
     
     private var individualContent: some View {
-        Group {
+        ScrollView {
             if registrations.isEmpty {
                 emptyView
             } else {
-                ScrollView {
                     LazyVStack(spacing: 8) {
                         ForEach(registrations) { reg in
                             individualRow(reg)
                         }
                     }
                     .padding(.vertical, 16)
+            }
+        }
+        .scrollBounceBehavior(.always)
+        .refreshable {
+            await withCheckedContinuation { continuation in
+                loadRegistrations(showLoading: false) {
+                    continuation.resume()
                 }
             }
         }
@@ -186,11 +192,10 @@ struct AdminEventRegistrationsView: View {
     // MARK: - Team View
     
     private var teamContent: some View {
-        Group {
+        ScrollView {
             if teams.isEmpty && unassignedRegistrations.isEmpty {
                 emptyView
             } else {
-                ScrollView {
                     LazyVStack(spacing: 20) {
                         if !unassignedRegistrations.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
@@ -239,6 +244,13 @@ struct AdminEventRegistrationsView: View {
                         }
                     }
                     .padding(.bottom, 20)
+            }
+        }
+        .scrollBounceBehavior(.always)
+        .refreshable {
+            await withCheckedContinuation { continuation in
+                loadRegistrations(showLoading: false) {
+                    continuation.resume()
                 }
             }
         }
@@ -725,9 +737,12 @@ struct AdminEventRegistrationsView: View {
     
     // MARK: - Data Loading
     
-    private func loadRegistrations() {
-        guard let token = authState.currentToken else { return }
-        isLoading = true
+    private func loadRegistrations(showLoading: Bool = true, completion: @escaping () -> Void = {}) {
+        guard let token = authState.currentToken else {
+            completion()
+            return
+        }
+        if showLoading { isLoading = true }
         
         if isTeamEvent {
             let group = DispatchGroup()
@@ -746,11 +761,13 @@ struct AdminEventRegistrationsView: View {
             
             group.notify(queue: .main) {
                 self.isLoading = false
+                completion()
             }
         } else {
             viewModel.fetchEventRegistrations(serverURL: server.httpURL, eventId: event.id, token: token) { loadedRegs in
                 self.isLoading = false
                 self.registrations = loadedRegs ?? []
+                completion()
             }
         }
     }

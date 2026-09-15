@@ -14,23 +14,34 @@ struct EventRegistrationSheetView: View {
     @State private var errorMessage: String? = nil
     @State private var teamName: String = ""
     @State private var leaderEmail: String = ""
-    @State private var memberEmails: [String] = [""]
+    @State private var memberEmails: [String]
     
     @State private var wantsToBeGrouped: Bool = true
     @State private var acceptsExtraPilots: Bool = false
 
+    init(server: DiscoveredServer, viewModel: EventsViewModel, event: RaceEvent) {
+        self.server = server
+        self.viewModel = viewModel
+        self.event = event
+        _memberEmails = State(initialValue: Array(repeating: "", count: max(0, (event.minPeoplePerGroup ?? 1) - 1)))
+    }
+
+    private var minAdditionalMembers: Int { max(0, (event.minPeoplePerGroup ?? 1) - 1) }
     private var isTeamEvent: Bool { event.isTeamEvent }
-    private var maxAdditionalMembers: Int { max(0, (event.maxPeoplePerGroup ?? 1) - 1) }
+    private var maxAdditionalMembers: Int { max(0, (event.maxPeoplePerGroup ?? Int.max) - 1) }
     private var isDeadlinePassed: Bool { event.isDeadlinePassed }
     
     private var filledEmailsCount: Int {
-        memberEmails.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count
+        memberEmails.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
     }
     
+    private var isCreatingTeam: Bool { !teamName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
     private var isButtonEnabled: Bool {
         guard isTeamEvent else { return true }
-        if filledEmailsCount == 0 && wantsToBeGrouped { return true }
-        return !teamName.trimmingCharacters(in: .whitespaces).isEmpty
+        guard isCreatingTeam else { return wantsToBeGrouped }
+        return filledEmailsCount >= minAdditionalMembers &&
+            memberEmails.prefix(minAdditionalMembers).allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
 
     var body: some View {
@@ -49,16 +60,18 @@ struct EventRegistrationSheetView: View {
                                 leaderEmail: $leaderEmail,
                                 memberEmails: $memberEmails,
                                 maxAdditionalMembers: maxAdditionalMembers,
+                                minAdditionalMembers: minAdditionalMembers,
+                                showMembers: isCreatingTeam,
                                 isLeaderEditable: false
                             )
                             
-                            if filledEmailsCount == 0 {
+                            if !isCreatingTeam {
                                 Toggle("Voglio essere accorpato ad una squadra", isOn: $wantsToBeGrouped)
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(.kartForeground)
                                     .tint(.kartAccent)
                                     .padding(.top, 10)
-                            } else if filledEmailsCount < maxAdditionalMembers {
+                            } else {
                                 Toggle("Accetto membri extra accorpati dagli admin", isOn: $acceptsExtraPilots)
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(.kartForeground)
@@ -73,6 +86,7 @@ struct EventRegistrationSheetView: View {
                         Spacer(minLength: 30)
                         RegistrationButton(
                             isTeamEvent: isTeamEvent,
+                            isGroupingRequest: isTeamEvent && !isCreatingTeam,
                             isEnabled: isButtonEnabled,
                             isLoading: isRegistering,
                             isDeadlinePassed: isDeadlinePassed,
@@ -123,22 +137,14 @@ struct EventRegistrationSheetView: View {
             text = "Le iscrizioni per questo evento sono chiuse. Proseguendo entrerai in lista d'attesa: riceverai una notifica se verrai accettato dall'organizzatore."
         } else if !isTeamEvent {
             text = "Cliccando su Conferma Iscrizione, ti registrerai ufficialmente all'evento."
+        } else if !isCreatingTeam {
+            text = "Attiva ‘Voglio essere accorpato’ per iscriverti individualmente in lista d’attesa. Gli admin ti assegneranno a una squadra."
+        } else if filledEmailsCount < minAdditionalMembers {
+            text = "Sei il capogruppo. Servono almeno \(minAdditionalMembers + 1) componenti, incluso te, per iscrivere la squadra."
+        } else if acceptsExtraPilots && filledEmailsCount < maxAdditionalMembers {
+            text = "Sei il capogruppo. Gli admin potranno aggiungere membri fino al massimo previsto dall’evento."
         } else {
-            if filledEmailsCount == 0 {
-                if wantsToBeGrouped {
-                    text = "Non avendo inserito compagni, sarai messo in lista d'attesa. Pagherai l'iscrizione il giorno dell'evento."
-                } else {
-                    text = "Creerai una squadra da solo. Pagherai l'intera quota, ma potrai aggiungere membri in futuro."
-                }
-            } else if filledEmailsCount < maxAdditionalMembers {
-                if acceptsExtraPilots {
-                    text = "I membri extra si accorperanno alla tua squadra il giorno dell'evento solo se i pagamenti verranno divisi correttamente in pista."
-                } else {
-                    text = "La tua squadra non accetterà piloti extra dagli admin."
-                }
-            } else {
-                text = "Hai riempito tutti i posti disponibili per questa gara a squadre."
-            }
+            text = "Sei il capogruppo. La squadra sarà iscritta con i componenti indicati."
         }
         return Text(text)
             .font(.footnote)
@@ -154,13 +160,17 @@ struct EventRegistrationSheetView: View {
             errorMessage = "Devi essere loggato per iscriverti."
             return
         }
+        guard isButtonEnabled else {
+            errorMessage = "Compila il nome della squadra e tutti i componenti obbligatori."
+            return
+        }
         isRegistering = true
         errorMessage = nil
 
         if isTeamEvent {
-            let validEmails = memberEmails.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }.filter { !$0.isEmpty }
+            let validEmails = memberEmails.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }.filter { !$0.isEmpty }
             
-            if validEmails.isEmpty && wantsToBeGrouped {
+            if !isCreatingTeam {
                 viewModel.registerToEvent(
                     serverURL: server.httpURL,
                     eventId: event.id,
@@ -170,12 +180,8 @@ struct EventRegistrationSheetView: View {
                     if success { dismiss() } else { errorMessage = msg ?? "Errore sconosciuto." }
                 }
             } else {
-                var finalTeamName = teamName.trimmingCharacters(in: .whitespaces)
-                if finalTeamName.isEmpty && validEmails.isEmpty {
-                    let shortEmail = leaderEmail.components(separatedBy: "@").first ?? "Anon"
-                    finalTeamName = "Team \(shortEmail)"
-                }
-                
+                let finalTeamName = teamName.trimmingCharacters(in: .whitespacesAndNewlines)
+
                 let acceptsExtra = (validEmails.count < maxAdditionalMembers) ? acceptsExtraPilots : false
                 
                 viewModel.registerToEvent(
@@ -420,6 +426,7 @@ struct RegistrationErrorBanner: View {
 
 private struct RegistrationButton: View {
     let isTeamEvent: Bool
+    let isGroupingRequest: Bool
     let isEnabled: Bool
     let isLoading: Bool
     var isDeadlinePassed: Bool = false
@@ -431,13 +438,13 @@ private struct RegistrationButton: View {
                 if isLoading {
                     ProgressView().tint(.kartDim).padding(.trailing, 5)
                 }
-                Image(systemName: isDeadlinePassed
-                    ? "clock.badge.exclamationmark.fill"
-                    : (isTeamEvent ? "person.3.fill" : "checkmark.circle.fill")
+                Image(systemName: isGroupingRequest
+                    ? "person.fill"
+                    : (isDeadlinePassed ? "clock.badge.exclamationmark.fill" : (isTeamEvent ? "person.3.fill" : "checkmark.circle.fill"))
                 )
-                Text(isDeadlinePassed
-                    ? "Lista d'Attesa"
-                    : (isTeamEvent ? "Iscriviti con il Team" : "Conferma Iscrizione")
+                Text(isGroupingRequest
+                    ? "Iscriviti"
+                    : (isDeadlinePassed ? "Lista d'Attesa" : (isTeamEvent ? "Iscriviti con il Team" : "Conferma Iscrizione"))
                 )
                 .font(.system(size: 16, weight: .bold))
             }
@@ -458,13 +465,16 @@ struct TeamFormSection: View {
     @Binding var leaderEmail: String
     @Binding var memberEmails: [String]
     let maxAdditionalMembers: Int
+    var minAdditionalMembers: Int = 0
+    var showMembers: Bool = true
     var isLeaderEditable: Bool = false
 
     private var filledCount: Int {
-        memberEmails.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count
+        memberEmails.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
     }
 
     private func removeMember(at index: Int) {
+        guard index >= minAdditionalMembers else { return }
         var updated = memberEmails
         updated.remove(at: index)
         memberEmails = updated
@@ -477,14 +487,16 @@ struct TeamFormSection: View {
                     .font(.headline)
                     .foregroundColor(.kartForeground)
                 Spacer()
-                Text("Membri: \(filledCount + 1)/\(maxAdditionalMembers + 1)")
+                Text("Membri: \(filledCount + 1)/\(maxAdditionalMembers == Int.max - 1 ? "∞" : String(maxAdditionalMembers + 1))")
                     .font(.system(size: 12, weight: .semibold, design: .monospaced))
                     .foregroundColor(.kartAccent)
             }
 
             teamNameField
-            leaderEmailField
-            memberEmailsSection
+            if showMembers {
+                leaderEmailField
+                memberEmailsSection
+            }
         }
         .padding(14)
         .background(Color.kartForeground.opacity(0.04))
@@ -501,7 +513,7 @@ struct TeamFormSection: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.kartDim)
 
-            let isEmpty = teamName.trimmingCharacters(in: .whitespaces).isEmpty
+            let isEmpty = teamName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             let borderColor: Color = isEmpty ? Color.kartForeground.opacity(0.15) : Color.kartAccent.opacity(0.6)
 
             TextField("Inserisci il nome della squadra", text: $teamName)
@@ -521,7 +533,7 @@ struct TeamFormSection: View {
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.kartForeground)
             
-            let isEmpty = leaderEmail.trimmingCharacters(in: .whitespaces).isEmpty
+            let isEmpty = leaderEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             let borderColor: Color = isEmpty ? Color.kartForeground.opacity(0.15) : Color.kartAccent.opacity(0.6)
             
             TextField("Email, @Username o Nome", text: $leaderEmail)
@@ -544,6 +556,12 @@ struct TeamFormSection: View {
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.kartDim)
 
+            if minAdditionalMembers > 0 {
+                Text("Minimo \(minAdditionalMembers + 1) componenti incluso il caposquadra. I primi \(minAdditionalMembers) campi compagno sono obbligatori.")
+                    .font(.footnote)
+                    .foregroundColor(.kartDim)
+            }
+
             ForEach(Array(memberEmails.enumerated()), id: \.offset) { index, _ in
                 EmailFieldRow(
                     index: index,
@@ -551,7 +569,7 @@ struct TeamFormSection: View {
                         get: { memberEmails[index] },
                         set: { memberEmails[index] = $0 }
                     ),
-                    canRemove: true,
+                    canRemove: index >= minAdditionalMembers,
                     onRemove: {
                         withAnimation(.spring(response: 0.3)) {
                             removeMember(at: index)
@@ -587,7 +605,7 @@ private struct EmailFieldRow: View {
     let onRemove: () -> Void
 
     private var borderColor: Color {
-        let t = email.trimmingCharacters(in: .whitespaces)
+        let t = email.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.isEmpty { return Color.kartForeground.opacity(0.15) }
         return t.contains("@") ? Color.green.opacity(0.5) : Color.orange.opacity(0.5)
     }

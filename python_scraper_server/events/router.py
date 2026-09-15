@@ -85,6 +85,12 @@ def resolve_user_by_identifier(db: Session, identifier: str) -> Optional[User]:
         return db.query(User).filter(func.lower(User.username) == username.lower()).first()
     return db.query(User).filter(func.lower(User.email) == identifier.lower()).first()
 
+def _validate_team_minimum(event, identifiers):
+    minimum = event.min_people_per_group or 1
+    if 1 + sum(bool(identifier.strip()) for identifier in identifiers) < minimum:
+        raise HTTPException(status_code=400, detail=f"Servono almeno {minimum} componenti per squadra, incluso il caposquadra")
+
+
 def _validate_team_members(db, identifiers, leader_identifier):
     seen = set()
     for identifier in [leader_identifier, *identifiers]:
@@ -245,6 +251,7 @@ def register_for_event(
     creating_team = is_team_event and team_data and team_data.team_name.strip()
 
     if creating_team:
+        _validate_team_minimum(event, team_data.member_emails)
         # Gara a squadre: creazione team
         expected_members = event.max_people_per_group - 1 if event.max_people_per_group is not None else None  # escluso il leader
         if expected_members is not None and len(team_data.member_emails) > expected_members:
@@ -543,6 +550,8 @@ def update_team_registration(
     if leader_reg.user_id != user_id and not is_admin:
         raise HTTPException(status_code=403, detail="Solo il capogruppo o un admin può modificare il team")
         
+    _validate_team_minimum(event, team_data.member_emails)
+
     # Rimosso check se confermata: permettiamo modifiche anche da pagata
     expected_members = event.max_people_per_group - 1 if event.max_people_per_group is not None else None
     if expected_members is not None and len(team_data.member_emails) > expected_members:

@@ -21,9 +21,18 @@ struct EventTeamEditSheetView: View {
     @State private var errorMessage: String? = nil
     
     private var maxAdditionalMembers: Int {
-        max(0, (event.maxPeoplePerGroup ?? 1) - 1)
+        max(0, (event.maxPeoplePerGroup ?? Int.max) - 1)
     }
     
+    private var minAdditionalMembers: Int { max(0, (event.minPeoplePerGroup ?? 1) - 1) }
+
+    private var canSave: Bool {
+        !teamName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !leaderEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        (memberEmails.count >= minAdditionalMembers &&
+        memberEmails.prefix(minAdditionalMembers).allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+    }
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -43,10 +52,11 @@ struct EventTeamEditSheetView: View {
                                 leaderEmail: $leaderEmail,
                                 memberEmails: $memberEmails,
                                 maxAdditionalMembers: maxAdditionalMembers,
+                                minAdditionalMembers: minAdditionalMembers,
                                 isLeaderEditable: isAdmin
                             )
                             
-                            let filledCount = memberEmails.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count
+                            let filledCount = memberEmails.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
                             if filledCount < maxAdditionalMembers {
                                 Toggle("Accetto membri extra accorpati dagli admin", isOn: $acceptsExtraPilots)
                                     .font(.system(size: 13, weight: .semibold))
@@ -80,7 +90,7 @@ struct EventTeamEditSheetView: View {
                                         .cornerRadius(10)
                                 }
                             }
-                            .disabled(isSaving || teamName.trimmingCharacters(in: .whitespaces).isEmpty)
+                            .disabled(isSaving || !canSave)
                             
                             if !isAdmin && registration.status != "confirmed" {
                                 Button {
@@ -149,10 +159,9 @@ struct EventTeamEditSheetView: View {
                         self.memberEmails = otherMembers.compactMap { $0.username.map { "@\($0)" } ?? $0.email }
                         self.acceptsExtraPilots = teamResponse.acceptsExtraPilots
                         
-                        // Non forziamo alcun campo vuoto
-                        // if self.memberEmails.isEmpty {
-                        //     self.memberEmails.append("")
-                        // }
+                        if self.memberEmails.count < minAdditionalMembers {
+                            self.memberEmails += Array(repeating: "", count: minAdditionalMembers - self.memberEmails.count)
+                        }
                     } else {
                         self.errorMessage = "Errore di decodifica dei dati del team"
                     }
@@ -164,12 +173,12 @@ struct EventTeamEditSheetView: View {
     }
     
     private func performSave() {
-        guard let teamId = registration.teamId else { return }
+        guard canSave, let teamId = registration.teamId else { return }
         isSaving = true
         errorMessage = nil
         
         let validEmails = memberEmails
-            .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
             .filter { !$0.isEmpty }
         let acceptsExtra = (validEmails.count < maxAdditionalMembers) ? acceptsExtraPilots : false
             
@@ -178,9 +187,9 @@ struct EventTeamEditSheetView: View {
             eventId: event.id,
             teamId: teamId,
             token: authState.currentToken,
-            teamName: teamName.trimmingCharacters(in: .whitespaces),
+            teamName: teamName.trimmingCharacters(in: .whitespacesAndNewlines),
             memberEmails: validEmails,
-            leaderEmail: isAdmin ? leaderEmail.trimmingCharacters(in: .whitespaces) : nil,
+            leaderEmail: isAdmin ? leaderEmail.trimmingCharacters(in: .whitespacesAndNewlines) : nil,
             acceptsExtraPilots: acceptsExtra
         ) { success, errorMsg in
             isSaving = false
