@@ -118,7 +118,7 @@ struct MessageRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(spacing: 10) {
             // Tipo icona
             if let kart = message.targetKart {
                 Text("#\(kart)")
@@ -126,42 +126,42 @@ struct MessageRow: View {
                     .foregroundColor(.kartAccent)
                     .frame(width: 36)
             } else {
-                Image(systemName: message.messageType == "checkered_flag"
-                      ? "flag.checkered.2.crossed" : "antenna.radiowaves.left.and.right")
+                Image(systemName: message.systemIcon)
                     .font(.system(size: 16))
                     .foregroundColor(accentColor)
                     .frame(width: 24)
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    if message.targetKart != nil {
-                        Text("MESSAGGIO DIRETTO")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(.kartAccent)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Color.kartAccent.opacity(0.12))
-                            .cornerRadius(4)
-                    } else {
-                        Text(message.messageType == "checkered_flag" ? "FINE GARA" : "BROADCAST")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(accentColor)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(accentColor.opacity(0.12))
-                            .cornerRadius(4)
-                    }
-                    Spacer()
-                    if let date = message.parsedDate {
-                        Text(date, style: .time)
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.kartDim)
-                    }
+                if message.targetKart != nil {
+                    Label("MESSAGGIO DIRETTO", systemImage: message.systemIcon)
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(.kartAccent)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.kartAccent.opacity(0.12))
+                        .cornerRadius(4)
+                } else if message.messageType == "checkered_flag" {
+                    Text("FINE GARA")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(accentColor)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(accentColor.opacity(0.12))
+                        .cornerRadius(4)
                 }
                 Text(message.text)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.kartForeground)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            Spacer()
+
+            if let date = message.parsedDate {
+                Text(date, style: .time)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.kartDim)
+            }
+
 
             Button(action: onDelete) {
                 Image(systemName: "xmark.circle.fill")
@@ -191,8 +191,7 @@ struct PenaltyLogRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Image(systemName: penalty.systemIcon)
-                        .foregroundColor(penalty.penaltyType == "blue_flag" ? .blue : (penalty.isWarning ? .kartDim : .kartWarningText))
+                    RacePenaltyIcon(penalty: penalty)
                         .font(.system(size: 11))
                     Text(penalty.displayLabel)
                         .font(.system(size: 13, weight: .semibold))

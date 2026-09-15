@@ -62,7 +62,10 @@ nonisolated struct RacePenalty: Identifiable, Codable, Sendable, Equatable {
     }
 
     var systemIcon: String {
-        PenaltyType.systemIcon(code: penaltyType)
+        if penaltyType == "black_flag" { return "nosign" }
+        if penaltyType == "blue_flag" { return "flag.fill" }
+        if (seconds ?? 0) > 0 { return "exclamationmark.triangle.fill" }
+        return PenaltyType.systemIcon(code: penaltyType)
     }
 
     var displayLabel: String {
@@ -117,6 +120,10 @@ nonisolated struct RaceMessage: Identifiable, Codable, Sendable {
     }
 
     var isBroadcast: Bool { targetKart == nil }
+
+    var systemIcon: String {
+        isBroadcast ? "antenna.radiowaves.left.and.right" : "envelope.fill"
+    }
 
     var parsedDate: Date? { LiveDateCache.parse(createdAt) }
 }
@@ -239,14 +246,14 @@ nonisolated struct PenaltyType: Identifiable, Codable, Equatable, Sendable {
             }
         }
         switch code {
-        case "black_flag": return "xmark.circle.fill"
+        case "black_flag": return "nosign"
         case "blue_flag": return "flag.fill"
         default: break
         }
         switch resolvedAction {
         case "drive_through": return "arrow.right.circle.fill"
         case "stop_go":       return "stop.circle.fill"
-        case "time_added":    return "plus.circle.fill"
+        case "time_added":    return "exclamationmark.triangle.fill"
         case "warning":       return "exclamationmark.bubble.fill"
         case "custom":        return "exclamationmark.triangle.fill"
         default:              return "flag.fill"

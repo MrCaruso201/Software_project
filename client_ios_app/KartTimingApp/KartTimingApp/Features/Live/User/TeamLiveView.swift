@@ -8,6 +8,34 @@ struct TeamLiveView: View {
 
     var myKart: MyKartResponse { viewModel.myKart }
 
+    private enum LogItem: Identifiable {
+        case penalty(RacePenalty)
+        case message(RaceMessage)
+
+        var id: String {
+            switch self {
+            case .penalty(let penalty): return "pen_\(penalty.id)"
+            case .message(let message): return "msg_\(message.id)"
+            }
+        }
+
+        var date: Date {
+            switch self {
+            case .penalty(let penalty): return penalty.parsedDate ?? .distantPast
+            case .message(let message): return message.parsedDate ?? .distantPast
+            }
+        }
+    }
+
+    private var combinedLog: [LogItem] {
+        let penalties = myKart.penalties.map { LogItem.penalty($0) }
+        let messages = myKart.messages.map { LogItem.message($0) }
+        return (penalties + messages).sorted {
+            if $0.date != $1.date { return $0.date > $1.date }
+            return $0.id > $1.id
+        }
+    }
+
     @State private var showingBlueFlagCard = false
     @State private var processedBlueFlagIds: Set<Int> = []
 
@@ -39,8 +67,8 @@ struct TeamLiveView: View {
                         }
 
                         if event?.weightLimit != nil { weightCard }
-                        if !myKart.penalties.isEmpty { penaltiesCard }
-                        if myKart.penalties.isEmpty && activeFlag == nil { allClearCard }
+                        if !combinedLog.isEmpty { penaltiesCard }
+                        if combinedLog.isEmpty && activeFlag == nil { allClearCard }
                     }
                     .padding(16)
                     .padding(.bottom, 30)
@@ -498,7 +526,7 @@ struct TeamLiveView: View {
             HStack(spacing: 6) {
                 penaltyWarningIcon
                     .font(.system(size: 11, weight: .bold))
-                Text("PENALITÀ E AVVISI")
+                Text("PENALITÀ, AVVISI E MESSAGGI")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundColor(.kartPenaltyText)
                 Spacer()
@@ -510,39 +538,12 @@ struct TeamLiveView: View {
             .background(Color.yellow.opacity(0.08))
 
             VStack(spacing: 0) {
-                ForEach(myKart.penalties) { penalty in
-                    HStack(spacing: 12) {
-                        Group {
-                            if penalty.isWarning {
-                                Image(systemName: "exclamationmark.bubble.fill")
-                                    .foregroundColor(.kartDim)
-                            } else {
-                                penaltyWarningIcon
-                            }
-                        }
-                        .font(.system(size: 14))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(penalty.displayLabel)
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.kartForeground)
-                            if let note = penalty.note, !note.isEmpty {
-                                Text(note).font(.system(size: 11)).foregroundColor(.kartDim)
-                            }
-                        }
-
-                        Spacer()
-
-                        if let date = penalty.parsedDate {
-                            Text(date, style: .time)
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundColor(.kartDim)
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .overlay(alignment: .bottom) {
-                        Divider().background(Color.kartBorder(opacity: 0.05)).padding(.leading, 40)
+                ForEach(combinedLog) { item in
+                    switch item {
+                    case .penalty(let penalty):
+                        penaltyRow(penalty)
+                    case .message(let message):
+                        userMessageRow(message)
                     }
                 }
             }
@@ -552,71 +553,57 @@ struct TeamLiveView: View {
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartMessageBorder(.orange, opacity: 0.2), lineWidth: 1))
     }
 
-    // MARK: - Messages Card
+    private func penaltyRow(_ penalty: RacePenalty) -> some View {
+        HStack(spacing: 12) {
+            RacePenaltyIcon(penalty: penalty)
+                .font(.system(size: 14))
 
-    private var messagesCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 6) {
-                Image(systemName: "megaphone.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.kartInfo)
-                Text("MESSAGGI DAL DIRETTORE")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(.kartInfo)
-                Spacer()
-            }
-            .padding(14)
-            .background(Color.kartInfo.opacity(0.08))
-
-            VStack(spacing: 0) {
-                ForEach(myKart.messages.reversed()) { msg in
-                    userMessageRow(msg)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(penalty.displayLabel)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.kartForeground)
+                if let note = penalty.note, !note.isEmpty {
+                    Text(note).font(.system(size: 11)).foregroundColor(.kartDim)
                 }
             }
+
+            Spacer()
+
+            if let date = penalty.parsedDate {
+                Text(date, style: .time)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.kartDim)
+            }
         }
-        .background(Color.kartPanel)
-        .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.kartMessageBorder(.kartInfo, opacity: 0.2), lineWidth: 1))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .overlay(alignment: .bottom) {
+            Divider().background(Color.kartBorder(opacity: 0.05)).padding(.leading, 40)
+        }
     }
 
     private func userMessageRow(_ msg: RaceMessage) -> some View {
-        let isCheckered = msg.messageType == "checkered_flag"
         let color = Color.kartRaceMessage(msg.messageType)
 
-        return HStack(alignment: .top, spacing: 12) {
-            if isCheckered {
-                Image(systemName: "flag.checkered.2.crossed")
-                    .font(.system(size: 10))
-                    .foregroundColor(.kartForeground)
-                    .frame(width: 18, height: 18)
-                    .background(Color.kartForeground.opacity(0.08))
-                    .clipShape(Circle())
-            } else {
-                Circle()
-                    .fill(color)
-                    .frame(width: 8, height: 8)
-                    .padding(.top, 4)
-            }
+        return HStack(spacing: 12) {
+            Image(systemName: msg.systemIcon)
+                .font(.system(size: 14))
+                .foregroundColor(color)
+                .frame(width: 18)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(msg.text)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.kartForeground)
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 4) {
-                    if msg.isBroadcast {
-                        Text("Broadcast")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                            .foregroundColor(.kartDim)
-                    }
-                    if let date = msg.parsedDate {
-                        Text(date, style: .time)
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundColor(.kartDim)
-                    }
-                }
             }
             Spacer()
+
+            if let date = msg.parsedDate {
+                Text(date, style: .time)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.kartDim)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
