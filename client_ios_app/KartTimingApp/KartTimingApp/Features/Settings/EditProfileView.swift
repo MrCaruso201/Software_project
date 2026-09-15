@@ -24,6 +24,11 @@ struct EditProfileView: View {
     @State private var isFetching: Bool = true
     @State private var showDeleteConfirmation = false
 
+    private var canDeleteAccount: Bool {
+        guard let user = authState.currentUser else { return false }
+        return user.role != .admin
+    }
+
     private var resolvedAvatarURL: URL? {
         guard let token = authState.currentToken else { return nil }
         return authState.avatarURL(path: profilePictureURL, serverURL: appEnv.server(token: token).httpURL)
@@ -180,27 +185,29 @@ struct EditProfileView: View {
                         .padding(.horizontal, 24)
                         
                         // ── Bottone Elimina Account ──────────────────────────
-                        Button {
-                            showDeleteConfirmation = true
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "trash.fill")
-                                    .font(.system(size: 15, weight: .bold))
-                                Text("ELIMINA ACCOUNT")
-                                    .font(.system(size: 16, weight: .bold))
+                        if canDeleteAccount {
+                            Button {
+                                showDeleteConfirmation = true
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "trash.fill")
+                                        .font(.system(size: 15, weight: .bold))
+                                    Text("ELIMINA ACCOUNT")
+                                        .font(.system(size: 16, weight: .bold))
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 18)
+                                .background(Color.kartRed)
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1)
+                                )
                             }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 18)
-                            .background(Color.kartRed)
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.kartBorder(opacity: 0.08), lineWidth: 1)
-                            )
+                            .disabled(isLoading)
+                            .padding(.horizontal, 24)
                         }
-                        .disabled(isLoading)
-                        .padding(.horizontal, 24)
 
                         Spacer(minLength: 32)
                     }
@@ -279,6 +286,7 @@ struct EditProfileView: View {
     // MARK: - Logic
     
     private func deleteAccount() {
+        guard canDeleteAccount else { return }
         guard let token = authState.currentToken else { return }
         errorMessage = nil
         isLoading = true
