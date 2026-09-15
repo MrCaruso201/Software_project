@@ -3,6 +3,7 @@ import SwiftUI
 struct NotificationsPanelView: View {
     @ObservedObject var viewModel: UserHomeViewModel
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     /// Evento su cui aprire il sheet di pagamento (se tappato da questa view)
     @State private var activePaymentEvent: RaceEvent? = nil
@@ -32,8 +33,14 @@ struct NotificationsPanelView: View {
                                 Button(role: .destructive) {
                                     viewModel.deleteSingleNotification(id: notification.id)
                                 } label: {
-                                    Label("Elimina", systemImage: "trash")
+                                    Label {
+                                        Text("Elimina")
+                                    } icon: {
+                                        Image(uiImage: swipeTrashIcon)
+                                            .renderingMode(.original)
+                                    }
                                 }
+                                .tint(colorScheme == .dark ? .white : .black)
                             }
                         }
                     }
@@ -56,7 +63,7 @@ struct NotificationsPanelView: View {
             .navigationTitle("Notifiche")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         viewModel.deleteAllNotifications()
                     }) {
@@ -64,7 +71,7 @@ struct NotificationsPanelView: View {
                     }
                     .foregroundColor(.kartRed)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Chiudi") { dismiss() }
                         .foregroundColor(.kartForeground)
                 }
@@ -73,6 +80,19 @@ struct NotificationsPanelView: View {
                 PaymentInfoSheetView(event: event)
             }
         }
+    }
+
+    private var swipeTrashIcon: UIImage {
+        let configuration = UIImage.SymbolConfiguration(pointSize: 20, weight: .regular)
+        guard let symbol = UIImage(systemName: "trash", withConfiguration: configuration) else {
+            return UIImage()
+        }
+        let tintedSymbol = symbol.withTintColor(colorScheme == .dark ? .black : .white,
+                                               renderingMode: .alwaysOriginal)
+        // Rasterize the symbol so the native swipe control cannot reapply its white symbol tint.
+        return UIGraphicsImageRenderer(size: symbol.size).image { _ in
+            tintedSymbol.draw(in: CGRect(origin: .zero, size: symbol.size))
+        }.withRenderingMode(.alwaysOriginal)
     }
 
     // MARK: - Empty State
