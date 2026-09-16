@@ -1,0 +1,14 @@
+{
+  "utc": "2026-09-16T19:42:32.280213+00:00",
+  "scope": "Local synthetic, no production server, network, provider or iOS UI; not full T11 acceptance",
+  "concurrent_coroutines": 5,
+  "api_requests": 15,
+  "api_p95_seconds": 0.00954991701291874,
+  "csv_rows": 200,
+  "csv_single_run_seconds": 0.028341124998405576,
+  "synthetic_sources": 3,
+  "synthetic_recipients": 50,
+  "fanout_max_seconds": 5.612500535789877e-05,
+  "stint_delay_after_threshold_seconds_approx": 0.5228380829939852,
+  "P3": "NOT EXECUTED: requires iOS UI/network fault observation"
+}

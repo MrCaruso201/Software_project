@@ -1,0 +1,99 @@
+# DD/RASD test report
+
+Date: 16 September 2026. Inputs: [DD_Race_Manager.md](../DD_Race_Manager.md), Section 5, and [RASD_Race_Manager.md](../RASD_Race_Manager.md), acceptance examples and performance/quality requirements.
+
+**Result: 94 tests executed, 90 passed, 4 failed, 0 errors, 0 skipped.** The existing 69 backend tests all pass; 25 acceptance tests were added, of which 21 pass. The implementation does not yet satisfy all tested acceptance/security requirements. No application code was changed to make tests pass.
+
+Full evidence: [final log](evidence/20260916T194241148741Z.log), [per-case JSON and source hashes](evidence/20260916T194241148741Z.json). The recorded repository revision is accompanied by content hashes because uncommitted documents/tests are part of this run. Fixtures contain synthetic data only.
+
+## Previously executed but not recorded per requirement
+
+The 69 backend tests had already passed in the preceding documentation review. They were mentioned collectively in the architecture/backend documentation, but neither supplied DD nor RASD contains a per-case execution ledger. This is a missing traceability record, not evidence that the tests had never run.
+
+They have now been moved unchanged into this root-level test directory and rerun: [baseline run](evidence/20260916T193702022475Z.json). See the [13-module summary](ALREADY_EXECUTED.md) and [complete case list](TEST_INVENTORY.md). In particular, invalid/mixed CSV imports were already tested in `test_access_integrity.py`, not only in a dedicated result module; A7 therefore already had backend evidence.
+
+## Failures reproduced
+
+| Finding | Test / requirement | Expected | Observed and assessment |
+| --- | --- | --- | --- |
+| F1 — deleted identity retains waiver PDF access | `test_T12_deleted_account_cannot_download_waiver`; R3, Q3/Q4 | HTTP 401 after account deletion | HTTP 200 using its still-valid JWT in the query string. The download route verifies the token but does not resolve the current account. High-priority authorization defect. |
+| F2 — demoted identity retains waiver PDF access | `test_T12_demoted_token_cannot_download_waiver`; R3, Q3/Q4 | HTTP 401/403 after admin is changed to user | HTTP 200: the route trusts the historical role inside the JWT. Same authorization boundary as F1, a distinct regression case. |
+| F3 — private storage is served as a static asset | `test_T12_private_database_is_not_public_static_asset`; Q4, DD T12 | Unauthenticated request denied/not found | HTTP 200 for a synthetic `kart_timing.db` through the actual StaticFiles handler. `main.py` mounts the complete data directory. No operational DB was accessed. High-priority storage isolation defect; external reachability depends on deployment. |
+| F4 — empty signature accepted | `test_T4_empty_signature_is_rejected`; R15/R16 | HTTP 400/422, no signed record | HTTP 200 for an empty signature. The success path can persist an unsigned waiver as signed. Input-validation defect. |
+
+The checks remain ordinary failures so future runs cannot silently certify these behaviors. F1/F2 also correct the earlier general statement that all protected routes enforce the current role: this PDF route is an exception. Its current minimum token role is race director, whereas other waiver administration routes have different guards; policy consistency needs review.
+
+## DD verification groups
+
+“Partial” means that executable evidence covers part of the group, not that the entire group is accepted.
+
+| Group | Executed evidence and result | Remaining work / overall evaluation |
+| --- | --- | --- |
+| T1 — Identity | Registration, duplicate identities, password hashing/login failure, refresh/logout revocation, expired/deleted identity, current-role checks, own-profile role protection pass. | Partial: password-change/refresh-expiration edge cases and production transport not comprehensively tested. Current identity enforcement also fails on the PDF route under T12. |
+| T2 — Events/individual entries | Duplicate request, late/full waitlist routing, confirmed cancellation, date/deadline rules and rollback cases pass. | Partial: simultaneous admission at capacity, complete deletion cascades and every lifecycle transition remain unverified. |
+| T3 — Teams | Size boundaries, duplicate members, edits preserving attributes, atomic invalid operations, foreign-team edit rejection and notifications pass. | Partial: a complete non-leader departure/eligibility workflow and genuinely concurrent team updates remain unverified. |
+| T4 — Waivers | Real PDF preview/generation with a synthetic PNG, persistence, own status, admin retrieval, deletion, unregistered/cross-account rejection and exact 10 MiB boundary pass. Empty-signature check fails. | Not accepted: F4 plus F1/F2 access issues; retention/revision policy and iOS signing interaction not validated. |
+| T5 — Timing | Two-source/event routing isolation, shared sessions, source switch/refcount/idle cleanup, malformed commands, failed-client cleanup, token revalidation, circuit updates and simulator table contract pass. | Partial: real provider normalization/page changes, setup failure recovery, valid-but-disallowed switch retention, redirects and end-to-end freshness still need tests. |
+| T6 — Race control | Red/checkered stop, elapsed-time preservation, green cannot restart stop, explicit start reset, pit transitions, targeted-control rejection and assignment conflict preservation pass. | Partial: full client synchronization and all simultaneous-event/time-boundary combinations not validated. |
+| T7 — Penalties | Value/threshold validation, configured consequence at warning threshold, one automatic penalty per stint, deletion without rearming, new-stint eligibility and stale-reader prevention pass. | Partial: stale-reader test is not simultaneous multi-process stress; additional operational configurations remain to be checked. |
+| T8 — Results | Invalid input preserves classification; mixed input reports issues; valid import preserves another event; real HTTP rejects non-admin imports; lap filtering passes. | Partial: all CSV encodings/team associations and client rendering of missing data not exhaustively covered. |
+| T9 — Notifications/expiration | Recipient read/delete, linked-member notifications, rollback, reminder window/deduplication and exact 48-hour/UTC boundaries pass. | Partial: no real server restart or socket delivery; expiration tests do not certify session/timer reconciliation. |
+| T10 — Recovery/usability | Failure cleanup and committed registration/waiver/result persistence after closing and reopening a file-backed SQLite engine pass. | Partial: this is not a full process restart. Provider outage, iOS foreground/account switching, stale indicator and accessibility are not executed. |
+| T11 — Performance | Reduced local measurements completed; see below. | Not accepted: 50-client REST attempt was interrupted; no representative sustained deployment load or device receipt measurements. |
+| T12 — Access boundaries | Role and team edits, inbox ownership, expired identity and non-admin imports rejected correctly; direct PDF identity and synthetic static-data checks fail. | Not accepted: F1–F3; source redirect policy, production TLS and full capability-link policy still require validation. |
+
+## RASD acceptance examples
+
+| Example | Evidence | Evaluation |
+| --- | --- | --- |
+| A1 | `test_A1_duplicate_registration` | PASS for backend uniqueness on repeated request; not concurrent admission. |
+| A2 | `test_A2_late_registration_enters_waitlist` | PASS for server status; visible iOS label not tested. |
+| A3 | `test_A3_account_cannot_change_roles`, `test_A3_foreign_team_edit_denied` | PASS for both server rejection paths through HTTP. |
+| A4 | `test_A4_source_and_event_isolation` | PASS for routing to asynchronous synthetic sinks; actual devices not involved. |
+| A5 | Existing `test_stop_flags_require_explicit_restart` and `test_pit_entry_checks_and_next_stint_rearms` | PASS for stop/pit behavior specified by the supplied RASD. |
+| A6 | Existing `test_threshold_once_and_admin_deletion`, `test_scan_persists_across_sessions`, and pit/rearm test | PASS for backend assessment independent of clients and duplicate prevention. |
+| A7 | Existing `test_invalid_csv_preserves_previous_results` | PASS; tested before this task and rerun. |
+| A8 | `test_A8_waiver_preview_store_pdf_remove` | PASS for the positive server workflow and record association; does not cancel the negative access/validation failures F1/F2/F4. |
+| A9 | Existing `test_stop_flags_require_explicit_restart` | PASS for both red and checkered stop, green refusal and explicit new start. |
+| A10 | No device/provider-failure experiment | NOT EXECUTED: requires observing the real interface on feed interruption. |
+
+The supplied DD still mentions pause/resume in T6, while the supplied RASD lifecycle and A5 explicitly describe red/checkered stop. The tests follow the RASD and the user's approved red-flag change. A separate legacy test still exercises the stored `paused` state, without claiming that red enters it.
+
+## Performance: measured scope and limitations
+
+The supplied RASD names latency targets but does not quantify its reference concurrency or CSV row limit. The following are explicit experimental choices, not a stakeholder-approved workload.
+
+[Measurement data](evidence/local_benchmark.json): Python in-process ASGI, temporary SQLite, 5 client coroutines making 15 authenticated GET requests, one 200-row CSV, 50 synthetic asynchronous sinks on 3 source labels, and one real stint-monitor task using a temporary database. No TCP/TLS, provider browser or iOS app was involved. Different measurements ran sequentially, not as one sustained combined load.
+
+| Target | Local measurement | Evaluation |
+| --- | --- | --- |
+| P1 — p95 API ≤2 s | 0.009550 s p95 for 15 GETs / 5 coroutines | Below target in this small sample only; not representative load acceptance. |
+| P2 — p95 delivery ≤1 s | 0.000056 s maximum fan-out to 50 synthetic sinks | Measures only Python dispatch; not actual WebSocket/mobile delivery latency. |
+| P3 — UI stale/disconnected within 10 s | Not measured | Requires iOS and controlled connectivity/provider faults. |
+| P4 — assessment within 2 s of threshold | Approximately 0.523 s after a controlled threshold crossing | Local unloaded monitor observation; no scheduling guarantee under production load. |
+| P5 — CSV outcome ≤5 s after upload | 0.028341 s for one 200-row request | Includes in-process request parsing; all rows imported, 200 expected unassociated-account warnings. No production network or mixed-load claim. |
+
+An initial 50-coroutine REST run did not finish in the observed interval and was interrupted. [Interrupted attempt log](evidence/interrupted_50_client_attempt.log) records cancellation, not a valid throughput result. Connection-pool/thread interaction is a hypothesis, not a diagnosed production defect. A later reduced harness includes a 30-second process watchdog. The larger workload needs a bounded, instrumented rerun before any capacity claim.
+
+## Remaining execution plan
+
+| Work | Environment / procedure | Pass condition |
+| --- | --- | --- |
+| Concurrent admission and team edits | Isolated server process and separate clients racing for the last slot; record transactions and final membership | Capacity preserved, no partial teams, explicit loser response. |
+| Provider failure and normalization | Recorded provider pages plus a controlled fake provider; break one feed while another and REST operate | Correct identities/units, isolation, recovery, no false freshness. |
+| Restart and persistence | Disposable server deployment; commit registrations, waivers, results and penalties; kill/restart and reconnect client | All committed records survive, UI resynchronizes, no duplicate penalties or false success. |
+| iOS A2/A8/A10 and T10 | Simulator/device plus instrumented server; background/foreground, switch account/event, revoke tokens, interrupt feed and network | Correct status/identity, stale indication within 10 s, no unauthorized cached data. |
+| Accessibility | Supported iPhone sizes, larger text and VoiceOver | Readable controls/status, actionable errors, no color-only meaning. |
+| Full P1–P5 | Agree workload/hardware/network first; run sustained REST plus three real source streams and uploads, synchronize timestamps | Required percentile limits at the agreed concurrency without lost committed operations. |
+| Deployment access | Disposable ingress/storage fixture matching production TLS, URL redirects and file mounts | Only intended public assets accessible; current identity/role enforced on all private routes. |
+
+No skipped unittest cases were used to disguise these unexecuted activities. They are explicitly outside the completed run, so zero skips does not mean complete DD acceptance.
+
+## Evidence history
+
+1. Baseline: 69/69 passed after relocation, before adding acceptance cases.
+2. Initial acceptance-only run: 18 cases, six failures. Two were fixture mistakes (sending `{}` instead of JSON `null` for optional individual-registration body), corrected before the final run; four reproduced application defects. This exploratory log is retained and is not the final verdict.
+3. Intermediate combined run: 90 cases, four application failures.
+4. Final combined run: 94 cases, four application failures; no errors/skips.
+
+Logs retain all runs for auditability. Review the timestamped final run above rather than aggregating counts across repeated executions. Test durations are execution metadata, not P1–P5 benchmarks. Source hashes identify the exact implementation tested.

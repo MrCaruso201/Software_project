@@ -1,0 +1,118 @@
+test_A1_duplicate_registration (test_document_acceptance.DocumentAcceptanceTests.test_A1_duplicate_registration) ... FAIL
+test_A2_late_registration_enters_waitlist (test_document_acceptance.DocumentAcceptanceTests.test_A2_late_registration_enters_waitlist) ... FAIL
+test_A3_account_cannot_change_roles (test_document_acceptance.DocumentAcceptanceTests.test_A3_account_cannot_change_roles) ... ok
+test_A4_source_and_event_isolation (test_document_acceptance.DocumentAcceptanceTests.test_A4_source_and_event_isolation) ... ok
+test_A8_waiver_preview_store_pdf_remove (test_document_acceptance.DocumentAcceptanceTests.test_A8_waiver_preview_store_pdf_remove) ... ok
+test_T10_durable_records_after_engine_reopen (test_document_acceptance.DocumentAcceptanceTests.test_T10_durable_records_after_engine_reopen) ... 📊  Classifica importata per evento 1: 1 risultati, 1 errori
+ok
+test_T12_deleted_account_cannot_download_waiver (test_document_acceptance.DocumentAcceptanceTests.test_T12_deleted_account_cannot_download_waiver) ... FAIL
+test_T12_demoted_token_cannot_download_waiver (test_document_acceptance.DocumentAcceptanceTests.test_T12_demoted_token_cannot_download_waiver) ... FAIL
+test_T12_private_database_is_not_public_static_asset (test_document_acceptance.DocumentAcceptanceTests.test_T12_private_database_is_not_public_static_asset) ... FAIL
+test_T1_duplicate_identity_rejected (test_document_acceptance.DocumentAcceptanceTests.test_T1_duplicate_identity_rejected) ... ok
+test_T1_expired_token_rejected (test_document_acceptance.DocumentAcceptanceTests.test_T1_expired_token_rejected) ... ok
+test_T1_profile_cannot_promote_self (test_document_acceptance.DocumentAcceptanceTests.test_T1_profile_cannot_promote_self) ... ok
+test_T1_register_login_refresh_logout (test_document_acceptance.DocumentAcceptanceTests.test_T1_register_login_refresh_logout) ... 👤 Nuovo utente registrato: new-driver (id=5)
+🔑 Login: new-driver (ruolo=user)
+ok
+test_T2_confirmed_self_cancellation_blocked (test_document_acceptance.DocumentAcceptanceTests.test_T2_confirmed_self_cancellation_blocked) ... ok
+test_T4_empty_signature_is_rejected (test_document_acceptance.DocumentAcceptanceTests.test_T4_empty_signature_is_rejected) ... FAIL
+test_T4_unregistered_cannot_sign_or_read_other_waiver (test_document_acceptance.DocumentAcceptanceTests.test_T4_unregistered_cannot_sign_or_read_other_waiver) ... ok
+test_T8_import_authorization_through_http (test_document_acceptance.DocumentAcceptanceTests.test_T8_import_authorization_through_http) ... 📊  Classifica importata per evento 1: 1 risultati, 1 errori
+ok
+test_T8_valid_import_preserves_other_events (test_document_acceptance.DocumentAcceptanceTests.test_T8_valid_import_preserves_other_events) ... 📊  Classifica importata per evento 1: 1 risultati, 1 errori
+ok
+
+======================================================================
+FAIL: test_A1_duplicate_registration (test_document_acceptance.DocumentAcceptanceTests.test_A1_duplicate_registration)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py", line 58, in test_A1_duplicate_registration
+    self.assertEqual(status, 400)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+AssertionError: 422 != 400
+
+======================================================================
+FAIL: test_A2_late_registration_enters_waitlist (test_document_acceptance.DocumentAcceptanceTests.test_A2_late_registration_enters_waitlist)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py", line 66, in test_A2_late_registration_enters_waitlist
+    self.assertEqual(status, 201, data)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: 422 != 201 : b'{"detail":[{"type":"missing","loc":["body","team_name"],"msg":"Field required","input":{}},{"type":"missing","loc":["body","member_emails"],"msg":"Field required","input":{}}]}'
+
+======================================================================
+FAIL: test_T12_deleted_account_cannot_download_waiver (test_document_acceptance.DocumentAcceptanceTests.test_T12_deleted_account_cannot_download_waiver)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py", line 178, in test_T12_deleted_account_cannot_download_waiver
+    self.assertEqual(status, 401, 'R3: deleted identity must not retain PDF access')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 200 != 401 : R3: deleted identity must not retain PDF access
+
+======================================================================
+FAIL: test_T12_demoted_token_cannot_download_waiver (test_document_acceptance.DocumentAcceptanceTests.test_T12_demoted_token_cannot_download_waiver)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py", line 169, in test_T12_demoted_token_cannot_download_waiver
+    self.assertIn(status, (401, 403), 'R3: waiver download must check current database role')
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 200 not found in (401, 403) : R3: waiver download must check current database role
+
+======================================================================
+FAIL: test_T12_private_database_is_not_public_static_asset (test_document_acceptance.DocumentAcceptanceTests.test_T12_private_database_is_not_public_static_asset)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py", line 191, in test_T12_private_database_is_not_public_static_asset
+    self.assertIn(status, (401, 403, 404), 'Q4: database files must not be served anonymously')
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 200 not found in (401, 403, 404) : Q4: database files must not be served anonymously
+
+======================================================================
+FAIL: test_T4_empty_signature_is_rejected (test_document_acceptance.DocumentAcceptanceTests.test_T4_empty_signature_is_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py", line 127, in test_T4_empty_signature_is_rejected
+    self.assertIn(status, (400, 422), 'R15: empty signature must not create a signed waiver')
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 200 not found in (400, 422) : R15: empty signature must not create a signed waiver
+
+----------------------------------------------------------------------
+Ran 18 tests in 1.474s
+
+FAILED (failures=6)

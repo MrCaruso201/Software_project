@@ -36,7 +36,7 @@ Le mappe di sottoscrizione e le sessioni sono in memoria nel processo Python. Il
 | `auth/dependencies.py`, `roles.py` | Identità risolta sul DB corrente e gerarchia `viewer < user < race_director < admin`. I controlli di appartenenza restano nelle operazioni di dominio. |
 | `auth/jwt.py`, `password.py` | Access JWT HS256, refresh token casuali salvati come hash SHA-256, password con hash bcrypt. |
 | `auth/token.py` | Verifica del token WebSocket e dell'account/ruolo corrente; non è un file di modelli Pydantic. |
-| `auth/admin_router.py` | Ricerca utenti, cambio ruolo, configurazione liberatorie, anteprima, elenco firme, PDF e rimozione firme per amministratori. |
+| `auth/admin_router.py` | Ricerca utenti, ruoli e liberatorie. I guard variano: elenco firme admin-only; download/rimozione ammettono direttori. Il download verifica il ruolo nel JWT senza risolvere l’account corrente (vedere report test). |
 | `db/database.py`, `models.py` | Sessioni SQLAlchemy, foreign key SQLite abilitate, inizializzazione/migrazioni manuali, seed e modelli persistenti. |
 | `events/router.py`, `schemas.py` | CRUD eventi, iscrizioni individuali/team, ammissioni, conferme, modifiche, uscite e firme liberatorie. |
 | `events/lifecycle.py` | Chiusura degli eventi scheduled/started a 48 ore dalla data programmata; controllo iniziale e ogni 30 s. |
@@ -55,7 +55,7 @@ Le mappe di sottoscrizione e le sessioni sono in memoria nel processo Python. Il
 | `services/pdf_generator.py` | Genera PDF delle liberatorie a partire dai record e dalla firma disegnata. |
 | `services/pdf_router.py` | Upload autenticato e link browser temporanei: 10 MiB, validità un'ora, download tramite link non autenticato. |
 | `discovery/bonjour.py` | Annuncio mDNS `_karttiming._tcp.local.` sulla rete locale. |
-| `tests/` | Suite unittest per accessi, iscrizioni, notifiche, monitor, WebSocket, circuiti, statistiche e PDF. |
+| `../project_tests/backend/` | Suite unittest per accessi, iscrizioni, notifiche, monitor, WebSocket, circuiti, statistiche e PDF. |
 
 ### 2.1 Modello persistente
 
@@ -132,4 +132,4 @@ Questi punti sono documentati come stato attuale; questo aggiornamento non modif
 
 ## 6. Verifiche
 
-Eseguita la suite backend con `python -m unittest discover -s tests -v`: **69 test superati** il 16 settembre 2026. La suite usa fixture/database isolati per le verifiche; non equivale a un collaudo con provider reali, carico concorrente o dispositivi iOS. La revisione client è basata sul codice, senza build Xcode o test su dispositivo.
+La suite originale comprendeva **69 test superati**. È ora centralizzata in `project_tests/backend/`: dalla root eseguire `.venv/bin/python project_tests/run.py`. La verifica estesa DD/RASD ha eseguito **94 test: 90 superati e 4 falliti**, documentati nel [report](project_tests/TEST_REPORT.md). La suite usa fixture/database isolati per le verifiche; non equivale a un collaudo con provider reali, carico concorrente o dispositivi iOS. La revisione client è basata sul codice, senza build Xcode o test su dispositivo.

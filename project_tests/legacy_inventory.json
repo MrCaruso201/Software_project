@@ -1,0 +1,97 @@
+{
+  "test_access_integrity.py": [
+    "AccessIntegrityTests.test_event_writes_require_current_director_role",
+    "AccessIntegrityTests.test_deleted_account_token_is_rejected",
+    "AccessIntegrityTests.test_websocket_uses_current_account",
+    "AccessIntegrityTests.test_idle_websocket_revalidates_and_unsubscribes",
+    "AccessIntegrityTests.test_invalid_csv_preserves_previous_results",
+    "AccessIntegrityTests.test_partial_csv_replaces_results_and_reports_errors"
+  ],
+  "test_event_lifecycle.py": [
+    "EventLifecycleTests.test_closes_only_events_at_least_two_days_old",
+    "EventLifecycleTests.test_exact_48_hour_boundary_including_daylight_saving_changes",
+    "EventLifecycleTests.test_aware_now_is_converted_to_utc",
+    "EventExpirationNotificationTests.test_notifies_clients_after_scan"
+  ],
+  "test_event_registration_integrity.py": [
+    "EventRegistrationIntegrityTests.test_optional_max_and_rename_preserve_member_attributes",
+    "EventRegistrationIntegrityTests.test_member_replacement",
+    "EventRegistrationIntegrityTests.test_duplicates_rejected_before_insert",
+    "EventRegistrationIntegrityTests.test_duplicate_edit_preserves_team",
+    "EventRegistrationIntegrityTests.test_explicit_max_is_enforced",
+    "EventRegistrationIntegrityTests.test_minimum_rejects_missing_and_blank_members_without_insert",
+    "EventRegistrationIntegrityTests.test_minimum_and_maximum_inclusive",
+    "EventRegistrationIntegrityTests.test_edit_below_minimum_preserves_team",
+    "EventRegistrationIntegrityTests.test_incomplete_team_rejected_even_when_accepting_extra_pilots",
+    "EventRegistrationIntegrityTests.test_edit_incomplete_team_rejected_even_when_accepting_extra_pilots",
+    "EventRegistrationIntegrityTests.test_no_team_name_registers_individual_in_waitlist_despite_minimum",
+    "EventRegistrationIntegrityTests.test_extra_pilots_does_not_bypass_maximum",
+    "EventRegistrationIntegrityTests.test_complete_team_accepting_extra_pilots_is_not_waitlisted",
+    "EventRegistrationIntegrityTests.test_minimum_one_allows_solo_registration",
+    "EventRegistrationIntegrityTests.test_deadline_follows_date_and_respects_explicit_override",
+    "EventRegistrationIntegrityTests.test_generic_status_patch_rejected_without_changes"
+  ],
+  "test_event_reminders.py": [
+    "EventReminderTests.test_boundary_refresh_and_deletion",
+    "EventReminderTests.test_registration_inside_window_before_confirmation",
+    "EventReminderTests.test_excluded_waitlist_started_and_past_events",
+    "EventReminderTests.test_rollback_does_not_consume_reminder"
+  ],
+  "test_kartodromo_update.py": [
+    "KartodromoUpdateTests.test_live_event_blocks_without_disconnect_or_changes",
+    "KartodromoUpdateTests.test_disconnect_precedes_save_and_only_affects_target",
+    "KartodromoUpdateTests.test_duplicate_url_does_not_disconnect",
+    "KartodromoUpdateTests.test_timeout_aborts_save_and_unblocks_url",
+    "KartodromoUpdateTests.test_save_without_connected_clients"
+  ],
+  "test_lap_stats.py": [
+    "LapStatsTests.test_unique_route_and_per_kart_threshold"
+  ],
+  "test_live_message_scope.py": [
+    "MessageScopeTests.test_targeted_control_commands_are_rejected_without_side_effects",
+    "MessageScopeTests.test_targeted_information_remains_supported",
+    "MessageScopeTests.test_stop_flags_require_explicit_restart"
+  ],
+  "test_notifications_integrity.py": [
+    "NotificationIntegrityTests.test_new_event_persists_one_notification_per_eligible_account",
+    "NotificationIntegrityTests.test_event_and_notifications_rollback_together_on_failure",
+    "NotificationIntegrityTests.test_team_actions_notify_all_linked_members",
+    "NotificationIntegrityTests.test_inbox_ownership_read_and_delete",
+    "NotificationIntegrityTests.test_expiry_accepts_database_dates_and_preserves_recent_notifications",
+    "NotificationIntegrityTests.test_sender_without_linked_account_does_not_create_notification",
+    "NotificationIntegrityTests.test_start_event_notifies_confirmed_and_removes_unconfirmed"
+  ],
+  "test_pdf_browser.py": [
+    "PDFBrowserTests.test_publish_and_open",
+    "PDFBrowserTests.test_expiry",
+    "PDFBrowserTests.test_validation",
+    "PDFBrowserTests.test_unknown_link"
+  ],
+  "test_penalty_configuration.py": [
+    "PenaltyThresholdValidationTests.test_rejects_invalid_thresholds",
+    "PenaltyThresholdValidationTests.test_accepts_positive_thresholds_and_unchanged_value",
+    "PenaltyConfigurationTests.test_restart_preserves_custom_seconds_and_thresholds",
+    "PenaltyConfigurationTests.test_legacy_migration_preserves_history_and_configuration",
+    "PenaltyConfigurationTests.test_duplicate_codes_keep_current_configuration",
+    "PenaltySecondsValidationTests.test_rejects_negative_and_non_integer_seconds",
+    "PenaltySecondsValidationTests.test_accepts_zero_positive_and_optional_seconds"
+  ],
+  "test_stint_monitor.py": [
+    "StintPenaltyTests.test_threshold_once_and_admin_deletion",
+    "StintPenaltyTests.test_pit_entry_checks_and_next_stint_rearms",
+    "StintPenaltyTests.test_pause_and_disabled_limit",
+    "StintPenaltyTests.test_stale_worker_cannot_duplicate_penalty",
+    "StintPenaltyTests.test_scan_persists_across_sessions"
+  ],
+  "test_ws_manager.py": [
+    "BroadcastCleanupTests.test_failed_broadcast_releases_last_subscriber_once",
+    "BroadcastCleanupTests.test_failure_preserves_other_subscribers_and_delivery",
+    "BroadcastCleanupTests.test_event_only_client_failure_needs_no_scraper"
+  ],
+  "test_ws_router.py": [
+    "WebSocketInputTests.test_malformed_messages_allow_next_valid_command",
+    "WebSocketInputTests.test_unexpected_receive_error_releases_subscriptions",
+    "WebSocketInputTests.test_error_response_send_failure_releases_subscriptions",
+    "WebSocketInputTests.test_cancellation_releases_subscriptions"
+  ]
+}

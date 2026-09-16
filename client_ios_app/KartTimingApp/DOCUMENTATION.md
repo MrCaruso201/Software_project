@@ -160,7 +160,7 @@ I risultati e le firme nel DB sono indipendenti dalla copia temporanea. L'upload
 
 ## 11. Verifiche e limiti
 
-La revisione ha confrontato client e backend; i **69 test backend** sono passati il 16 settembre 2026. Non sono stati eseguiti test UI, build o collaudi GPS/browser su dispositivo.
+La suite originale di **69 test backend** continua a passare. La verifica DD/RASD estesa conta **94 test: 90 superati e 4 falliti**; vedere il [report](../../project_tests/TEST_REPORT.md) per difetti e limiti. I test sono ora in `project_tests/` nella root. Non sono stati eseguiti test UI, build o collaudi GPS/browser su dispositivo.
 
 Restano da riconciliare il cronometro derivato dopo rossa, l'autodichiarazione giro evento e alcune differenze di permesso: `UserRole.canChangeURL` consente solo director/admin mentre il backend permette la selezione della propria sorgente da viewer in su. Le restrizioni guest di navigazione non dimostrano una restrizione equivalente su ogni endpoint.
 

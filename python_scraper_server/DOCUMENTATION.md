@@ -36,7 +36,7 @@ All'avvio: inizializzazione DB, chiusura eventi già scaduti, pulizia JSON timin
 - WebSocket: `/ws?token=<access_token>`, chiusura `4401` per identità non valida. Rivalidazione a ogni comando e ogni 5 secondi di inattività.
 - Account e ruolo sono riletti dal DB: il ruolo contenuto in un vecchio JWT non è l'unico riferimento per l'autorizzazione.
 
-Gerarchia: `viewer < user < race_director < admin`. Il leader è una proprietà della partecipazione al team, non un ruolo globale. Direttori e admin possono effettuare operazioni organizzative; import/rimozione classifiche ufficiali, ruoli, amministrazione liberatorie, circuiti e configurazione tipi di penalità sono riservati agli admin.
+Gerarchia: `viewer < user < race_director < admin`. Il leader è una proprietà della partecipazione al team, non un ruolo globale. Direttori e admin possono effettuare operazioni organizzative; import/rimozione classifiche ufficiali, ruoli, circuiti e configurazione tipi di penalità sono riservati agli admin. Le route liberatorie non hanno guard uniformi: download e rimozione ammettono anche direttori; il download usa il ruolo nel JWT senza rileggere l’account, come dimostrato dai nuovi test falliti.
 
 Esistono differenze fra policy desiderata e applicazione attuale: la lista/dettaglio eventi non richiede autenticazione; l'iscrizione richiede un account ma non verifica un ruolo minimo `user`. La sola limitazione guest nella UI non protegge queste API.
 
@@ -173,12 +173,15 @@ Il monitor promemoria seleziona eventi scheduled futuri entro 7 giorni e utenti 
 
 ## 10. Test e verifica
 
-Da `python_scraper_server`, nell'ambiente che contiene le dipendenze:
+I test sono stati centralizzati in `project_tests/backend/`, nella root. Dalla root del repository:
 
 ```sh
-python -m unittest discover -s tests -v
+.venv/bin/python project_tests/run.py
+.venv/bin/python project_tests/benchmark.py
 ```
 
-Per il repository con ambiente nella directory superiore si può usare `../.venv/bin/python` al posto di `python`. Impostare `JWT_SECRET` anche per l'import dei moduli nei test se non già disponibile.
+Il runner configura percorsi import e un segreto JWT casuale di test, salva log/esiti per caso e usa fixture isolate. Non richiede il segreto operativo.
 
-Verifica del 16 settembre 2026: **69 test superati**. La suite comprende accesso corrente/revoca identità, iscrizioni/team, atomicità e privacy notifiche, promemoria, scadenze, routing/cleanup WebSocket, modifica circuiti, statistiche giri, configurazione penalità, monitor stint, stop rosso/scacchi e PDF temporanei. Non sono stati eseguiti load test, test con provider reali o una validazione completa su iOS.
+Il 16 settembre 2026 i **69 test originali** sono stati rieseguiti con successo. La suite estesa DD/RASD conta **94 casi: 90 superati, 4 falliti** per firma vuota, identità eliminata/declassata nel download PDF ed esposizione del database tramite mount statico (verificata con soli file fittizi). I fallimenti rimangono visibili e producono exit code 1; non sono stati corretti in questa attività di verifica.
+
+Vedere [report e copertura](../project_tests/TEST_REPORT.md), [elenco dei test già svolti](../project_tests/ALREADY_EXECUTED.md) e [istruzioni](../project_tests/README.md). Le misure prestazionali sono locali e ridotte; un tentativo a 50 client è inconclusivo. Non sono stati eseguiti collaudi UI su dispositivo o prove con provider reali.
