@@ -1,180 +1,135 @@
-# Documentazione Architetturale e Mappa dei File
+# Race Manager — Architettura e mappa dei file
 
-Questo documento descrive in dettaglio l'architettura del sistema Kart Live Timing, seguendo esattamente l'organizzazione fisica delle cartelle e dei file. Il progetto si divide in due macro-aree: il server backend (Python/FastAPI) e il client mobile (iOS/SwiftUI).
+Aggiornamento: 16 settembre 2026. Questa mappa descrive l'implementazione presente nel repository, verificata leggendo backend, client e test. Le specifiche accademiche RASD e DD preparate separatamente contengono anche requisiti e decisioni proposte: non sono una prova di conformità del codice. Questa mappa documenta la nuova semantica della bandiera rossa in stop.
 
----
+Per API e gestione operativa vedere la [documentazione backend](python_scraper_server/DOCUMENTATION.md); per navigazione, networking e UI vedere la [documentazione iOS](client_ios_app/KartTimingApp/DOCUMENTATION.md).
 
-## 1. Server Python (Backend) - `python_scraper_server/`
+## 1. Struttura del sistema
 
-Il server è basato su FastAPI e utilizza un database SQLite. Svolge i ruoli di API RESTful e gestore WebSocket per i dati in tempo reale estratti tramite uno scraper Playwright.
+Il sistema è client–server: app nativa SwiftUI, backend FastAPI organizzato in moduli, database SQLite sullo stesso host del backend. I livelli presentazione, logica e persistenza non sono tre servizi distribuiti. Il client usa REST per leggere/modificare risorse e WebSocket per ricevere timing e invalidazioni dello stato evento.
 
-- **`main.py`**: Entry point del server FastAPI. Configura CORS, mappa i router, inizializza database e crea le directory se necessario dove verranno salvati i dati dell'app.
-- **`config.py`**: Assegnazione di tutte le costanti che verranno usate, url degli scraper, servizio Bonjour e path per salvare i dati di scraping.
-- **`requirements.txt`**: Elenco delle librerie Python necessarie.
+```mermaid
+flowchart LR
+    App[App iOS: SwiftUI e view model] -->|REST| API[FastAPI: auth e router di dominio]
+    App <-->|WebSocket| WS[Gestore sottoscrizioni]
+    API --> DB[(SQLite)]
+    API -->|event_update dopo commit| WS
+    Provider[Provider esterno o simulatore] --> Scraper[Sessione per URL e adapter]
+    Scraper -->|timing_update per URL| WS
+    Scraper -->|Giri osservati| DB
+    Jobs[Monitor stint, scadenze e promemoria] --> DB
+    Jobs -->|Invalidazioni live dove previste| WS
+```
 
-### `auth/` - Autenticazione e Autorizzazione
+Il backend mantiene due associazioni distinte: socket → URL del timing e socket → evento. Più client sullo stesso URL condividono l'acquisizione; cambiare sorgente non cambia quella degli altri client. I messaggi `event_update` sollecitano nuove letture REST, mentre `timing_update` contiene la tabella acquisita.
 
-- **`__init__.py`**: Inizializzatore del modulo.
-- **`admin_router.py`**: Endpoint API riservati agli amministratori per gestire utenti, qui sono implementate tutte le funzioni utilizzabili da utenti di tipo admin (list_users, search_users, update_role, update_release_form, preview_admin_release_form, list_signed_releases, download_release_pdf, delete_signed_release).
-- **`dependencies.py`**: Funzioni di Dependency Injection per indirizzare alle giuste API: implementa le funzioni per identificare il ruolo di un utente e forzarne la dipendenza.
-- **`jwt.py`**: Logica di creazione, decodifica e validazione dei token JWT usati per l'autenticazione degli utenti.
-- **`password.py`**: Utility per l'hashing sicuro delle password tramite bcrypt (passlib). Crypta e verifica la correttezza delle password degli utenti.
-- **`roles.py`**: Definizione dei ruoli di sistema (`user`, `race_director`, `admin`) e logiche associate.
-- **`router.py`**: Endpoint API per tutti gli utenti, qui sono implementate le funzioni usabili da tutti gli utenti registrati.
-- **`schemas.py`**: Modelli Pydantic per validare i payload in ingresso e uscita relativi all'auth.
-- **`token.py`**: Modelli Pydantic per i payload del token JWT.
+Le mappe di sottoscrizione e le sessioni sono in memoria nel processo Python. Il deployment attuale va considerato a singolo worker: aggiungere worker non fornisce automaticamente broadcast condivisi o coordinamento dei monitor.
 
-### `db/` - Database
+## 2. Backend — `python_scraper_server/`
 
-- **`__init__.py`**: Inizializzatore del modulo.
-- **`database.py`**: Configurazione del motore SQLAlchemy e gestione delle sessioni SQLite.
-- **`models.py`**: Definisce tutte le tabelle (ORM) del database (es. `User`, `Event`, `Kartodromo`, ecc.).
+| Percorso | Responsabilità effettiva |
+| --- | --- |
+| `main.py` | Montaggio router, CORS, file statici, lifespan e avvio Uvicorn sulla porta 8000. All'avvio inizializza DB, chiude eventi scaduti, pulisce snapshot e avvia Bonjour e monitor; allo shutdown cancella monitor e ferma sessioni/discovery. |
+| `config.py` | Host consentiti, URL simulatore, percorsi, polling ogni 3 s, massimo 5 sorgenti e grace period di 15 s senza iscritti. |
+| `requirements.txt` | Dipendenze Python; comprende FastAPI, SQLAlchemy, Playwright, autenticazione, Zeroconf e fpdf2. |
+| `auth/router.py`, `schemas.py` | Registrazione, login, refresh/logout, profilo, avatar, cambio password ed eliminazione account. |
+| `auth/dependencies.py`, `roles.py` | Identità risolta sul DB corrente e gerarchia `viewer < user < race_director < admin`. I controlli di appartenenza restano nelle operazioni di dominio. |
+| `auth/jwt.py`, `password.py` | Access JWT HS256, refresh token casuali salvati come hash SHA-256, password con hash bcrypt. |
+| `auth/token.py` | Verifica del token WebSocket e dell'account/ruolo corrente; non è un file di modelli Pydantic. |
+| `auth/admin_router.py` | Ricerca utenti, cambio ruolo, configurazione liberatorie, anteprima, elenco firme, PDF e rimozione firme per amministratori. |
+| `db/database.py`, `models.py` | Sessioni SQLAlchemy, foreign key SQLite abilitate, inizializzazione/migrazioni manuali, seed e modelli persistenti. |
+| `events/router.py`, `schemas.py` | CRUD eventi, iscrizioni individuali/team, ammissioni, conferme, modifiche, uscite e firme liberatorie. |
+| `events/lifecycle.py` | Chiusura degli eventi scheduled/started a 48 ore dalla data programmata; controllo iniziale e ogni 30 s. |
+| `live/router.py`, `schemas.py` | Stato evento, kart, pit, messaggi, penalità, tipi di penalità e proiezione del kart dell'utente. |
+| `live/stint_monitor.py` | Valutazione automatica del limite stint circa ogni secondo, senza dipendenza dai client; marker e penalità nella stessa transazione. |
+| `notifications/router.py`, `schemas.py` | Notifiche persistenti e operazioni riservate al destinatario. |
+| `notifications/reminders.py` | Promemoria per eventi nei prossimi 7 giorni, deduplicati da una tabella persistente; monitor ogni 30 s. |
+| `results/router.py`, `schemas.py` | Import/rimozione risultati ufficiali per admin, classifiche, storico personale e statistiche giri. |
+| `kartodromi/router.py`, `schemas.py` | Circuiti, immagini, configurazione URL, risultati personali circuito; durante un aggiornamento disconnette i client della sorgente interessata. |
+| `scraper/base.py`, `factory.py` | Contratto `setup/scrape/teardown` e selezione adapter per host. |
+| `scraper/providers/` | Apex Timing, RaceFacer, estrattore HTML generico e simulatore da JSON locale. Il fallback generico non aggira l'allowlist WebSocket. |
+| `scraper/session.py` | Una sessione/thread per URL, conteggio iscritti, ultimo payload, polling e rilascio differito senza iscritti. |
+| `scraper/storage.py` | Scrittura atomica degli snapshot JSON; questi file vengono ripuliti e non sono uno storico permanente. |
+| `scraper/lap_tracker.py` | Rileva incrementi del contatore giri e salva l'ultimo giro osservato; associa il circuito all'evento started più recente tramite il nome della location. |
+| `ws/router.py`, `manager.py` | Comandi WebSocket, autenticazione/rivalidazione, mappe URL/evento, broadcast e cleanup connessioni. |
+| `services/pdf_generator.py` | Genera PDF delle liberatorie a partire dai record e dalla firma disegnata. |
+| `services/pdf_router.py` | Upload autenticato e link browser temporanei: 10 MiB, validità un'ora, download tramite link non autenticato. |
+| `discovery/bonjour.py` | Annuncio mDNS `_karttiming._tcp.local.` sulla rete locale. |
+| `tests/` | Suite unittest per accessi, iscrizioni, notifiche, monitor, WebSocket, circuiti, statistiche e PDF. |
 
-### `discovery/` - Network Discovery
+### 2.1 Modello persistente
 
-- **`__init__.py`**: Inizializzatore del modulo.
-- **`bonjour.py`**: Pubblica il server sulla rete locale usando il protocollo mDNS (Bonjour), facilitando la connessione dell'app senza inserire IP manualmente. Sono implementate tutte le funzioni per gestire il servizio.
+| Modelli | Collegamenti e vincoli principali |
+| --- | --- |
+| `User`, `RefreshToken` | Username/email univoci; refresh associati all'utente, con hash, scadenza e revoca. |
+| `Event`, `Kartodromo` | L'evento contiene `location`, non una foreign key al circuito. Stato evento e stato turno sono separati. |
+| `EventRegistration` | Unicità `(user_id, event_id)` per account collegati; `user_id` nullable per email senza account. Team rappresentati da `team_id` condiviso, senza tabella Team. |
+| `SignedRelease` | Un record per `(event_id, user_id)`, dati anagrafici e immagine firma Base64. Non contiene una versione immutabile separata del testo firmato. |
+| `LiveKartAssignment` | Unicità evento/kart; entry/team, stato pit, secondi accumulati, ultimo avvio e marker di penalità stint. |
+| `PenaltyType`, `RacePenalty`, `RaceMessage` | Configurazione penalità e soglie avvisi, decisioni per evento/kart e messaggi globali o mirati. |
+| `EventResult`, `KartodromoResult`, `LapTime` | Classifiche evento, risultati personali circuito e giri osservati sono dati distinti. |
+| `Notification`, `EventReminderDelivery` | Contenuto per destinatario e marker user/event per non rigenerare il promemoria dopo lettura/cancellazione o riavvio. |
 
-### `events/` - Gare e Iscrizioni
+### 2.2 Stato gara e durata dei dati
 
-- **`router.py`**: Endpoint per creare eventi e gestire le iscrizioni di singoli o squadre.
-- **`schemas.py`**: Modelli Pydantic per la validazione di gare, iscrizioni e squadre.
+- `Event.status`: `scheduled`, `started`, `finished`; riguarda l'evento organizzativo.
+- `Event.race_status`: `not_started`, `running`, `paused`, `stopped`; riguarda il turno e i timer. `paused` resta riconosciuto dal modello e dal monitor, ma non viene più impostato dalla bandiera rossa.
+- `red_flag` e `checkered_flag`: entrambi impostano `stopped` e congelano i timer preservando i secondi accumulati. Non chiudono automaticamente l'evento.
+- `green_flag`: avvia/riprende solo se lo stato non è `stopped`; il controllo attuale non è limitato al solo stato `paused`.
+- `custom` con testo normalizzato `Gara Iniziata` o `Turno Iniziato`: avvio esplicito, reset degli stint, rientro in pista dei kart assegnati e nuovo stato `running`.
+- I risultati ufficiali restano nel DB dopo un riavvio. Un import valido sostituisce tutti quelli dell'evento, anche di altri tipi di sessione; cancellazioni esplicite e foreign key possono rimuoverli.
+- I link PDF temporanei scadono dopo un'ora; questo non cancella i risultati o le firme nel DB.
+- L'acquisizione timing può fermarsi senza iscritti: la raccolta giri non garantisce uno storico completo.
 
-### `kartodromi/` - Anagrafica Piste
+## 3. Client — `client_ios_app/KartTimingApp/KartTimingApp/`
 
-- **`__init__.py`**: Inizializzatore del modulo.
-- **`router.py`**: Endpoint per la creazione e la consultazione dei circuiti.
-- **`schemas.py`**: Modelli Pydantic per la validazione dei dati delle piste.
+Il client segue un'organizzazione MVVM con stato condiviso di autenticazione/ambiente, view model di feature e servizi di rete. Le autorizzazioni della UI non sostituiscono i controlli server.
 
-### `live/` - Stato in Diretta
+| Percorso | Responsabilità effettiva |
+| --- | --- |
+| `App/KartTimingAppApp.swift` | Entrypoint e scelta della root in base alla sessione. |
+| `App/AppEnvironment.swift` | Endpoint remoto HTTPS, modalità sviluppo con host/porta locali persistiti e richiesta di apertura evento da notifica. |
+| `Auth/AuthService.swift`, `AuthState.swift`, `KeychainService.swift`, `LoginView.swift` | Accesso, sessione/refresh, profilo/avatar, Keychain e ingresso ospite tramite account viewer. |
+| `Services/NetworkService.swift` | Actor HTTP, refresh condiviso dopo 401, cache GET opzionale e deduplicazione richieste; decoding JSON fuori dal main actor. |
+| `Services/ServerBrowser.swift` | Discovery locale tramite NetServiceBrowser. |
+| `Services/GPSSpeedMonitor.swift` | Velocità GPS locale in km/h, permesso when-in-use e scarto campioni vecchi; non invia telemetria al backend. |
+| `Models/Models.swift`, `UserRole.swift` | DTO e ruoli; decodifica JWT per la UI, senza verifica crittografica client. |
+| `Features/Home/` | TabView, dashboard, notifiche e navigazione verso un evento. La sessione guest mostra solo Timing. |
+| `Features/Events/` | Root/lista/dettaglio evento, form, registrazione/team, gestione organizzatore, liberatorie, informazioni pagamento e import risultati. |
+| `Features/Events/PDFViewer.swift` | Contiene `PDFBrowser`: carica i byte sul server e apre il link temporaneo nel browser; non è un lettore PDF incorporato. |
+| `Features/Timing/KartTimingManager.swift` | WebSocket, heartbeat, stato connessione/sorgente, riconnessione dopo rinnovo token e dispatch aggiornamenti. |
+| `Features/Timing/TimingView.swift`, `TimingPilotView.swift` | Selezione/consultazione timing e rappresentazione della classifica. |
+| `Features/Live/LiveRootView.swift`, `LiveViewModel.swift` | Coordinamento evento live, fetch mirati, accorpamento refresh, correlazione richieste e scarto risposte di contesti precedenti. |
+| `Features/Live/Models/LiveModels.swift` | Kart, messaggi, penalità, proiezione personale e stato locale del cambio pilota. |
+| `Features/Live/Director/` | `DirectorLiveView`, `ClassificaLiveView`, `PitWallLiveView`, `AssegnazioneKartView`, `GestioneLiveView`, `DirectorMessaggiView`: classifica, pit wall, assegnazioni e comandi. |
+| `Features/Live/User/` | `UserLiveView`, `PilotLiveView`, `TeamLiveView`, `UserMessaggiView`: viste pilota/team e messaggi; stima GPS nella vista pilota. |
+| `Features/Analisi/` | Storico, classifiche, grafici Swift Charts, statistiche disponibili e generazione PDF con `ClassificationPDFGenerator.swift`. Non è più una sezione placeholder. |
+| `Features/Admin/` | Ricerca/dettaglio utenti, ruoli, analisi amministrativa, circuiti e relativo form/view model. |
+| `Features/Settings/` | Profilo, password, ambiente, logout e `GestionePenalitaView` per la configurazione delle penalità. |
+| `UI/Color+Theme.swift`, `Info.plist` | Tema e metadati/permessi piattaforma. |
 
-- **`__init__.py`**: Inizializzatore del modulo.
-- **`router.py`**: Endpoint per gestire e notificare lo stato in corso delle gare.
-- **`schemas.py`**: Modelli Pydantic per il controllo dello stato live.
+Non esiste una directory client `Network/`: autenticazione e rete sono in `Auth/` e `Services/`. Il target Xcode attuale indica iOS 26.1; non è stata verificata compatibilità con versioni precedenti.
 
-### `notifications/` - Notifiche Utente
+## 4. Flussi e confini
 
-- **`router.py`**: Endpoint per interrogare, contrassegnare come lette o eliminare le notifiche persistenti salvate nel DB.
-- **`schemas.py`**: Modelli Pydantic per le notifiche in-app.
+1. REST autenticato risolve account e ruolo correnti; le mutazioni salvano record e possono inviare invalidazioni WebSocket.
+2. Il client seleziona separatamente sorgente timing ed evento. Gli aggiornamenti mirati pit/messaggi/penalità evitano un caricamento completo quando il protocollo fornisce il dettaglio.
+3. `X-Request-ID` consente al client di riconoscere la propria invalidazione; non è una chiave di idempotenza server.
+4. L'import CSV ufficiale è admin-only. Il client genera la rappresentazione PDF, poi la pubblica temporaneamente per l'apertura browser.
+5. Firma, conferma iscrizione e pagamento sono concetti separati. Non sono implementati pagamento integrato, invio email di invito o push APNs.
 
-### `results/` - Classifiche Finali
+## 5. Discrepanze da conoscere
 
-- **`__init__.py`**: Inizializzatore del modulo.
-- **`router.py`**: Endpoint per il caricamento o recupero dei risultati finalizzati di un evento.
-- **`schemas.py`**: Modelli Pydantic per i risultati definitivi.
+- `LiveViewModel.syncRaceTimesFromMessages` chiude il cronometro derivato dai messaggi solo su `checkered_flag`: non è ancora allineato alla rossa per quel calcolo UI, anche se il backend ferma correttamente gli stint e la UI offre «Inizia Turno» dopo la rossa.
+- Il client contiene una chiamata per autodichiarare il miglior giro evento, ma nel router risultati non è registrato il relativo POST. L'autodichiarazione per circuito ha invece un endpoint.
+- `UserRole.canChangeURL` limita il permesso a director/admin, mentre il WebSocket ammette tutti i ruoli autenticati alla selezione della propria sorgente.
+- Il backend espone alcune letture evento senza autenticazione e la registrazione richiede identità ma non un ruolo minimo `user`: non descrivere la restrizione guest della UI come protezione completa delle API.
+- La sottoscrizione evento valida un ID positivo, non una policy completa di accesso. Il filtro kart dei messaggi è un parametro di lettura, non un vincolo di appartenenza del chiamante.
+- `main.py` monta l'intera directory `data/` sotto `/static`, non soltanto immagini. Lo storage privato non è quindi isolato da quel mount nella configurazione attuale.
+- La scadenza automatica cambia solo `Event.status`: non pubblica risultati e non riconcilia `race_status`/timer.
 
-### `scraper/` - Motore Headless Scraping
+Questi punti sono documentati come stato attuale; questo aggiornamento non modifica il codice applicativo. RASD/DD e rispettive versioni LaTeX richiedono una revisione separata per recepire la nuova semantica della bandiera rossa.
 
-Recupera i tempi live su interfacce web di fornitori terzi.
+## 6. Verifiche
 
-- **`__init__.py`**: Inizializzatore del modulo.
-- **`base.py`**: Interfaccia astratta (BaseScraper) da cui ereditano tutti gli scraper.
-- **`factory.py`**: Pattern Factory per instanziare la classe di scraping adatta in base all'URL.
-- **`session.py`**: Gestione del ciclo di vita globale di Playwright (avvio/spegnimento browser in background).
-- **`storage.py`**: Meccanismo per mettere in cache e organizzare i payload grezzi estratti.
-- **`providers/`**: Cartella con le implementazioni per fornitori specifici.
-  - **`apex_timing.py`**: Algoritmi di estrazione per i circuiti basati su Apex Timing.
-  - **`generic.py`**: Scraper generico/fallback.
-  - **`racefacer.py`**: Algoritmi di estrazione per i circuiti basati su RaceFacer.
-  - **`simulator.py`**: Scraper di test che emula un live timing senza connettersi ad internet.
-
-### `services/` - Integrazioni Extra
-
-- **`pdf_generator.py`**: Utilizza `fpdf2` per costruire on-the-fly liberatorie in PDF con i dati dell'utente e la firma inserita su schermo mobile.
-
-### `ws/` - Comunicazione WebSocket
-
-- **`__init__.py`**: Inizializzatore del modulo.
-- **`manager.py`**: Tiene traccia dei client connessi al WebSocket e implementa i metodi di broadcasting.
-- **`router.py`**: Endpoint `/ws` principale in attesa delle connessioni dal client iOS.
-
----
-
-## 2. App iOS (Frontend) - `client_ios_app/KartTimingApp/KartTimingApp/`
-
-L'applicazione mobile è scritta in SwiftUI utilizzando l'architettura **MVVM**.
-
-- **`Info.plist`**: File di metadati di sistema (permessi, configurazioni bundle).
-
-### `App/` - Entry point
-
-- **`KartTimingAppApp.swift`**: L'avvio dell'applicazione. Sceglie se mostrare la dashboard o la schermata di login.
-- **`AppEnvironment.swift`**: Definizione dell'environment utilizzato (develop o production), develop assume che esista un serve locale, production cerca il server sul productionBaseURL. Questo permette di collegarsi anche via internet al server, sul server è installato tailscale e l'URL pubblico viene servito tramite Tailscale Funnel per gestire la connessione sicura https sulla porta 8000 (stessa usata dal server locale).
-
-### `Auth/` - Autenticazione Client-side
-
-- **`AuthService.swift`**: Interfaccia di rete per le chiamate API di login e registrazione.
-- **`AuthState.swift`**: View Model globale che conserva in memoria l'utente corrente e il suo token JWT.
-- **`KeychainService.swift`**: Wrapper per salvare e recuperare in modo criptato il token nel Keychain di iOS.
-- **`LoginView.swift`**: Interfaccia utente grafica per la pagina di benvenuto e accesso.
-
-### `Features/` - Interfacce e View Models (Dominio Applicativo)
-
-Raggruppa le funzionalità principali nei vari tab/percorsi.
-
-#### `Features/Admin/` - Pannelli di Back-Office
-
-- **`AdminAnalisiView.swift`**: Visualizzazione macro delle statistiche utente per gli amministratori.
-- **`AdminKartodromoView.swift`**: Schermata per la lista delle piste gestibili dagli admin.
-- **`AdminUserDetailView.swift` / `AdminUserSearchCard.swift`**: Visualizzazione di dettaglio e card sintetica per l'anagrafica utenti.
-- **`AdminUserSearchViewModel.swift` / `AdminUsersView.swift`**: Motore e interfaccia di ricerca per trovare e modificare ruoli utenti.
-- **`Kartodromo.swift` / `KartodromoFormView.swift` / `KartodromoViewModel.swift`**: Modello UI, form di creazione/modifica e logica associata alle piste.
-
-#### `Features/Analisi/`
-
-- **`AnalisiView.swift` / `AnalisiViewModel.swift`**: Schermata e logica per l'esplorazione dei risultati di gare concluse.
-- **`EventResultModels.swift`**: Strutture dati di supporto alle statistiche.
-
-#### `Features/Events/` - Gestione Eventi
-
-- **`EventsView.swift` / `EventsViewModel.swift`**: Elenco delle gare imminenti e chiamate di rete.
-- **`EventDetailView.swift` / `EventDetailContentView.swift`**: Dettaglio della singola gara con lista partecipanti.
-- **`EventFormView.swift`**: Form accessibile ai Race Director per configurare una nuova gara.
-- **`EventRegistrationSheetView.swift` / `EventTeamEditSheetView.swift`**: Modali per iscriversi e gestire il proprio team (inviti tramite mail).
-- **`AdminEventView.swift` / `AdminEventRegistrationsView.swift`**: Strumenti per Race Director per gestire le code e forzare iscrizioni.
-- **`AdminAddRegistrationSheetView.swift` / `AdminReleaseFormSheetView.swift`**: Approvazione delle iscrizioni e consultazione firme ricevute.
-- **`ReleaseFormSignView.swift` / `SignaturePadView.swift`**: Interfaccia per raccogliere dati anagrafici e un canvas (PencilKit) per acquisire la firma grafometrica in Base64.
-- **`PDFViewer.swift`**: Lettore PDF per visualizzare il documento finale generato dal backend.
-- **`PaymentInfoSheetView.swift`**: Modale per le direttive di pagamento.
-- **`UploadResultsView.swift`**: Form per consentire al Race Director l'upload dei risultati finali.
-- **`RaceEvent.swift` / `TeamMemberView.swift`**: View Model di evento locale e componente UI per visualizzare il membro di un team.
-- **`UserEventView.swift`**: Interfaccia di visualizzazione eventi dalla prospettiva del pilota.
-
-#### `Features/Home/` - Dashboard e Notifiche
-
-- **`HomeView.swift`**: Contenitore TabView primario.
-- **`UserHomeView.swift` / `UserHomeViewModel.swift`**: La dashboard principale in cui atterra un utente loggato.
-- **`NotificationsPanelView.swift` / `AppNotification.swift`**: Il pannello a comparsa contenente le notifiche (alert di sistema) che consentono di navigare verso gli eventi tramite tap.
-- **`GuestLiveTimingPlaceholderView.swift`**: Vista segnaposto per chi non è autenticato.
-
-#### `Features/Live/` - Esperienza durante la Gara
-
-- **`LiveRootView.swift` / `LiveViewModel.swift` / `Models/LiveModels.swift`**: Radice della navigazione, gestione della logica real-time e modelli dati per il timing dal vivo.
-- **`Director/`**: Sotto-cartella con controlli per il Race Director.
-  - `ClassificaLiveView.swift`, `DirectorLiveView.swift`: Interfacce per manipolare l'andamento della gara.
-  - `AssegnazioneKartView.swift`, `GestioneLiveView.swift`: Finestre per l'assegnazione fisica del numero kart al pilota o di eventuali sanzioni.
-  - `DirectorMessaggiView.swift`: UI per l'invio di messaggi in direzione corsa.
-- **`User/`**: Sotto-cartella con viste per i normali utenti.
-  - `PilotLiveView.swift`, `TeamLiveView.swift`, `UserLiveView.swift`: Schermate specifiche (spesso orizzontali ad alto contrasto) con telemetria utile al pilota o al team ai box.
-
-#### `Features/Settings/` - Gestione Profilo
-
-- **`SettingsView.swift`**: Menu impostazioni per profilazione e tasto disconnessione.
-- **`EditProfileView.swift` / `ChangePasswordView.swift`**: Aggiornamento credenziali.
-
-#### `Features/Timing/` - Motore WebSocket Client-Side
-
-- **`KartTimingManager.swift`**: Cuore pulsante che si collega a `/ws`, riceve gli update live in JSON continuo dal server e ne notifica le View iscritte.
-- **`TimingView.swift` / `TimingPilotView.swift`**: Tabelle UI dark-mode (ispirate ai veri monitor in pista) che renderizzano ciclicamente la classifica estratta dal WebSocket.
-
-### `Models/` - Data Transfer Object
-
-- **`Models.swift` / `UserRole.swift`**: Strutture conformi al protocollo `Codable` per il matching esatto dei JSON inviati dalle chiamate REST di FastAPI (es. Utente, Ruolo, Gara).
-
-### `Services/` - Utility di Sistema
-
-- **`ServerBrowser.swift`**: Implementazione Bonjour (`NetServiceBrowser`) per cercare il server sulla rete Wi-Fi locale, aggirando il bisogno per l'utente di inserire manualmente un IP statico.
-
-### `UI/` - Estetica e Design System
-
-- **`Color+Theme.swift`**: Definizione di accenti, tinte di contrasto e scale cromatiche specifiche del progetto (es. `kartGreen`, `kartAccent`, ottimizzati sia per il dark che per il light mode).
+Eseguita la suite backend con `python -m unittest discover -s tests -v`: **69 test superati** il 16 settembre 2026. La suite usa fixture/database isolati per le verifiche; non equivale a un collaudo con provider reali, carico concorrente o dispositivi iOS. La revisione client è basata sul codice, senza build Xcode o test su dispositivo.
