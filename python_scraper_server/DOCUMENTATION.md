@@ -2,6 +2,8 @@
 
 Aggiornamento: 16 settembre 2026. Descrizione dell'implementazione corrente, verificata sui router, modelli, monitor e test. Per la mappa dei componenti vedere [ARCHITECTURE.md](../ARCHITECTURE.md); per il comportamento del client vedere [documentazione iOS](../client_ios_app/KartTimingApp/DOCUMENTATION.md).
 
+> **Ultima modifica (16/09/2026, sera):** corretta casistica di uscita membro dal team che portava il team sotto il minimo richiesto (§4); corrette etichette UI admin (vedere documentazione iOS §3).
+
 ## 1. Avvio e configurazione
 
 Dalla directory `python_scraper_server`, con un ambiente Python compatibile con le dipendenze:
@@ -69,6 +71,8 @@ Gli stati di iscrizione sono `pending_payment`, `waitlist`, `confirmed`. Le rich
 I membri condividono `team_id`, nome e riferimento evento; uno è leader. Si possono inserire email senza account (`user_id` nullable). Non c'è un servizio di invio email né un flusso separato di accettazione inviti. Le notifiche riguardano gli account collegati.
 
 Le operazioni dedicate permettono ammissione dalla waitlist, conferma, revoca conferma, spostamento in waitlist, rimozione e inserimento organizzatore. Non si deve usare un generico cambio stato per aggirare le transizioni dedicate. La cancellazione autonoma di un'iscrizione confermata è bloccata; l'uscita del membro non leader dal team è un'operazione distinta.
+
+Quando un membro non-leader abbandona il team (`DELETE /events/{event_id}/registrations/me/leave`), il backend verifica il numero di membri rimasti. Se il team scende sotto `min_people_per_group` (minimo configurato sull'evento), **tutte le iscrizioni del team vengono automaticamente portate in `waitlist`** e ogni membro rimasto (incluso il leader) riceve una notifica. Se il team rimane sopra il minimo, viene notificato solo il leader come in precedenza. Il race director può poi accettare il team dalla waitlist o eliminarlo.
 
 Il DB garantisce unicità account/evento per le iscrizioni collegate. Le identità email e la capienza richiedono controlli applicativi: non tutte le regole di ammissione sono vincoli univoci SQL.
 

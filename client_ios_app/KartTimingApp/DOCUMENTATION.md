@@ -2,7 +2,7 @@
 
 Aggiornamento: 16 settembre 2026. Questa documentazione descrive il codice SwiftUI presente in `KartTimingApp/`, confrontato con le API backend. La revisione è statica: non è stata eseguita una build Xcode né una prova su dispositivo. Vedere anche [architettura](../../ARCHITECTURE.md) e [documentazione backend](../../python_scraper_server/DOCUMENTATION.md).
 
-> **Ultima modifica (16/09/2026):** aggiunta gestione errori di connessione nelle schermate Home e Analisi, coerente con quella già presente in EventsView.
+> **Ultima modifica (16/09/2026, sera):** corretta etichetta "ISCRITTE TARDI" nella sezione waitlist della vista admin iscrizioni; corretto form di iscrizione team admin per eventi senza massimo di partecipanti per gruppo.
 
 ## 1. Progetto e navigazione
 
@@ -59,6 +59,8 @@ Non tutte le chiamate passano da questo servizio: ad esempio `PDFBrowser` usa di
 | Import risultati | `UploadResultsView` e funzioni live inviano CSV; il backend permette import/rimozione ufficiali solo agli admin. |
 
 Stato iscrizione, firma e stato evento sono separati. La firma disegnata non è una firma crittografica. L'inizio organizzativo dell'evento può rimuovere le iscrizioni non confermate; l'avvio del turno e dei timer è un altro comando.
+
+La vista admin delle iscrizioni (`AdminEventRegistrationsView`) mostra la sezione **«SQUADRE IN LISTA D'ATTESA»** (etichetta precedentemente errata: conteneva la postilla «ISCRITTE TARDI», non pertinente perché le squadre possono finire in waitlist anche per carenza di piloti, non solo per iscrizione tardiva). Il form admin di iscrizione team (`AdminAddRegistrationSheetView`) calcola correttamente il numero massimo di compagni aggiuntivi anche quando l'evento non ha un massimo di partecipanti per gruppo (`max_people_per_group = nil`): il tetto è illimitato, coerentemente con `EventTeamEditSheetView`.
 
 ## 4. Home e notifiche in-app
 
