@@ -2,6 +2,8 @@
 
 Aggiornamento: 16 settembre 2026. Questa documentazione descrive il codice SwiftUI presente in `KartTimingApp/`, confrontato con le API backend. La revisione è statica: non è stata eseguita una build Xcode né una prova su dispositivo. Vedere anche [architettura](../../ARCHITECTURE.md) e [documentazione backend](../../python_scraper_server/DOCUMENTATION.md).
 
+> **Ultima modifica (16/09/2026):** aggiunta gestione errori di connessione nelle schermate Home e Analisi, coerente con quella già presente in EventsView.
+
 ## 1. Progetto e navigazione
 
 Aprire `KartTimingApp.xcodeproj` in Xcode. Il deployment target configurato nel progetto è **iOS 26.1**; servono un SDK/toolchain adeguati ed eventuale signing per il dispositivo. Questo valore non costituisce verifica di compatibilità con sistemi precedenti.
@@ -58,9 +60,11 @@ Non tutte le chiamate passano da questo servizio: ad esempio `PDFBrowser` usa di
 
 Stato iscrizione, firma e stato evento sono separati. La firma disegnata non è una firma crittografica. L'inizio organizzativo dell'evento può rimuovere le iscrizioni non confermate; l'avvio del turno e dei timer è un altro comando.
 
-## 4. Notifiche in-app
+## 4. Home e notifiche in-app
 
-`UserHomeViewModel`, `AppNotification` e `NotificationsPanelView` gestiscono la casella persistente fornita dal backend: non è implementato push APNs. L'interfaccia mostra lette/non lette, consente marcatura e cancellazione e apre l'evento associato.
+`UserHomeView` e `UserHomeViewModel` gestiscono il profilo, il prossimo evento, le iscrizioni e il pannello notifiche. In caso di errore di rete (tutte e quattro le fetch — profilo, iscrizioni, notifiche, eventi — falliscono), `UserHomeViewModel` imposta `errorMessage` e la vista mostra un banner con icona `wifi.exclamationmark` e il pulsante **«Riprova»**, che rilancia `fetchData` con `forceRefresh: true`. Il comportamento è identico a quello già presente in `EventsView`.
+
+`AppNotification` e `NotificationsPanelView` gestiscono la casella persistente fornita dal backend: non è implementato push APNs. L'interfaccia mostra lette/non lette, consente marcatura e cancellazione e apre l'evento associato.
 
 `HomeView` riceve `OpenEventDetail`, seleziona Eventi e trasferisce l'ID attraverso `AppEnvironment.pendingEventIdToOpen`. Il backend produce anche promemoria una tantum per eventi futuri entro sette giorni, per iscrizioni confirmed/pending_payment; cancellare il messaggio non riabilita il promemoria persistente.
 
@@ -112,6 +116,8 @@ Il limite stint è valutato sul backend anche con app chiusa. Il telefono visual
 
 La sezione Analisi è implementata, non è più un placeholder. `AnalisiViewModel`, `AnalisiView`, `EventResultModels` e `ClassificationPDFGenerator` supportano:
 
+In caso di errore di rete (tutte e cinque le fetch falliscono), `AnalisiViewModel` imposta `errorMessage` e la vista utente mostra un banner con icona `wifi.exclamationmark` e il pulsante **«Riprova»**, che richiama `fetchAll`. La schermata admin (`AdminAnalisiView`) non è coinvolta da questa logica. Gli stessi dati sono visualizzati correttamente quando almeno una fetch ha esito positivo.
+
 - Storico risultati e iscrizioni dell'utente; percorsi amministrativi per consultare altri utenti autorizzati.
 - Classifiche evento e penalità, con associazioni account/team quando disponibili.
 - Statistiche giri per kart fornite dal backend e grafici Swift Charts dei dati disponibili.
@@ -160,8 +166,8 @@ I risultati e le firme nel DB sono indipendenti dalla copia temporanea. L'upload
 
 ## 11. Verifiche e limiti
 
-La suite originale di **69 test backend** continua a passare. La verifica DD/RASD estesa conta **94 test: 90 superati e 4 falliti**; vedere il [report](../../project_tests/TEST_REPORT.md) per difetti e limiti. I test sono ora in `project_tests/` nella root. Non sono stati eseguiti test UI, build o collaudi GPS/browser su dispositivo.
+La suite originale di **69 test backend** continua a passare. La verifica DD/RASD estesa conta **98 test: 96 superati e 2 falliti**; vedere il [report](../../project_tests/TEST_REPORT.md) per difetti e limiti. I finding aperti sono **F1** (esposizione dello storage privato via mount statico in `main.py`) e **F2** (firma vuota accettata senza validazione). I precedenti finding sulle identità eliminate/declassate sono **risolti** tramite il meccanismo `token_version`: REST e WebSocket rifiutano i token emessi prima di un cambio ruolo o di una cancellazione account. I test sono ora in `project_tests/` nella root. Non sono stati eseguiti test UI, build o collaudi GPS/browser su dispositivo.
 
-Restano da riconciliare il cronometro derivato dopo rossa, l'autodichiarazione giro evento e alcune differenze di permesso: `UserRole.canChangeURL` consente solo director/admin mentre il backend permette la selezione della propria sorgente da viewer in su. Le restrizioni guest di navigazione non dimostrano una restrizione equivalente su ogni endpoint.
+Restano da riconciliare il cronometro derivato dopo rossa, l'autodichiarazione giro evento e alcune differenze di permesso: `UserRole.canChangeURL` consente solo director/admin mentre il backend permette la selezione della propria sorgente da viewer in su. Le restrizioni guest di navigazione non dimostrano una restrizione equivalente su ogni endpoint. I finding aperti del backend (**F1** e **F2**) non hanno un impatto diretto sulla UI del client, ma devono essere considerati nel modello di sicurezza complessivo.
 
 Non sono implementati pagamenti, inviti email, push APNs, client Android/web completo o modalità offline completa. I grafici esistenti e la misura GPS locale non implicano un sistema di telemetria remota.

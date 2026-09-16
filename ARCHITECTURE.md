@@ -125,11 +125,13 @@ Non esiste una directory client `Network/`: autenticazione e rete sono in `Auth/
 - `UserRole.canChangeURL` limita il permesso a director/admin, mentre il WebSocket ammette tutti i ruoli autenticati alla selezione della propria sorgente.
 - Il backend espone alcune letture evento senza autenticazione e la registrazione richiede identità ma non un ruolo minimo `user`: non descrivere la restrizione guest della UI come protezione completa delle API.
 - La sottoscrizione evento valida un ID positivo, non una policy completa di accesso. Il filtro kart dei messaggi è un parametro di lettura, non un vincolo di appartenenza del chiamante.
-- `main.py` monta l'intera directory `data/` sotto `/static`, non soltanto immagini. Lo storage privato non è quindi isolato da quel mount nella configurazione attuale.
+- **F1 (aperto)** — `main.py` monta l'intera directory `data/` sotto `/static`, non soltanto immagini. Lo storage privato non è quindi isolato da quel mount nella configurazione attuale.
+- **F2 (aperto)** — la firma vuota (`signature_base64: ""`) non viene rifiutata dal backend: `SignedRelease` può essere persistita senza una firma reale.
+- Le identità eliminate e i token declassati vengono rifiutati correttamente su tutti i percorsi REST e WebSocket tramite il meccanismo `token_version` + lettura corrente del ruolo dal DB (risolti nella sessione del 16/09/2026).
 - La scadenza automatica cambia solo `Event.status`: non pubblica risultati e non riconcilia `race_status`/timer.
 
 Questi punti sono documentati come stato attuale; questo aggiornamento non modifica il codice applicativo. RASD/DD e rispettive versioni LaTeX richiedono una revisione separata per recepire la nuova semantica della bandiera rossa.
 
 ## 6. Verifiche
 
-La suite originale comprendeva **69 test superati**. È ora centralizzata in `project_tests/backend/`: dalla root eseguire `.venv/bin/python project_tests/run.py`. La verifica estesa DD/RASD ha eseguito **94 test: 90 superati e 4 falliti**, documentati nel [report](project_tests/TEST_REPORT.md). La suite usa fixture/database isolati per le verifiche; non equivale a un collaudo con provider reali, carico concorrente o dispositivi iOS. La revisione client è basata sul codice, senza build Xcode o test su dispositivo.
+La suite originale comprendeva **69 test superati**. È ora centralizzata in `project_tests/backend/`: dalla root eseguire `.venv/bin/python project_tests/run.py`. La verifica estesa DD/RASD ha eseguito **98 test: 96 superati e 2 falliti**, documentati nel [report](project_tests/TEST_REPORT.md). I finding aperti sono **F1** (esposizione storage privato via mount statico) e **F2** (firma vuota accettata). I precedenti finding sulle identità eliminate e declassate sono risolti: la colonna `token_version` aggiunta con migrazione idempotente garantisce che REST e WebSocket rifiutino token emessi prima di un cambio ruolo o di una cancellazione account. La suite usa fixture/database isolati per le verifiche; non equivale a un collaudo con provider reali, carico concorrente o dispositivi iOS. La revisione client è basata sul codice, senza build Xcode o test su dispositivo.
