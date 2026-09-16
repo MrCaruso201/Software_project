@@ -21,7 +21,7 @@ struct AdminAddRegistrationSheetView: View {
     @State private var errorMessage: String? = nil
     
     private var maxAdditionalMembers: Int {
-        max(0, (event.maxPeoplePerGroup ?? 1) - 1)
+        max(0, (event.maxPeoplePerGroup ?? Int.max) - 1)
     }
     
     var body: some View {

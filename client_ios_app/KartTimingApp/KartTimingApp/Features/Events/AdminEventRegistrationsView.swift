@@ -215,7 +215,7 @@ struct AdminEventRegistrationsView: View {
                         
                         if !waitlistTeams.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("SQUADRE IN LISTA D'ATTESA (ISCRITTE TARDI)")
+                                Text("SQUADRE IN LISTA D'ATTESA")
                                     .font(.system(size: 13, weight: .bold))
                                     .foregroundColor(.purple)
                                     .padding(.horizontal, 16)

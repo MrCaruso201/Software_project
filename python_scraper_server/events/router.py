@@ -431,6 +431,9 @@ def leave_team_as_member(
     Permette a un membro NON-leader di abbandonare il proprio team.
     Rimuove solo la propria iscrizione; il resto del team rimane invariato.
     Funziona anche se lo status è 'confirmed'.
+    Se dopo l'uscita il team scende sotto il minimo di piloti richiesti
+    (min_people_per_group dell'evento), tutti i membri rimasti vengono
+    automaticamente spostati in 'waitlist' e notificati.
     """
     user_id = int(user_payload["sub"])
 
@@ -455,20 +458,44 @@ def leave_team_as_member(
     db.delete(reg)
     db.commit()
 
-    # Notifica il leader
+    # Controlla se il team è sceso sotto il minimo di piloti richiesti
     if team_id:
-        leader = db.query(EventRegistration).filter(
+        event = db.query(Event).filter(Event.id == event_id).first()
+        minimum = event.min_people_per_group or 1 if event else 1
+
+        remaining_members = db.query(EventRegistration).filter(
             EventRegistration.team_id == team_id,
             EventRegistration.event_id == event_id,
-            EventRegistration.is_team_leader == True
-        ).first()
-        if leader and leader.user_id:
-            notify_user(
-                db, leader.user_id, event_id,
-                "registration_deleted",
-                "Membro ha abbandonato il team",
-                f"{leaving_name} ha rifiutato l'iscrizione e ha abbandonato la squadra."
-            )
+        ).all()
+        remaining_count = len(remaining_members)
+
+        if remaining_count < minimum:
+            # Sposta tutto il team in waitlist
+            for member in remaining_members:
+                member.status = "waitlist"
+            db.commit()
+
+            # Notifica tutti i membri rimasti (incluso il leader)
+            for member in remaining_members:
+                if member.user_id:
+                    notify_user(
+                        db, member.user_id, event_id,
+                        "moved_to_waitlist",
+                        "Squadra in lista d'attesa",
+                        f"{leaving_name} ha abbandonato la squadra. Il team ora ha {remaining_count} "
+                        f"membro/i, sotto il minimo di {minimum} richiesti. "
+                        f"La vostra iscrizione è stata spostata in lista d'attesa in attesa di un nuovo pilota o di una decisione dell'organizzatore."
+                    )
+        else:
+            # Il team è ancora sopra il minimo: notifica solo il leader
+            leader = next((m for m in remaining_members if m.is_team_leader), None)
+            if leader and leader.user_id:
+                notify_user(
+                    db, leader.user_id, event_id,
+                    "registration_deleted",
+                    "Membro ha abbandonato il team",
+                    f"{leaving_name} ha rifiutato l'iscrizione e ha abbandonato la squadra."
+                )
 
     return None
 
