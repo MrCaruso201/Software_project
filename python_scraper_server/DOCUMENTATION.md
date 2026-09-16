@@ -36,7 +36,9 @@ All'avvio: inizializzazione DB, chiusura eventi già scaduti, pulizia JSON timin
 - WebSocket: `/ws?token=<access_token>`, chiusura `4401` per identità non valida. Rivalidazione a ogni comando e ogni 5 secondi di inattività.
 - Account e ruolo sono riletti dal DB: il ruolo contenuto in un vecchio JWT non è l'unico riferimento per l'autorizzazione.
 
-Gerarchia: `viewer < user < race_director < admin`. Il leader è una proprietà della partecipazione al team, non un ruolo globale. Direttori e admin possono effettuare operazioni organizzative; import/rimozione classifiche ufficiali, ruoli, circuiti e configurazione tipi di penalità sono riservati agli admin. Le route liberatorie non hanno guard uniformi: download e rimozione ammettono anche direttori; il download usa il ruolo nel JWT senza rileggere l’account, come dimostrato dai nuovi test falliti.
+Gerarchia: `viewer < user < race_director < admin`. Il leader è una proprietà della partecipazione al team, non un ruolo globale. Direttori e admin possono effettuare operazioni organizzative; import/rimozione classifiche ufficiali, ruoli, circuiti e configurazione tipi di penaltà sono riservati agli admin. Le route liberatorie non hanno guard uniformi: download e rimozione ammettono anche direttori; il download usa il ruolo nel JWT senza rileggere l'account, come dimostrato dai nuovi test falliti.
+
+Il meccanismo `token_version` (colonna aggiunta con migrazione idempotente) garantisce che REST e WebSocket rifiutino token emessi prima di un cambio ruolo o di una cancellazione account: l'account e il ruolo correnti sono riletti dal DB a ogni richiesta autenticata. Il vecchio finding sull'accesso al PDF da parte di identità eliminate/declassate è risolto.
 
 Esistono differenze fra policy desiderata e applicazione attuale: la lista/dettaglio eventi non richiede autenticazione; l'iscrizione richiede un account ma non verifica un ruolo minimo `user`. La sola limitazione guest nella UI non protegge queste API.
 
@@ -164,7 +166,8 @@ Il monitor promemoria seleziona eventi scheduled futuri entro 7 giorni e utenti 
 
 ## 9. Limiti di implementazione
 
-- `main.py` monta tutto `data/` su `/static`: il mount non separa DB e altri dati privati dalle immagini pubbliche.
+- **F1 (aperto)** — `main.py` monta tutto `data/` su `/static`: il mount non separa DB e altri dati privati dalle immagini pubbliche.
+- **F2 (aperto)** — la firma vuota (`signature_base64: ""`) viene accettata dal backend: `SignedRelease` può essere persistita senza una firma reale.
 - Gli eventi non hanno un proprietario organizzatore per isolamento multi-tenant.
 - `subscribe_event` non applica una policy completa di accesso all'evento. `GET .../messages` filtra per kart solo se il chiamante specifica il parametro; non vincola quel kart alla sua appartenenza.
 - Le sessioni/source map non sono condivise fra processi e i broadcast non hanno garanzia di consegna durevole.
@@ -182,6 +185,6 @@ I test sono stati centralizzati in `project_tests/backend/`, nella root. Dalla r
 
 Il runner configura percorsi import e un segreto JWT casuale di test, salva log/esiti per caso e usa fixture isolate. Non richiede il segreto operativo.
 
-Il 16 settembre 2026 i **69 test originali** sono stati rieseguiti con successo. La suite estesa DD/RASD conta **94 casi: 90 superati, 4 falliti** per firma vuota, identità eliminata/declassata nel download PDF ed esposizione del database tramite mount statico (verificata con soli file fittizi). I fallimenti rimangono visibili e producono exit code 1; non sono stati corretti in questa attività di verifica.
+Il 16 settembre 2026 i **69 test originali** sono stati rieseguiti con successo. La suite estesa DD/RASD conta **98 casi: 96 superati, 2 falliti**. I finding aperti sono **F1** (esposizione del database via mount statico, verificata con file fittizi) e **F2** (firma vuota accettata, nessuna validazione su `signature_base64: ""`). I precedenti finding sulle identità eliminate/declassate nel download PDF sono **risolti**: il meccanismo `token_version` + lettura corrente del ruolo dal DB copre tutti i percorsi REST e WebSocket, confermato dai nuovi test `TokenRenewalTests` e dalla verifica della migrazione su DB legacy. I fallimenti rimangono visibili e producono exit code 1; non sono stati corretti in questa attività di verifica.
 
 Vedere [report e copertura](../project_tests/TEST_REPORT.md), [elenco dei test già svolti](../project_tests/ALREADY_EXECUTED.md) e [istruzioni](../project_tests/README.md). Le misure prestazionali sono locali e ridotte; un tentativo a 50 client è inconclusivo. Non sono stati eseguiti collaudi UI su dispositivo o prove con provider reali.
