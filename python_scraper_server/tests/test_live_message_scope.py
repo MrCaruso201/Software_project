@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy import create_engine
@@ -19,7 +19,7 @@ class MessageScopeTests(unittest.TestCase):
         self.db.add(self.event)
         self.db.flush()
         self.kart = LiveKartAssignment(event_id=self.event.id, team_id='team', kart_number=7,
-                                      stint_elapsed_seconds=12, stint_last_resume=datetime.now() - timedelta(seconds=10))
+                                      stint_elapsed_seconds=12, stint_last_resume=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=10))
         self.db.add(self.kart)
         self.db.commit()
 
@@ -54,19 +54,35 @@ class MessageScopeTests(unittest.TestCase):
         self.assertEqual(self.event.race_status, 'running')
         self.assertEqual((self.kart.stint_elapsed_seconds, self.kart.stint_last_resume), before)
 
-    def test_broadcast_controls_keep_timer_transitions(self):
-        self.send('red_flag', 'Rossa', None)
-        self.assertEqual(self.event.race_status, 'paused')
-        self.assertIsNone(self.kart.stint_last_resume)
-        elapsed = self.kart.stint_elapsed_seconds
-        self.send('green_flag', 'Verde', None)
-        self.assertEqual(self.event.race_status, 'running')
-        self.assertEqual(self.kart.stint_elapsed_seconds, elapsed)
-        self.assertIsNotNone(self.kart.stint_last_resume)
-        self.send('checkered_flag', 'Fine', None)
-        self.assertEqual(self.event.race_status, 'stopped')
-        self.assertIsNone(self.kart.stint_last_resume)
-        self.send('custom', ' Turno Iniziato ', None)
-        self.assertEqual(self.event.race_status, 'running')
-        self.assertEqual(self.kart.stint_elapsed_seconds, 0)
-        self.assertIsNotNone(self.kart.stint_last_resume)
+    def test_stop_flags_require_explicit_restart(self):
+        for kind in ('red_flag', 'checkered_flag'):
+            with self.subTest(kind=kind):
+                self.send('custom', 'Turno Iniziato', None)
+                self.kart.stint_elapsed_seconds = 12
+                self.kart.stint_last_resume = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=10)
+                self.db.commit()
+                lifecycle = self.event.status
+
+                message, tasks = self.send(kind, 'Stop', None)
+                self.db.expire_all()
+                self.assertEqual(self.event.race_status, 'stopped')
+                self.assertEqual(self.event.status, lifecycle)
+                self.assertEqual(message.message_type, kind)
+                self.assertIsNone(self.kart.stint_last_resume)
+                elapsed = self.kart.stint_elapsed_seconds
+                self.assertGreaterEqual(elapsed, 22)
+                self.assertTrue(tasks.tasks[-1].args[1]['karts_changed'])
+
+                self.send('green_flag', 'Verde', None)
+                self.assertEqual(self.event.race_status, 'stopped')
+                self.assertEqual(self.kart.stint_elapsed_seconds, elapsed)
+                self.assertIsNone(self.kart.stint_last_resume)
+
+                self.send(kind, 'Stop', None)
+                self.assertEqual(self.kart.stint_elapsed_seconds, elapsed)
+                self.assertIsNone(self.kart.stint_last_resume)
+
+                self.send('custom', ' Turno Iniziato ', None)
+                self.assertEqual(self.event.race_status, 'running')
+                self.assertEqual(self.kart.stint_elapsed_seconds, 0)
+                self.assertIsNotNone(self.kart.stint_last_resume)

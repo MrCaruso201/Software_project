@@ -698,7 +698,7 @@ def send_message(
                 k.stint_elapsed_seconds += max(0, delta)
             k.stint_last_resume = None
         # Aggiorna race_status senza toccare event.status
-        event.race_status = "paused" if body.message_type == "red_flag" else "stopped"
+        event.race_status = "stopped"
     elif body.message_type == "green_flag":
         if event.race_status != "stopped":
             # Riprende i timer dal punto in cui erano (NO reset) solo se non è stopped
