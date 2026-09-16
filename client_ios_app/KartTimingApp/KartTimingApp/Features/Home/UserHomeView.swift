@@ -23,6 +23,27 @@ struct UserHomeView: View {
             
             if viewModel.isLoading {
                 ProgressView().tint(.kartAccent).scaleEffect(1.3)
+            } else if let errorMessage = viewModel.errorMessage {
+                Spacer()
+                VStack(spacing: 12) {
+                    Image(systemName: "wifi.exclamationmark")
+                        .font(.system(size: 36))
+                        .foregroundColor(.kartRed)
+                    Text("Impossibile caricare la Home")
+                        .font(.headline)
+                        .foregroundColor(.kartForeground)
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundColor(.kartDim)
+                        .multilineTextAlignment(.center)
+                    Button("Riprova") {
+                        viewModel.fetchData(serverURL: server.httpURL, token: authState.currentToken, forceRefresh: true)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.kartInfoAction)
+                }
+                .padding(24)
+                Spacer()
             } else {
                 ScrollView {
                     VStack(spacing: 20) {

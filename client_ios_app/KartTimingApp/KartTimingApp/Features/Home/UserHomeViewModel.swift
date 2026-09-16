@@ -11,6 +11,7 @@ class UserHomeViewModel: ObservableObject {
     var currentToken: String?
 
     @Published var isLoading = true
+    @Published var errorMessage: String? = nil
 
     @Published var notificationError: String?
     private var notificationScope: String { "\(currentServerURL?.absoluteString ?? "")_\(profile?.id ?? 0)" }
@@ -35,10 +36,13 @@ class UserHomeViewModel: ObservableObject {
         }
 
         isLoading = profile == nil
+        errorMessage = nil
         self.currentServerURL = serverURL
         self.currentToken = token
 
         let group = DispatchGroup()
+        var failedCount = 0
+        let totalRequests = 4
 
         // Fetch User Profile
         group.enter()
@@ -49,6 +53,8 @@ class UserHomeViewModel: ObservableObject {
             Task { @MainActor in
                 if let data = data, let p = try? await BackgroundJSON.decode(UserProfile.self, from: data) {
                     self.profile = p
+                } else {
+                    failedCount += 1
                 }
                 group.leave()
             }
@@ -63,11 +69,12 @@ class UserHomeViewModel: ObservableObject {
             Task { @MainActor in
                 if let data = data, let regs = try? await BackgroundJSON.decode([EventRegistrationResponse].self, from: data) {
                     self.registrations = regs
+                } else {
+                    failedCount += 1
                 }
                 group.leave()
             }
         }.resume()
-
 
         // Fetch Server Notifications
         group.enter()
@@ -81,6 +88,7 @@ class UserHomeViewModel: ObservableObject {
                     self.notificationError = nil
                 } else {
                     self.notificationError = "Impossibile aggiornare le notifiche. Riprova."
+                    failedCount += 1
                 }
                 group.leave()
             }
@@ -95,6 +103,8 @@ class UserHomeViewModel: ObservableObject {
             Task { @MainActor in
                 if let data = data, let evs = try? await BackgroundJSON.decode([RaceEvent].self, from: data) {
                     self.events = evs
+                } else {
+                    failedCount += 1
                 }
                 group.leave()
             }
@@ -102,6 +112,9 @@ class UserHomeViewModel: ObservableObject {
 
         group.notify(queue: .main) {
             self.isLoading = false
+            if failedCount == totalRequests {
+                self.errorMessage = "Impossibile raggiungere il server. Controlla la connessione e riprova."
+            }
             self.buildNotifications()
             completion?()
         }

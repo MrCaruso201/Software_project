@@ -41,6 +41,27 @@ struct AnalisiView: View {
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundColor(.kartDim)
                 }
+            } else if let errorMessage = viewModel.errorMessage {
+                Spacer()
+                VStack(spacing: 12) {
+                    Image(systemName: "wifi.exclamationmark")
+                        .font(.system(size: 36))
+                        .foregroundColor(.kartRed)
+                    Text("Impossibile caricare l'analisi")
+                        .font(.headline)
+                        .foregroundColor(.kartForeground)
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundColor(.kartDim)
+                        .multilineTextAlignment(.center)
+                    Button("Riprova") {
+                        viewModel.fetchAll(serverURL: server.httpURL, token: authState.currentToken)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.kartInfoAction)
+                }
+                .padding(24)
+                Spacer()
             } else {
                 VStack(spacing: 0) {
                     segmentBar

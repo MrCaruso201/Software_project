@@ -171,6 +171,8 @@ class AnalisiViewModel: ObservableObject {
         self.targetUserId = targetUserId
 
         let group = DispatchGroup()
+        var failedCount = 0
+        let totalRequests = 5
 
         if let uid = targetUserId {
             // ── Percorso Admin: endpoint /user/{id} ──────────────────────────
@@ -178,7 +180,7 @@ class AnalisiViewModel: ObservableObject {
             fetch(url: serverURL.appendingPathComponent("events/results/user/\(uid)"),
                   token: token,
                   type: [EventResult].self) { [weak self] result in
-                if let res = result { self?.myResults = res }
+                if let res = result { self?.myResults = res } else { failedCount += 1 }
                 group.leave()
             }
 
@@ -186,7 +188,7 @@ class AnalisiViewModel: ObservableObject {
             fetch(url: serverURL.appendingPathComponent("events/registrations/user/\(uid)"),
                   token: token,
                   type: [EventRegistrationResponse].self) { [weak self] result in
-                if let regs = result { self?.registrations = regs }
+                if let regs = result { self?.registrations = regs } else { failedCount += 1 }
                 group.leave()
             }
 
@@ -194,7 +196,7 @@ class AnalisiViewModel: ObservableObject {
             fetch(url: serverURL.appendingPathComponent("kartodromi/results/user/\(uid)"),
                   token: token,
                   type: [KartodromoResultResponse].self) { [weak self] result in
-                if let kr = result { self?.kartodromiResults = kr }
+                if let kr = result { self?.kartodromiResults = kr } else { failedCount += 1 }
                 group.leave()
             }
         } else {
@@ -203,7 +205,7 @@ class AnalisiViewModel: ObservableObject {
             fetch(url: serverURL.appendingPathComponent("events/registrations/me"),
                   token: token,
                   type: [EventRegistrationResponse].self) { [weak self] result in
-                if let regs = result { self?.registrations = regs }
+                if let regs = result { self?.registrations = regs } else { failedCount += 1 }
                 group.leave()
             }
 
@@ -211,7 +213,7 @@ class AnalisiViewModel: ObservableObject {
             fetch(url: serverURL.appendingPathComponent("events/results/me"),
                   token: token,
                   type: [EventResult].self) { [weak self] result in
-                if let res = result { self?.myResults = res }
+                if let res = result { self?.myResults = res } else { failedCount += 1 }
                 group.leave()
             }
 
@@ -219,7 +221,7 @@ class AnalisiViewModel: ObservableObject {
             fetch(url: serverURL.appendingPathComponent("kartodromi/results/me"),
                   token: token,
                   type: [KartodromoResultResponse].self) { [weak self] result in
-                if let kr = result { self?.kartodromiResults = kr }
+                if let kr = result { self?.kartodromiResults = kr } else { failedCount += 1 }
                 group.leave()
             }
         }
@@ -229,7 +231,7 @@ class AnalisiViewModel: ObservableObject {
         fetch(url: serverURL.appendingPathComponent("events/"),
               token: token,
               type: [RaceEvent].self) { [weak self] result in
-            if let evs = result { self?.events = evs }
+            if let evs = result { self?.events = evs } else { failedCount += 1 }
             group.leave()
         }
 
@@ -237,12 +239,15 @@ class AnalisiViewModel: ObservableObject {
         fetch(url: serverURL.appendingPathComponent("kartodromi/"),
               token: token,
               type: [Kartodromo].self) { [weak self] result in
-            if let k = result { self?.allKartodromi = k }
+            if let k = result { self?.allKartodromi = k } else { failedCount += 1 }
             group.leave()
         }
 
         group.notify(queue: .main) { [weak self] in
             self?.isLoading = false
+            if failedCount == totalRequests {
+                self?.errorMessage = "Impossibile raggiungere il server. Controlla la connessione e riprova."
+            }
         }
     }
 
