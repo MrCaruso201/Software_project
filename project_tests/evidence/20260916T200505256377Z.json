@@ -1,0 +1,672 @@
+{
+  "utc": "20260916T200505256377Z",
+  "python": "3.13.14",
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "revision": "8e98a8860e9bec1d3af4be4a9ed3b4c93a10c529",
+  "pattern": "test_*.py",
+  "tests_run": 98,
+  "failures": 2,
+  "errors": 0,
+  "skipped": 0,
+  "successful": false,
+  "cases": [
+    {
+      "id": "test_access_integrity.AccessIntegrityTests.test_deleted_account_token_is_rejected",
+      "status": "PASS",
+      "seconds": 0.025184208003338426,
+      "detail": ""
+    },
+    {
+      "id": "test_access_integrity.AccessIntegrityTests.test_event_writes_require_current_director_role",
+      "status": "PASS",
+      "seconds": 0.033146125002531335,
+      "detail": ""
+    },
+    {
+      "id": "test_access_integrity.AccessIntegrityTests.test_idle_websocket_revalidates_and_unsubscribes",
+      "status": "PASS",
+      "seconds": 0.014380666994838975,
+      "detail": ""
+    },
+    {
+      "id": "test_access_integrity.AccessIntegrityTests.test_invalid_csv_preserves_previous_results",
+      "status": "PASS",
+      "seconds": 0.017567250004503876,
+      "detail": ""
+    },
+    {
+      "id": "test_access_integrity.AccessIntegrityTests.test_partial_csv_replaces_results_and_reports_errors",
+      "status": "PASS",
+      "seconds": 0.017826374998549,
+      "detail": ""
+    },
+    {
+      "id": "test_access_integrity.AccessIntegrityTests.test_websocket_uses_current_account",
+      "status": "PASS",
+      "seconds": 0.03662375001295004,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_A1_duplicate_registration",
+      "status": "PASS",
+      "seconds": 0.04181087500182912,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_A2_late_registration_enters_waitlist",
+      "status": "PASS",
+      "seconds": 0.04025829100282863,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_A3_account_cannot_change_roles",
+      "status": "PASS",
+      "seconds": 0.03733704199839849,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_A3_foreign_team_edit_denied",
+      "status": "PASS",
+      "seconds": 0.03776145800657105,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_A4_source_and_event_isolation",
+      "status": "PASS",
+      "seconds": 0.035120750006171875,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_A8_waiver_preview_store_pdf_remove",
+      "status": "PASS",
+      "seconds": 0.05016837498988025,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T10_durable_records_after_engine_reopen",
+      "status": "PASS",
+      "seconds": 0.04524062499694992,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T12_deleted_account_cannot_download_waiver",
+      "status": "PASS",
+      "seconds": 0.04129395900235977,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T12_demoted_token_cannot_download_waiver",
+      "status": "PASS",
+      "seconds": 0.04152808399521746,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T12_private_database_is_not_public_static_asset",
+      "status": "FAIL",
+      "seconds": 0.09659808399737813,
+      "detail": "Traceback (most recent call last):\n  File \"/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py\", line 119, in run\n    return self._loop.run_until_complete(task)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py\", line 725, in run_until_complete\n    return future.result()\n           ~~~~~~~~~~~~~^^\n  File \"/Users/marco/Documents/Universita\u0300/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py\", line 191, in test_T12_private_database_is_not_public_static_asset\n    self.assertIn(status, (401, 403, 404), 'Q4: database files must not be served anonymously')\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 200 not found in (401, 403, 404) : Q4: database files must not be served anonymously\n"
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T1_duplicate_identity_rejected",
+      "status": "PASS",
+      "seconds": 0.037899625007412396,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T1_expired_token_rejected",
+      "status": "PASS",
+      "seconds": 0.03554883299511857,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T1_profile_cannot_promote_self",
+      "status": "PASS",
+      "seconds": 0.03764312500425149,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T1_register_login_refresh_logout",
+      "status": "PASS",
+      "seconds": 0.5762889579928014,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T2_confirmed_self_cancellation_blocked",
+      "status": "PASS",
+      "seconds": 0.038680416997522116,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T2_full_individual_event_enters_waitlist",
+      "status": "PASS",
+      "seconds": 0.09990579100849573,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T4_empty_signature_is_rejected",
+      "status": "FAIL",
+      "seconds": 0.03941945898986887,
+      "detail": "Traceback (most recent call last):\n  File \"/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py\", line 119, in run\n    return self._loop.run_until_complete(task)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py\", line 725, in run_until_complete\n    return future.result()\n           ~~~~~~~~~~~~~^^\n  File \"/Users/marco/Documents/Universita\u0300/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py\", line 127, in test_T4_empty_signature_is_rejected\n    self.assertIn(status, (400, 422), 'R15: empty signature must not create a signed waiver')\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 200 not found in (400, 422) : R15: empty signature must not create a signed waiver\n"
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T4_unregistered_cannot_sign_or_read_other_waiver",
+      "status": "PASS",
+      "seconds": 0.04157895800017286,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T4_upload_exact_limit_and_one_byte_over",
+      "status": "PASS",
+      "seconds": 0.03908650000812486,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T5_shared_source_and_switch_preserve_other_client",
+      "status": "PASS",
+      "seconds": 0.03425329200399574,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T5_simulator_normalization_and_factory",
+      "status": "PASS",
+      "seconds": 0.0443739159964025,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T6_assignment_conflict_preserves_existing_entries",
+      "status": "PASS",
+      "seconds": 0.044200541000464,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T7_warning_threshold_creates_configured_penalty",
+      "status": "PASS",
+      "seconds": 0.045206707989564165,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T8_import_authorization_through_http",
+      "status": "PASS",
+      "seconds": 0.04151266600820236,
+      "detail": ""
+    },
+    {
+      "id": "test_document_acceptance.DocumentAcceptanceTests.test_T8_valid_import_preserves_other_events",
+      "status": "PASS",
+      "seconds": 0.04037425000569783,
+      "detail": ""
+    },
+    {
+      "id": "test_event_lifecycle.EventExpirationNotificationTests.test_notifies_clients_after_scan",
+      "status": "PASS",
+      "seconds": 0.0010074159945361316,
+      "detail": ""
+    },
+    {
+      "id": "test_event_lifecycle.EventLifecycleTests.test_aware_now_is_converted_to_utc",
+      "status": "PASS",
+      "seconds": 0.003371166007127613,
+      "detail": ""
+    },
+    {
+      "id": "test_event_lifecycle.EventLifecycleTests.test_closes_only_events_at_least_two_days_old",
+      "status": "PASS",
+      "seconds": 0.004638582991901785,
+      "detail": ""
+    },
+    {
+      "id": "test_event_lifecycle.EventLifecycleTests.test_exact_48_hour_boundary_including_daylight_saving_changes",
+      "status": "PASS",
+      "seconds": 0.0043851670052390546,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_complete_team_accepting_extra_pilots_is_not_waitlisted",
+      "status": "PASS",
+      "seconds": 0.005825582993566059,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_deadline_follows_date_and_respects_explicit_override",
+      "status": "PASS",
+      "seconds": 0.004514041997026652,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_duplicate_edit_preserves_team",
+      "status": "PASS",
+      "seconds": 0.007322042001760565,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_duplicates_rejected_before_insert",
+      "status": "PASS",
+      "seconds": 0.0064146250078920275,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_edit_below_minimum_preserves_team",
+      "status": "PASS",
+      "seconds": 0.007391999999526888,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_edit_incomplete_team_rejected_even_when_accepting_extra_pilots",
+      "status": "PASS",
+      "seconds": 0.006734541995683685,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_explicit_max_is_enforced",
+      "status": "PASS",
+      "seconds": 0.003898042006767355,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_extra_pilots_does_not_bypass_maximum",
+      "status": "PASS",
+      "seconds": 0.004178500006673858,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_generic_status_patch_rejected_without_changes",
+      "status": "PASS",
+      "seconds": 0.003520416998071596,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_incomplete_team_rejected_even_when_accepting_extra_pilots",
+      "status": "PASS",
+      "seconds": 0.004394666000735015,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_member_replacement",
+      "status": "PASS",
+      "seconds": 0.008198708004783839,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_minimum_and_maximum_inclusive",
+      "status": "PASS",
+      "seconds": 0.011681791002047248,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_minimum_one_allows_solo_registration",
+      "status": "PASS",
+      "seconds": 0.005493499993463047,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_minimum_rejects_missing_and_blank_members_without_insert",
+      "status": "PASS",
+      "seconds": 0.004688832996180281,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_no_team_name_registers_individual_in_waitlist_despite_minimum",
+      "status": "PASS",
+      "seconds": 0.005107874996610917,
+      "detail": ""
+    },
+    {
+      "id": "test_event_registration_integrity.EventRegistrationIntegrityTests.test_optional_max_and_rename_preserve_member_attributes",
+      "status": "PASS",
+      "seconds": 0.008216125002945773,
+      "detail": ""
+    },
+    {
+      "id": "test_event_reminders.EventReminderTests.test_boundary_refresh_and_deletion",
+      "status": "PASS",
+      "seconds": 0.006134958006441593,
+      "detail": ""
+    },
+    {
+      "id": "test_event_reminders.EventReminderTests.test_excluded_waitlist_started_and_past_events",
+      "status": "PASS",
+      "seconds": 0.005644250006298535,
+      "detail": ""
+    },
+    {
+      "id": "test_event_reminders.EventReminderTests.test_registration_inside_window_before_confirmation",
+      "status": "PASS",
+      "seconds": 0.00483787500706967,
+      "detail": ""
+    },
+    {
+      "id": "test_event_reminders.EventReminderTests.test_rollback_does_not_consume_reminder",
+      "status": "PASS",
+      "seconds": 0.004144874998019077,
+      "detail": ""
+    },
+    {
+      "id": "test_kartodromo_update.KartodromoUpdateTests.test_disconnect_precedes_save_and_only_affects_target",
+      "status": "PASS",
+      "seconds": 0.005950125007075258,
+      "detail": ""
+    },
+    {
+      "id": "test_kartodromo_update.KartodromoUpdateTests.test_duplicate_url_does_not_disconnect",
+      "status": "PASS",
+      "seconds": 0.004334333993028849,
+      "detail": ""
+    },
+    {
+      "id": "test_kartodromo_update.KartodromoUpdateTests.test_live_event_blocks_without_disconnect_or_changes",
+      "status": "PASS",
+      "seconds": 0.013738709007157013,
+      "detail": ""
+    },
+    {
+      "id": "test_kartodromo_update.KartodromoUpdateTests.test_save_without_connected_clients",
+      "status": "PASS",
+      "seconds": 0.004053500000736676,
+      "detail": ""
+    },
+    {
+      "id": "test_kartodromo_update.KartodromoUpdateTests.test_timeout_aborts_save_and_unblocks_url",
+      "status": "PASS",
+      "seconds": 0.004207249992759898,
+      "detail": ""
+    },
+    {
+      "id": "test_lap_stats.LapStatsTests.test_unique_route_and_per_kart_threshold",
+      "status": "PASS",
+      "seconds": 0.0032139999966602772,
+      "detail": ""
+    },
+    {
+      "id": "test_live_message_scope.MessageScopeTests.test_stop_flags_require_explicit_restart",
+      "status": "PASS",
+      "seconds": 0.00965012499364093,
+      "detail": ""
+    },
+    {
+      "id": "test_live_message_scope.MessageScopeTests.test_targeted_control_commands_are_rejected_without_side_effects",
+      "status": "PASS",
+      "seconds": 0.007936124995467253,
+      "detail": ""
+    },
+    {
+      "id": "test_live_message_scope.MessageScopeTests.test_targeted_information_remains_supported",
+      "status": "PASS",
+      "seconds": 0.004313124998589046,
+      "detail": ""
+    },
+    {
+      "id": "test_notifications_integrity.NotificationIntegrityTests.test_event_and_notifications_rollback_together_on_failure",
+      "status": "PASS",
+      "seconds": 0.004307499999413267,
+      "detail": ""
+    },
+    {
+      "id": "test_notifications_integrity.NotificationIntegrityTests.test_expiry_accepts_database_dates_and_preserves_recent_notifications",
+      "status": "PASS",
+      "seconds": 0.006130666006356478,
+      "detail": ""
+    },
+    {
+      "id": "test_notifications_integrity.NotificationIntegrityTests.test_inbox_ownership_read_and_delete",
+      "status": "PASS",
+      "seconds": 0.007165041010011919,
+      "detail": ""
+    },
+    {
+      "id": "test_notifications_integrity.NotificationIntegrityTests.test_new_event_persists_one_notification_per_eligible_account",
+      "status": "PASS",
+      "seconds": 0.004359832993941382,
+      "detail": ""
+    },
+    {
+      "id": "test_notifications_integrity.NotificationIntegrityTests.test_sender_without_linked_account_does_not_create_notification",
+      "status": "PASS",
+      "seconds": 0.004462583005079068,
+      "detail": ""
+    },
+    {
+      "id": "test_notifications_integrity.NotificationIntegrityTests.test_start_event_notifies_confirmed_and_removes_unconfirmed",
+      "status": "PASS",
+      "seconds": 0.008759708987781778,
+      "detail": ""
+    },
+    {
+      "id": "test_notifications_integrity.NotificationIntegrityTests.test_team_actions_notify_all_linked_members",
+      "status": "PASS",
+      "seconds": 0.014860374998534098,
+      "detail": ""
+    },
+    {
+      "id": "test_pdf_browser.PDFBrowserTests.test_expiry",
+      "status": "PASS",
+      "seconds": 0.0010041250061476603,
+      "detail": ""
+    },
+    {
+      "id": "test_pdf_browser.PDFBrowserTests.test_publish_and_open",
+      "status": "PASS",
+      "seconds": 0.0005925409932387993,
+      "detail": ""
+    },
+    {
+      "id": "test_pdf_browser.PDFBrowserTests.test_unknown_link",
+      "status": "PASS",
+      "seconds": 0.00029962499684188515,
+      "detail": ""
+    },
+    {
+      "id": "test_pdf_browser.PDFBrowserTests.test_validation",
+      "status": "PASS",
+      "seconds": 0.0004659999976865947,
+      "detail": ""
+    },
+    {
+      "id": "test_penalty_configuration.PenaltyConfigurationTests.test_duplicate_codes_keep_current_configuration",
+      "status": "PASS",
+      "seconds": 0.007598957992740907,
+      "detail": ""
+    },
+    {
+      "id": "test_penalty_configuration.PenaltyConfigurationTests.test_legacy_migration_preserves_history_and_configuration",
+      "status": "PASS",
+      "seconds": 0.007101541996235028,
+      "detail": ""
+    },
+    {
+      "id": "test_penalty_configuration.PenaltyConfigurationTests.test_restart_preserves_custom_seconds_and_thresholds",
+      "status": "PASS",
+      "seconds": 0.005897249997360632,
+      "detail": ""
+    },
+    {
+      "id": "test_penalty_configuration.PenaltySecondsValidationTests.test_accepts_zero_positive_and_optional_seconds",
+      "status": "PASS",
+      "seconds": 2.3375003365799785e-05,
+      "detail": ""
+    },
+    {
+      "id": "test_penalty_configuration.PenaltySecondsValidationTests.test_rejects_negative_and_non_integer_seconds",
+      "status": "PASS",
+      "seconds": 5.487501039169729e-05,
+      "detail": ""
+    },
+    {
+      "id": "test_penalty_configuration.PenaltyThresholdValidationTests.test_accepts_positive_thresholds_and_unchanged_value",
+      "status": "PASS",
+      "seconds": 1.0083007509820163e-05,
+      "detail": ""
+    },
+    {
+      "id": "test_penalty_configuration.PenaltyThresholdValidationTests.test_rejects_invalid_thresholds",
+      "status": "PASS",
+      "seconds": 2.3374988813884556e-05,
+      "detail": ""
+    },
+    {
+      "id": "test_stint_monitor.StintPenaltyTests.test_pause_and_disabled_limit",
+      "status": "PASS",
+      "seconds": 0.00299987499602139,
+      "detail": ""
+    },
+    {
+      "id": "test_stint_monitor.StintPenaltyTests.test_pit_entry_checks_and_next_stint_rearms",
+      "status": "PASS",
+      "seconds": 0.00658183399355039,
+      "detail": ""
+    },
+    {
+      "id": "test_stint_monitor.StintPenaltyTests.test_scan_persists_across_sessions",
+      "status": "PASS",
+      "seconds": 0.004955042008077726,
+      "detail": ""
+    },
+    {
+      "id": "test_stint_monitor.StintPenaltyTests.test_stale_worker_cannot_duplicate_penalty",
+      "status": "PASS",
+      "seconds": 0.004915458004688844,
+      "detail": ""
+    },
+    {
+      "id": "test_stint_monitor.StintPenaltyTests.test_threshold_once_and_admin_deletion",
+      "status": "PASS",
+      "seconds": 0.004827625001780689,
+      "detail": ""
+    },
+    {
+      "id": "test_token_renewal.TokenRenewalTests.test_deleted_account_cannot_refresh",
+      "status": "PASS",
+      "seconds": 0.44196720799664035,
+      "detail": ""
+    },
+    {
+      "id": "test_token_renewal.TokenRenewalTests.test_legacy_database_gets_token_version_without_losing_accounts",
+      "status": "PASS",
+      "seconds": 0.0343992919952143,
+      "detail": ""
+    },
+    {
+      "id": "test_token_renewal.TokenRenewalTests.test_role_change_requires_refresh_and_old_token_never_revives",
+      "status": "PASS",
+      "seconds": 0.3920402080111671,
+      "detail": ""
+    },
+    {
+      "id": "test_token_renewal.TokenRenewalTests.test_unchanged_role_does_not_revoke_access",
+      "status": "PASS",
+      "seconds": 0.03822654100076761,
+      "detail": ""
+    },
+    {
+      "id": "test_ws_manager.BroadcastCleanupTests.test_event_only_client_failure_needs_no_scraper",
+      "status": "PASS",
+      "seconds": 0.0005404579860623926,
+      "detail": ""
+    },
+    {
+      "id": "test_ws_manager.BroadcastCleanupTests.test_failed_broadcast_releases_last_subscriber_once",
+      "status": "PASS",
+      "seconds": 0.0007355410052696243,
+      "detail": ""
+    },
+    {
+      "id": "test_ws_manager.BroadcastCleanupTests.test_failure_preserves_other_subscribers_and_delivery",
+      "status": "PASS",
+      "seconds": 0.001047541998559609,
+      "detail": ""
+    },
+    {
+      "id": "test_ws_router.WebSocketInputTests.test_cancellation_releases_subscriptions",
+      "status": "PASS",
+      "seconds": 0.0006174159934744239,
+      "detail": ""
+    },
+    {
+      "id": "test_ws_router.WebSocketInputTests.test_error_response_send_failure_releases_subscriptions",
+      "status": "PASS",
+      "seconds": 0.0006017919949954376,
+      "detail": ""
+    },
+    {
+      "id": "test_ws_router.WebSocketInputTests.test_malformed_messages_allow_next_valid_command",
+      "status": "PASS",
+      "seconds": 0.005232625000644475,
+      "detail": ""
+    },
+    {
+      "id": "test_ws_router.WebSocketInputTests.test_unexpected_receive_error_releases_subscriptions",
+      "status": "PASS",
+      "seconds": 0.0007248750043800101,
+      "detail": ""
+    }
+  ],
+  "sha256": {
+    "python_scraper_server/auth/__init__.py": "3264bc10b55b8aa421be746878227d6e9306fd810fa0499e11be9c3f987c689a",
+    "python_scraper_server/auth/admin_router.py": "cc14e3cb9e00f7e7b0d0744a8bafff26708b0f5b32ec87fc81ce724ec4bc3d4c",
+    "python_scraper_server/auth/dependencies.py": "6d70c6938518926dcac68befa03ed61ad1a12cce177713068677f40a68defdd7",
+    "python_scraper_server/auth/jwt.py": "70b120a158ff327b8ad29dfdb11362f005a80b3875b0586e26c82898e987aa37",
+    "python_scraper_server/auth/password.py": "a711b8c167a5b0119eb02dc5847f66bfcfc6eff277174228496250d0b5ffa980",
+    "python_scraper_server/auth/roles.py": "6f578671dbeeed58b05ace0e350129952125e43397db495566dd0bd13904a8a9",
+    "python_scraper_server/auth/router.py": "2dfd17e5e3b5cebb5db4652882f02c6eed7e5008fdc7792bf105850dd292e3b2",
+    "python_scraper_server/auth/schemas.py": "d1835c875d7eac2b3876569a01be2b89fdeec4688800074b12d850a45ba70dc5",
+    "python_scraper_server/auth/token.py": "223d731cd322b7d13c1696b682dbe079130752ecf5726385a12e7772acb44264",
+    "python_scraper_server/config.py": "f67cfeda4ce34b76da8c4825fc002944a17a69328c4303f6bc5924ea545db2a0",
+    "python_scraper_server/db/__init__.py": "48c8890cf4e017b365833f7e00097116df366aee1cb21126b8384f8df34912fa",
+    "python_scraper_server/db/database.py": "c099a50e90831e126d977e007bc9932ddb48a76f43e296c1005e8f561d766521",
+    "python_scraper_server/db/models.py": "20e20cfe54b3601bec7eeb06ed449132b9dc13958a65b48425da645d8d28d3fe",
+    "python_scraper_server/discovery/__init__.py": "5dff6192c845c128ac886474252afe4fbdc4910c5c70dbf3201b5bf8f21f3b93",
+    "python_scraper_server/discovery/bonjour.py": "4f07215af8f8c9b8b2059f2e8e4d160da3a7e1cacfa80d14bac8d0a082dc0039",
+    "python_scraper_server/events/lifecycle.py": "7f4fb54723ea2a4c85f9ec8646b0d2e0198987f92ecd2821ec6ff93ff510fc12",
+    "python_scraper_server/events/router.py": "c668cc84faf30c8b197a758b9ad48e2e8e5c18f7255fa1212219185db8317684",
+    "python_scraper_server/events/schemas.py": "de34b4e4532e2ef7b468c206733bbd6d55ffbb7847f87a1e11dcffb6fcaabdf0",
+    "python_scraper_server/kartodromi/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "python_scraper_server/kartodromi/router.py": "95f8eec30c31a858847663bfa7a853f5d495f5323cb43121292041f0b7384ebb",
+    "python_scraper_server/kartodromi/schemas.py": "ec760cece81ee2c053655306e604d70894d71f78cd985eb0394eac4af2ad9b7c",
+    "python_scraper_server/live/__init__.py": "edfa25a9a2bcf4d8464521cd0f78026b25b7f70cb15bde19934e51b28a35c387",
+    "python_scraper_server/live/router.py": "bdd2664f84fdb9f289e5111700ad45d71443d7db1a3712ceee75d58b83150365",
+    "python_scraper_server/live/schemas.py": "0a21a07fd89ad728d26a519ae0b52566cc287609b0b1589564f65a888661fa9b",
+    "python_scraper_server/live/stint_monitor.py": "c97e1b0659fc9c490abe8235df923228201c113d903065868fc7db8ee823d28e",
+    "python_scraper_server/main.py": "7d2b47f51fd1d9fb0971bea10b80737a31ce760bc465bb60b9db12c953f88d40",
+    "python_scraper_server/notifications/reminders.py": "4d3de328f7c0e588eff60546f7fad284afa7f9bb037a2e8a8d648c615bf1eea3",
+    "python_scraper_server/notifications/router.py": "635ed6f69e2478e6e54c42c85a4f08d93a7528b201ad648ed44505edb07f5cff",
+    "python_scraper_server/notifications/schemas.py": "fb19a48eb86b0741b775ebf21f8ddb0a658cdeeef23298081ac3c1c9468c11ac",
+    "python_scraper_server/results/__init__.py": "ef67b8190c6a96e046a723e3f59576d6984e2a2bf5880e336c378fa97e81ddf6",
+    "python_scraper_server/results/router.py": "a4a3f71aa26c628f055b2a572ab31580da0d1c0c474d4f59c7d59d72f9b16b4b",
+    "python_scraper_server/results/schemas.py": "a4dbe286e0da21d9bc6c46b19349a27e83094670f2d4fb6e355fa4e18005e621",
+    "python_scraper_server/scraper/__init__.py": "555b3abb96fd451dcd4f89fa0ba5d016ed5bf215cdc2e3c5c9649ac17f52f760",
+    "python_scraper_server/scraper/base.py": "b1b100da2ebd239296c8ef44e80c852d0c2ce60e62d616949055e2cb60cb8b62",
+    "python_scraper_server/scraper/factory.py": "1cb961b2b0a8c89804413323231c9dc246bb4827f66ee72c35b39a60c816c7f1",
+    "python_scraper_server/scraper/lap_tracker.py": "57a11e08ad94831b13743d00ac6b7626713b67c255f4f1f6d4b5624f0e5db68a",
+    "python_scraper_server/scraper/providers/__init__.py": "2031cb426f7300249fdcc34a591fedb49b6a04f2f07d5eb7864f8e3e51b55cbf",
+    "python_scraper_server/scraper/providers/apex_timing.py": "b8b35313f37fc625100eaf9a8d20e9ba7c47292f884574a21a5c28296c99ace8",
+    "python_scraper_server/scraper/providers/generic.py": "d78ec6388df97b322014d0a016fb484a0056074d0064054fb8843b00e2c018ad",
+    "python_scraper_server/scraper/providers/racefacer.py": "59f7f8d6f510463eafffffcdba4887a6cbc00018f52283f3aa3942d60632ce19",
+    "python_scraper_server/scraper/providers/simulator.py": "c80cfcf78bb8a6dc3ff1b4ffff3c07c6c2c894788ec726f7b4db2aba926d6d45",
+    "python_scraper_server/scraper/session.py": "3872bccdc773b298efb83f5f35b40dffa509fffab45df77662d667e5c261ed3f",
+    "python_scraper_server/scraper/storage.py": "0af2b870bb524b9ecc808b17938507952d72fcdd888479c2b668befc6b129b47",
+    "python_scraper_server/services/pdf_generator.py": "25ba6617ba5e95eacb4df4f2e29154f76bc4e1e4231912af58ae91ae0260d576",
+    "python_scraper_server/services/pdf_router.py": "aeb546cf60fb75bf00045800df6f9ffdcdaf1f3ed8bde96020d0050330f6b1db",
+    "python_scraper_server/ws/__init__.py": "40aed2efc548b18cb3c7f503b5e126b52ca28d190537c65657249e3b8a0f019e",
+    "python_scraper_server/ws/manager.py": "7bdb878fa16cb11c4f3b469efcd3ee60ff955b6ae9b07c8f763ce3c70664d9cd",
+    "python_scraper_server/ws/router.py": "e8ea2a7b28eadbafac4b807cc9f14a9f1bfd89015137971dd47b75b8be93a982",
+    "DD_Race_Manager.md": "eb7e60d6a865ece4eecfc2f0e8a51d63791531d1b92d6ea7d6fa368127dffac0",
+    "RASD_Race_Manager.md": "cb9ed6f1d1691f99b8105bbfcb834106ad7ec17cb819e42e039a70cd90058757",
+    "project_tests/backend/acceptance_support.py": "889563ec9fba2c94cf67b3fc3f0321825d9d0c4712d540c219d21b3fe038e9ae",
+    "project_tests/backend/test_access_integrity.py": "4401694c1d71139bc7a16a80ecde87a38a3e60664bd452ada55f10e0ac582c22",
+    "project_tests/backend/test_document_acceptance.py": "f8613c3a7590b59419934db499ca4aa760882cb7a189c157a413f5cff07ff1da",
+    "project_tests/backend/test_event_lifecycle.py": "fd4953dd8daee67b929bc446e91f411e9baa663c83a676af7cf684241d4f0142",
+    "project_tests/backend/test_event_registration_integrity.py": "8b19a0511d7c0b5eb58edf24d924f3d98f0eaf9f0d9a583922a3429ccdea76ca",
+    "project_tests/backend/test_event_reminders.py": "157ca0893dc203eb67154be5e702f57f5b627547765b32733a90a0adc0a04112",
+    "project_tests/backend/test_kartodromo_update.py": "65285c391007719102d795ce2027f424d1ae3723cd59f6fb040053c43fb2ba8e",
+    "project_tests/backend/test_lap_stats.py": "94f728f4b50696933ab7aa2c49597b7afed7bdd0e7c71256d33e676950fa9e6e",
+    "project_tests/backend/test_live_message_scope.py": "613ab621e76ea653cc21ca1f266ae4c70c8b327b1acad94083e917c5f6a7e523",
+    "project_tests/backend/test_notifications_integrity.py": "804e9ea4cfea580ee0717ebc16c08c002a3c8325cd204cb5de0e795be5935504",
+    "project_tests/backend/test_pdf_browser.py": "b16b5b24cf3aac53c4e38b233a4915864fe7abc7bdfe5eda471f0a54461aaa5a",
+    "project_tests/backend/test_penalty_configuration.py": "d4f83cfb8da67f1193e1fad1970e17a155579eb8eb3918de5a80c79b67e6866c",
+    "project_tests/backend/test_stint_monitor.py": "605e7acf4127017a917264b0cef5b528dfe5abf4b437aa3d88df1d84255b2976",
+    "project_tests/backend/test_token_renewal.py": "ca750aa17dd394e7431bdbd00de53375291df239b65b58b0051ac2c7a319ceda",
+    "project_tests/backend/test_ws_manager.py": "d8927e3fbb159e7df2d735dc0c74f491cbb006b82c923d758ca2eba5ef8a87fe",
+    "project_tests/backend/test_ws_router.py": "37a48e27c4d00f87b322e127dd6967e9bddcb3fb6de6bbaa130afdfd34f6b3b0",
+    "project_tests/benchmark.py": "bd669200dbca4a6202a78fca4f288f7df58e5292b3c9b44a1a95e7ed6cca4f79",
+    "project_tests/run.py": "616dcf7fa7f265ee0e64b646c74d1473e32f56b0823e448d4ba46bd7e1408d29"
+  }
+}

@@ -37,13 +37,14 @@ REFRESH_EXPIRE_DAYS   = 30
 # ---------------------------------------------------------------------------
 
 
-def create_access_token(user_id: int, role: str) -> str:
+def create_access_token(user_id: int, role: str, token_version: int = 0) -> str:
     """Genera un JWT access token firmato con SECRET_KEY."""
     payload = {
         "sub":  str(user_id),
         "role": role,
         "exp":  datetime.now(timezone.utc) + timedelta(minutes=ACCESS_EXPIRE_MINUTES),
         "type": "access",
+        "token_version": token_version,
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 

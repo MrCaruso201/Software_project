@@ -1,0 +1,184 @@
+test_deleted_account_token_is_rejected (test_access_integrity.AccessIntegrityTests.test_deleted_account_token_is_rejected) ... ok
+test_event_writes_require_current_director_role (test_access_integrity.AccessIntegrityTests.test_event_writes_require_current_director_role) ... ok
+test_idle_websocket_revalidates_and_unsubscribes (test_access_integrity.AccessIntegrityTests.test_idle_websocket_revalidates_and_unsubscribes) ... 📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+ok
+test_invalid_csv_preserves_previous_results (test_access_integrity.AccessIntegrityTests.test_invalid_csv_preserves_previous_results) ... ok
+test_partial_csv_replaces_results_and_reports_errors (test_access_integrity.AccessIntegrityTests.test_partial_csv_replaces_results_and_reports_errors) ... 📊  Classifica importata per evento 1: 1 risultati, 2 errori
+ok
+test_websocket_uses_current_account (test_access_integrity.AccessIntegrityTests.test_websocket_uses_current_account) ... ok
+test_A1_duplicate_registration (test_document_acceptance.DocumentAcceptanceTests.test_A1_duplicate_registration) ... ok
+test_A2_late_registration_enters_waitlist (test_document_acceptance.DocumentAcceptanceTests.test_A2_late_registration_enters_waitlist) ... ok
+test_A3_account_cannot_change_roles (test_document_acceptance.DocumentAcceptanceTests.test_A3_account_cannot_change_roles) ... ok
+test_A3_foreign_team_edit_denied (test_document_acceptance.DocumentAcceptanceTests.test_A3_foreign_team_edit_denied) ... ok
+test_A4_source_and_event_isolation (test_document_acceptance.DocumentAcceptanceTests.test_A4_source_and_event_isolation) ... ok
+test_A8_waiver_preview_store_pdf_remove (test_document_acceptance.DocumentAcceptanceTests.test_A8_waiver_preview_store_pdf_remove) ... ok
+test_T10_durable_records_after_engine_reopen (test_document_acceptance.DocumentAcceptanceTests.test_T10_durable_records_after_engine_reopen) ... 📊  Classifica importata per evento 1: 1 risultati, 1 errori
+ok
+test_T12_deleted_account_cannot_download_waiver (test_document_acceptance.DocumentAcceptanceTests.test_T12_deleted_account_cannot_download_waiver) ... ok
+test_T12_demoted_token_cannot_download_waiver (test_document_acceptance.DocumentAcceptanceTests.test_T12_demoted_token_cannot_download_waiver) ... ok
+test_T12_private_database_is_not_public_static_asset (test_document_acceptance.DocumentAcceptanceTests.test_T12_private_database_is_not_public_static_asset) ... FAIL
+test_T1_duplicate_identity_rejected (test_document_acceptance.DocumentAcceptanceTests.test_T1_duplicate_identity_rejected) ... ok
+test_T1_expired_token_rejected (test_document_acceptance.DocumentAcceptanceTests.test_T1_expired_token_rejected) ... ok
+test_T1_profile_cannot_promote_self (test_document_acceptance.DocumentAcceptanceTests.test_T1_profile_cannot_promote_self) ... ok
+test_T1_register_login_refresh_logout (test_document_acceptance.DocumentAcceptanceTests.test_T1_register_login_refresh_logout) ... 👤 Nuovo utente registrato: new-driver (id=5)
+🔑 Login: new-driver (ruolo=user)
+ok
+test_T2_confirmed_self_cancellation_blocked (test_document_acceptance.DocumentAcceptanceTests.test_T2_confirmed_self_cancellation_blocked) ... ok
+test_T2_full_individual_event_enters_waitlist (test_document_acceptance.DocumentAcceptanceTests.test_T2_full_individual_event_enters_waitlist) ... ok
+test_T4_empty_signature_is_rejected (test_document_acceptance.DocumentAcceptanceTests.test_T4_empty_signature_is_rejected) ... FAIL
+test_T4_unregistered_cannot_sign_or_read_other_waiver (test_document_acceptance.DocumentAcceptanceTests.test_T4_unregistered_cannot_sign_or_read_other_waiver) ... ok
+test_T4_upload_exact_limit_and_one_byte_over (test_document_acceptance.DocumentAcceptanceTests.test_T4_upload_exact_limit_and_one_byte_over) ... ok
+test_T5_shared_source_and_switch_preserve_other_client (test_document_acceptance.DocumentAcceptanceTests.test_T5_shared_source_and_switch_preserve_other_client) ... ok
+test_T5_simulator_normalization_and_factory (test_document_acceptance.DocumentAcceptanceTests.test_T5_simulator_normalization_and_factory) ... 🎮 Avvio simulatore locale da /var/folders/6z/hv58tmpd7yq12rw1cv89jjpm0000gn/T/tmpdop77f2e/timing.json
+ok
+test_T6_assignment_conflict_preserves_existing_entries (test_document_acceptance.DocumentAcceptanceTests.test_T6_assignment_conflict_preserves_existing_entries) ... ok
+test_T7_warning_threshold_creates_configured_penalty (test_document_acceptance.DocumentAcceptanceTests.test_T7_warning_threshold_creates_configured_penalty) ... ok
+test_T8_import_authorization_through_http (test_document_acceptance.DocumentAcceptanceTests.test_T8_import_authorization_through_http) ... 📊  Classifica importata per evento 1: 1 risultati, 1 errori
+ok
+test_T8_valid_import_preserves_other_events (test_document_acceptance.DocumentAcceptanceTests.test_T8_valid_import_preserves_other_events) ... 📊  Classifica importata per evento 1: 1 risultati, 1 errori
+ok
+test_notifies_clients_after_scan (test_event_lifecycle.EventExpirationNotificationTests.test_notifies_clients_after_scan) ... ok
+test_aware_now_is_converted_to_utc (test_event_lifecycle.EventLifecycleTests.test_aware_now_is_converted_to_utc) ... ok
+test_closes_only_events_at_least_two_days_old (test_event_lifecycle.EventLifecycleTests.test_closes_only_events_at_least_two_days_old) ... ok
+test_exact_48_hour_boundary_including_daylight_saving_changes (test_event_lifecycle.EventLifecycleTests.test_exact_48_hour_boundary_including_daylight_saving_changes) ... ok
+test_complete_team_accepting_extra_pilots_is_not_waitlisted (test_event_registration_integrity.EventRegistrationIntegrityTests.test_complete_team_accepting_extra_pilots_is_not_waitlisted) ... ok
+test_deadline_follows_date_and_respects_explicit_override (test_event_registration_integrity.EventRegistrationIntegrityTests.test_deadline_follows_date_and_respects_explicit_override) ... ok
+test_duplicate_edit_preserves_team (test_event_registration_integrity.EventRegistrationIntegrityTests.test_duplicate_edit_preserves_team) ... ok
+test_duplicates_rejected_before_insert (test_event_registration_integrity.EventRegistrationIntegrityTests.test_duplicates_rejected_before_insert) ... ok
+test_edit_below_minimum_preserves_team (test_event_registration_integrity.EventRegistrationIntegrityTests.test_edit_below_minimum_preserves_team) ... ok
+test_edit_incomplete_team_rejected_even_when_accepting_extra_pilots (test_event_registration_integrity.EventRegistrationIntegrityTests.test_edit_incomplete_team_rejected_even_when_accepting_extra_pilots) ... ok
+test_explicit_max_is_enforced (test_event_registration_integrity.EventRegistrationIntegrityTests.test_explicit_max_is_enforced) ... ok
+test_extra_pilots_does_not_bypass_maximum (test_event_registration_integrity.EventRegistrationIntegrityTests.test_extra_pilots_does_not_bypass_maximum) ... ok
+test_generic_status_patch_rejected_without_changes (test_event_registration_integrity.EventRegistrationIntegrityTests.test_generic_status_patch_rejected_without_changes) ... ok
+test_incomplete_team_rejected_even_when_accepting_extra_pilots (test_event_registration_integrity.EventRegistrationIntegrityTests.test_incomplete_team_rejected_even_when_accepting_extra_pilots) ... ok
+test_member_replacement (test_event_registration_integrity.EventRegistrationIntegrityTests.test_member_replacement) ... ok
+test_minimum_and_maximum_inclusive (test_event_registration_integrity.EventRegistrationIntegrityTests.test_minimum_and_maximum_inclusive) ... ok
+test_minimum_one_allows_solo_registration (test_event_registration_integrity.EventRegistrationIntegrityTests.test_minimum_one_allows_solo_registration) ... ok
+test_minimum_rejects_missing_and_blank_members_without_insert (test_event_registration_integrity.EventRegistrationIntegrityTests.test_minimum_rejects_missing_and_blank_members_without_insert) ... ok
+test_no_team_name_registers_individual_in_waitlist_despite_minimum (test_event_registration_integrity.EventRegistrationIntegrityTests.test_no_team_name_registers_individual_in_waitlist_despite_minimum) ... ok
+test_optional_max_and_rename_preserve_member_attributes (test_event_registration_integrity.EventRegistrationIntegrityTests.test_optional_max_and_rename_preserve_member_attributes) ... ok
+test_boundary_refresh_and_deletion (test_event_reminders.EventReminderTests.test_boundary_refresh_and_deletion) ... ok
+test_excluded_waitlist_started_and_past_events (test_event_reminders.EventReminderTests.test_excluded_waitlist_started_and_past_events) ... ok
+test_registration_inside_window_before_confirmation (test_event_reminders.EventReminderTests.test_registration_inside_window_before_confirmation) ... ok
+test_rollback_does_not_consume_reminder (test_event_reminders.EventReminderTests.test_rollback_does_not_consume_reminder) ... ok
+test_disconnect_precedes_save_and_only_affects_target (test_kartodromo_update.KartodromoUpdateTests.test_disconnect_precedes_save_and_only_affects_target) ... ok
+test_duplicate_url_does_not_disconnect (test_kartodromo_update.KartodromoUpdateTests.test_duplicate_url_does_not_disconnect) ... ok
+test_live_event_blocks_without_disconnect_or_changes (test_kartodromo_update.KartodromoUpdateTests.test_live_event_blocks_without_disconnect_or_changes) ... ok
+test_save_without_connected_clients (test_kartodromo_update.KartodromoUpdateTests.test_save_without_connected_clients) ... ok
+test_timeout_aborts_save_and_unblocks_url (test_kartodromo_update.KartodromoUpdateTests.test_timeout_aborts_save_and_unblocks_url) ... ok
+test_unique_route_and_per_kart_threshold (test_lap_stats.LapStatsTests.test_unique_route_and_per_kart_threshold) ... ok
+test_stop_flags_require_explicit_restart (test_live_message_scope.MessageScopeTests.test_stop_flags_require_explicit_restart) ... ok
+test_targeted_control_commands_are_rejected_without_side_effects (test_live_message_scope.MessageScopeTests.test_targeted_control_commands_are_rejected_without_side_effects) ... ok
+test_targeted_information_remains_supported (test_live_message_scope.MessageScopeTests.test_targeted_information_remains_supported) ... ok
+test_event_and_notifications_rollback_together_on_failure (test_notifications_integrity.NotificationIntegrityTests.test_event_and_notifications_rollback_together_on_failure) ... ok
+test_expiry_accepts_database_dates_and_preserves_recent_notifications (test_notifications_integrity.NotificationIntegrityTests.test_expiry_accepts_database_dates_and_preserves_recent_notifications) ... ok
+test_inbox_ownership_read_and_delete (test_notifications_integrity.NotificationIntegrityTests.test_inbox_ownership_read_and_delete) ... ok
+test_new_event_persists_one_notification_per_eligible_account (test_notifications_integrity.NotificationIntegrityTests.test_new_event_persists_one_notification_per_eligible_account) ... ok
+test_sender_without_linked_account_does_not_create_notification (test_notifications_integrity.NotificationIntegrityTests.test_sender_without_linked_account_does_not_create_notification) ... ok
+test_start_event_notifies_confirmed_and_removes_unconfirmed (test_notifications_integrity.NotificationIntegrityTests.test_start_event_notifies_confirmed_and_removes_unconfirmed) ... ok
+test_team_actions_notify_all_linked_members (test_notifications_integrity.NotificationIntegrityTests.test_team_actions_notify_all_linked_members) ... ok
+test_expiry (test_pdf_browser.PDFBrowserTests.test_expiry) ... ok
+test_publish_and_open (test_pdf_browser.PDFBrowserTests.test_publish_and_open) ... ok
+test_unknown_link (test_pdf_browser.PDFBrowserTests.test_unknown_link) ... ok
+test_validation (test_pdf_browser.PDFBrowserTests.test_validation) ... ok
+test_duplicate_codes_keep_current_configuration (test_penalty_configuration.PenaltyConfigurationTests.test_duplicate_codes_keep_current_configuration) ... 🚩  Tipi di penalità di default caricati.
+🚩  Tipi di penalità di default caricati.
+🚩  Tipi di penalità di default caricati.
+ok
+test_legacy_migration_preserves_history_and_configuration (test_penalty_configuration.PenaltyConfigurationTests.test_legacy_migration_preserves_history_and_configuration) ... 🚩  Tipi di penalità di default caricati.
+🚩  Tipi di penalità di default caricati.
+ok
+test_restart_preserves_custom_seconds_and_thresholds (test_penalty_configuration.PenaltyConfigurationTests.test_restart_preserves_custom_seconds_and_thresholds) ... 🚩  Tipi di penalità di default caricati.
+🚩  Tipi di penalità di default caricati.
+ok
+test_accepts_zero_positive_and_optional_seconds (test_penalty_configuration.PenaltySecondsValidationTests.test_accepts_zero_positive_and_optional_seconds) ... ok
+test_rejects_negative_and_non_integer_seconds (test_penalty_configuration.PenaltySecondsValidationTests.test_rejects_negative_and_non_integer_seconds) ... ok
+test_accepts_positive_thresholds_and_unchanged_value (test_penalty_configuration.PenaltyThresholdValidationTests.test_accepts_positive_thresholds_and_unchanged_value) ... ok
+test_rejects_invalid_thresholds (test_penalty_configuration.PenaltyThresholdValidationTests.test_rejects_invalid_thresholds) ... ok
+test_pause_and_disabled_limit (test_stint_monitor.StintPenaltyTests.test_pause_and_disabled_limit) ... ok
+test_pit_entry_checks_and_next_stint_rearms (test_stint_monitor.StintPenaltyTests.test_pit_entry_checks_and_next_stint_rearms) ... ok
+test_scan_persists_across_sessions (test_stint_monitor.StintPenaltyTests.test_scan_persists_across_sessions) ... ok
+test_stale_worker_cannot_duplicate_penalty (test_stint_monitor.StintPenaltyTests.test_stale_worker_cannot_duplicate_penalty) ... ok
+test_threshold_once_and_admin_deletion (test_stint_monitor.StintPenaltyTests.test_threshold_once_and_admin_deletion) ... ok
+test_deleted_account_cannot_refresh (test_token_renewal.TokenRenewalTests.test_deleted_account_cannot_refresh) ... Executing <Task pending name='Task-209' coro=<TokenRenewalTests.test_deleted_account_cannot_refresh() running at /Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_token_renewal.py:65> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:101> took 0.174 seconds
+🔑 Login: user (ruolo=user)
+ok
+test_legacy_database_gets_token_version_without_losing_accounts (test_token_renewal.TokenRenewalTests.test_legacy_database_gets_token_version_without_losing_accounts) ... ok
+test_role_change_requires_refresh_and_old_token_never_revives (test_token_renewal.TokenRenewalTests.test_role_change_requires_refresh_and_old_token_never_revives) ... Executing <Task pending name='Task-219' coro=<TokenRenewalTests.test_role_change_requires_refresh_and_old_token_never_revives() running at /Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_token_renewal.py:27> cb=[_run_until_complete_cb() at /opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:181] created at /opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:101> took 0.171 seconds
+🔑 Login: user (ruolo=user)
+🛡️  Ruolo aggiornato: user user → race_director
+🛡️  Ruolo aggiornato: user race_director → user
+ok
+test_unchanged_role_does_not_revoke_access (test_token_renewal.TokenRenewalTests.test_unchanged_role_does_not_revoke_access) ... 🛡️  Ruolo aggiornato: user user → user
+ok
+test_event_only_client_failure_needs_no_scraper (test_ws_manager.BroadcastCleanupTests.test_event_only_client_failure_needs_no_scraper) ... ok
+test_failed_broadcast_releases_last_subscriber_once (test_ws_manager.BroadcastCleanupTests.test_failed_broadcast_releases_last_subscriber_once) ... ok
+test_failure_preserves_other_subscribers_and_delivery (test_ws_manager.BroadcastCleanupTests.test_failure_preserves_other_subscribers_and_delivery) ... ok
+test_cancellation_releases_subscriptions (test_ws_router.WebSocketInputTests.test_cancellation_releases_subscriptions) ... 📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+ok
+test_error_response_send_failure_releases_subscriptions (test_ws_router.WebSocketInputTests.test_error_response_send_failure_releases_subscriptions) ... 📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+ok
+test_malformed_messages_allow_next_valid_command (test_ws_router.WebSocketInputTests.test_malformed_messages_allow_next_valid_command) ... 📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+ok
+test_unexpected_receive_error_releases_subscriptions (test_ws_router.WebSocketInputTests.test_unexpected_receive_error_releases_subscriptions) ... 📱 Client connesso (ruolo=user). Nessun tracciato selezionato inizialmente. Totale client: 1
+📴 Client disconnesso. Totale client: 0
+ok
+
+======================================================================
+FAIL: test_T12_private_database_is_not_public_static_asset (test_document_acceptance.DocumentAcceptanceTests.test_T12_private_database_is_not_public_static_asset)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py", line 191, in test_T12_private_database_is_not_public_static_asset
+    self.assertIn(status, (401, 403, 404), 'Q4: database files must not be served anonymously')
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 200 not found in (401, 403, 404) : Q4: database files must not be served anonymously
+
+======================================================================
+FAIL: test_T4_empty_signature_is_rejected (test_document_acceptance.DocumentAcceptanceTests.test_T4_empty_signature_is_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.14_1/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py", line 127, in test_T4_empty_signature_is_rejected
+    self.assertIn(status, (400, 422), 'R15: empty signature must not create a signed waiver')
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 200 not found in (400, 422) : R15: empty signature must not create a signed waiver
+
+----------------------------------------------------------------------
+Ran 98 tests in 3.024s
+
+FAILED (failures=2)

@@ -67,6 +67,7 @@ def init_db() -> None:
 def _apply_migrations() -> None:
     """Aggiunge colonne al DB esistente senza sovrascrivere i dati (migration manuale)."""
     migrations = [
+        "ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE kartodromi ADD COLUMN sito_web TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE kartodromi ADD COLUMN image_url TEXT",
         "ALTER TABLE events ADD COLUMN description TEXT",

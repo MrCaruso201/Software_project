@@ -1,0 +1,249 @@
+test_access_integrity (unittest.loader._FailedTest.test_access_integrity) ... ERROR
+test_document_acceptance (unittest.loader._FailedTest.test_document_acceptance) ... ERROR
+test_event_lifecycle (unittest.loader._FailedTest.test_event_lifecycle) ... ERROR
+test_event_registration_integrity (unittest.loader._FailedTest.test_event_registration_integrity) ... ERROR
+test_event_reminders (unittest.loader._FailedTest.test_event_reminders) ... ERROR
+test_kartodromo_update (unittest.loader._FailedTest.test_kartodromo_update) ... ERROR
+test_lap_stats (unittest.loader._FailedTest.test_lap_stats) ... ERROR
+test_live_message_scope (unittest.loader._FailedTest.test_live_message_scope) ... ERROR
+test_notifications_integrity (unittest.loader._FailedTest.test_notifications_integrity) ... ERROR
+test_pdf_browser (unittest.loader._FailedTest.test_pdf_browser) ... ERROR
+test_penalty_configuration (unittest.loader._FailedTest.test_penalty_configuration) ... ERROR
+test_stint_monitor (unittest.loader._FailedTest.test_stint_monitor) ... ERROR
+test_token_renewal (unittest.loader._FailedTest.test_token_renewal) ... ERROR
+test_ws_manager (unittest.loader._FailedTest.test_ws_manager) ... ERROR
+test_ws_router (unittest.loader._FailedTest.test_ws_router) ... ERROR
+
+======================================================================
+ERROR: test_access_integrity (unittest.loader._FailedTest.test_access_integrity)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_access_integrity
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_access_integrity.py", line 8, in <module>
+    from fastapi import FastAPI, HTTPException, UploadFile
+ModuleNotFoundError: No module named 'fastapi'
+
+
+======================================================================
+ERROR: test_document_acceptance (unittest.loader._FailedTest.test_document_acceptance)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_document_acceptance
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_document_acceptance.py", line 8, in <module>
+    from fastapi import FastAPI
+ModuleNotFoundError: No module named 'fastapi'
+
+
+======================================================================
+ERROR: test_event_lifecycle (unittest.loader._FailedTest.test_event_lifecycle)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_event_lifecycle
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_event_lifecycle.py", line 5, in <module>
+    from sqlalchemy import create_engine
+ModuleNotFoundError: No module named 'sqlalchemy'
+
+
+======================================================================
+ERROR: test_event_registration_integrity (unittest.loader._FailedTest.test_event_registration_integrity)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_event_registration_integrity
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_event_registration_integrity.py", line 5, in <module>
+    from fastapi import HTTPException
+ModuleNotFoundError: No module named 'fastapi'
+
+
+======================================================================
+ERROR: test_event_reminders (unittest.loader._FailedTest.test_event_reminders)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_event_reminders
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_event_reminders.py", line 3, in <module>
+    from sqlalchemy import create_engine
+ModuleNotFoundError: No module named 'sqlalchemy'
+
+
+======================================================================
+ERROR: test_kartodromo_update (unittest.loader._FailedTest.test_kartodromo_update)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_kartodromo_update
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_kartodromo_update.py", line 5, in <module>
+    from fastapi import HTTPException
+ModuleNotFoundError: No module named 'fastapi'
+
+
+======================================================================
+ERROR: test_lap_stats (unittest.loader._FailedTest.test_lap_stats)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_lap_stats
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_lap_stats.py", line 4, in <module>
+    from sqlalchemy import create_engine
+ModuleNotFoundError: No module named 'sqlalchemy'
+
+
+======================================================================
+ERROR: test_live_message_scope (unittest.loader._FailedTest.test_live_message_scope)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_live_message_scope
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_live_message_scope.py", line 4, in <module>
+    from fastapi import BackgroundTasks, HTTPException
+ModuleNotFoundError: No module named 'fastapi'
+
+
+======================================================================
+ERROR: test_notifications_integrity (unittest.loader._FailedTest.test_notifications_integrity)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_notifications_integrity
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_notifications_integrity.py", line 6, in <module>
+    from fastapi import BackgroundTasks, HTTPException
+ModuleNotFoundError: No module named 'fastapi'
+
+
+======================================================================
+ERROR: test_pdf_browser (unittest.loader._FailedTest.test_pdf_browser)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_pdf_browser
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_pdf_browser.py", line 6, in <module>
+    from fastapi import HTTPException
+ModuleNotFoundError: No module named 'fastapi'
+
+
+======================================================================
+ERROR: test_penalty_configuration (unittest.loader._FailedTest.test_penalty_configuration)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_penalty_configuration
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_penalty_configuration.py", line 5, in <module>
+    from sqlalchemy import create_engine
+ModuleNotFoundError: No module named 'sqlalchemy'
+
+
+======================================================================
+ERROR: test_stint_monitor (unittest.loader._FailedTest.test_stint_monitor)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_stint_monitor
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_stint_monitor.py", line 5, in <module>
+    from sqlalchemy import create_engine
+ModuleNotFoundError: No module named 'sqlalchemy'
+
+
+======================================================================
+ERROR: test_token_renewal (unittest.loader._FailedTest.test_token_renewal)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_token_renewal
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_token_renewal.py", line 5, in <module>
+    from acceptance_support import BackendFixture, request
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/acceptance_support.py", line 11, in <module>
+    from fastapi import FastAPI
+ModuleNotFoundError: No module named 'fastapi'
+
+
+======================================================================
+ERROR: test_ws_manager (unittest.loader._FailedTest.test_ws_manager)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_ws_manager
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_ws_manager.py", line 4, in <module>
+    from ws import manager
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/python_scraper_server/ws/manager.py", line 14, in <module>
+    from fastapi import WebSocket
+ModuleNotFoundError: No module named 'fastapi'
+
+
+======================================================================
+ERROR: test_ws_router (unittest.loader._FailedTest.test_ws_router)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_ws_router
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/marco/Documents/Università/2 anno/SE/Software_project/project_tests/backend/test_ws_router.py", line 6, in <module>
+    from fastapi import WebSocketDisconnect
+ModuleNotFoundError: No module named 'fastapi'
+
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.000s
+
+FAILED (errors=15)

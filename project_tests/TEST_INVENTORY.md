@@ -1,6 +1,6 @@
 # Complete test inventory
 
-Final run: **94 tests, 90 PASS, 4 FAIL**. Old/new means present before this task or added during it. Each row describes one unittest method; subcases are not counted as independent tests. DD mapping indicates related coverage, not complete group acceptance.
+Final run: **98 tests, 96 PASS, 2 FAIL**. Old/new means present before this task or added during it. Each row describes one unittest method; subcases are not counted as independent tests. DD mapping indicates related coverage, not complete group acceptance.
 
 | Case | Origin | DD / acceptance link | Check | Result |
 | --- | --- | --- | --- | --- |
@@ -17,16 +17,16 @@ Final run: **94 tests, 90 PASS, 4 FAIL**. Old/new means present before this task
 | [`DocumentAcceptanceTests.test_A4_source_and_event_isolation`](backend/test_document_acceptance.py) | New | A4 | A4 source and event isolation | **PASS** |
 | [`DocumentAcceptanceTests.test_A8_waiver_preview_store_pdf_remove`](backend/test_document_acceptance.py) | New | A8 | A8 waiver preview store pdf remove | **PASS** |
 | [`DocumentAcceptanceTests.test_T10_durable_records_after_engine_reopen`](backend/test_document_acceptance.py) | New | T10 | T10 durable records after engine reopen | **PASS** |
-| [`DocumentAcceptanceTests.test_T12_deleted_account_cannot_download_waiver`](backend/test_document_acceptance.py) | New | T12 | T12 deleted account cannot download waiver | **FAIL** |
-| [`DocumentAcceptanceTests.test_T12_demoted_token_cannot_download_waiver`](backend/test_document_acceptance.py) | New | T12 | T12 demoted token cannot download waiver | **FAIL** |
-| [`DocumentAcceptanceTests.test_T12_private_database_is_not_public_static_asset`](backend/test_document_acceptance.py) | New | T12 | T12 private database is not public static asset | **FAIL** |
+| [`DocumentAcceptanceTests.test_T12_deleted_account_cannot_download_waiver`](backend/test_document_acceptance.py) | New | T12 | T12 deleted account cannot download waiver | **PASS** |
+| [`DocumentAcceptanceTests.test_T12_demoted_token_cannot_download_waiver`](backend/test_document_acceptance.py) | New | T12 | T12 demoted token cannot download waiver | **PASS** |
+| [`DocumentAcceptanceTests.test_T12_private_database_is_not_public_static_asset`](backend/test_document_acceptance.py) | New | T12 | T12 private database is not public static asset | **FAIL** (F1) |
 | [`DocumentAcceptanceTests.test_T1_duplicate_identity_rejected`](backend/test_document_acceptance.py) | New | T1 | T1 duplicate identity rejected | **PASS** |
 | [`DocumentAcceptanceTests.test_T1_expired_token_rejected`](backend/test_document_acceptance.py) | New | T1 | T1 expired token rejected | **PASS** |
 | [`DocumentAcceptanceTests.test_T1_profile_cannot_promote_self`](backend/test_document_acceptance.py) | New | T1 | T1 profile cannot promote self | **PASS** |
 | [`DocumentAcceptanceTests.test_T1_register_login_refresh_logout`](backend/test_document_acceptance.py) | New | T1 | T1 register login refresh logout | **PASS** |
 | [`DocumentAcceptanceTests.test_T2_confirmed_self_cancellation_blocked`](backend/test_document_acceptance.py) | New | T2 | T2 confirmed self cancellation blocked | **PASS** |
 | [`DocumentAcceptanceTests.test_T2_full_individual_event_enters_waitlist`](backend/test_document_acceptance.py) | New | T2 | T2 full individual event enters waitlist | **PASS** |
-| [`DocumentAcceptanceTests.test_T4_empty_signature_is_rejected`](backend/test_document_acceptance.py) | New | T4 | T4 empty signature is rejected | **FAIL** |
+| [`DocumentAcceptanceTests.test_T4_empty_signature_is_rejected`](backend/test_document_acceptance.py) | New | T4 | T4 empty signature is rejected | **FAIL** (F2) |
 | [`DocumentAcceptanceTests.test_T4_unregistered_cannot_sign_or_read_other_waiver`](backend/test_document_acceptance.py) | New | T4 | T4 unregistered cannot sign or read other waiver | **PASS** |
 | [`DocumentAcceptanceTests.test_T4_upload_exact_limit_and_one_byte_over`](backend/test_document_acceptance.py) | New | T4 | T4 upload exact limit and one byte over | **PASS** |
 | [`DocumentAcceptanceTests.test_T5_shared_source_and_switch_preserve_other_client`](backend/test_document_acceptance.py) | New | T5 | T5 shared source and switch preserve other client | **PASS** |
@@ -91,6 +91,10 @@ Final run: **94 tests, 90 PASS, 4 FAIL**. Old/new means present before this task
 | [`StintPenaltyTests.test_scan_persists_across_sessions`](backend/test_stint_monitor.py) | Existing | T6, T7 | scan persists across sessions | **PASS** |
 | [`StintPenaltyTests.test_stale_worker_cannot_duplicate_penalty`](backend/test_stint_monitor.py) | Existing | T6, T7 | stale worker cannot duplicate penalty | **PASS** |
 | [`StintPenaltyTests.test_threshold_once_and_admin_deletion`](backend/test_stint_monitor.py) | Existing | T6, T7 | threshold once and admin deletion | **PASS** |
+| [`TokenRenewalTests.test_deleted_account_cannot_refresh`](backend/test_token_renewal.py) | New | T1, T12 | deleted account cannot refresh token | **PASS** |
+| [`TokenRenewalTests.test_legacy_database_gets_token_version_without_losing_accounts`](backend/test_token_renewal.py) | New | T1 | legacy database migration adds token_version without data loss | **PASS** |
+| [`TokenRenewalTests.test_role_change_requires_refresh_and_old_token_never_revives`](backend/test_token_renewal.py) | New | T1, T12 | role change invalidates old token; refresh returns new-role token | **PASS** |
+| [`TokenRenewalTests.test_unchanged_role_does_not_revoke_access`](backend/test_token_renewal.py) | New | T1 | unchanged role does not revoke existing token | **PASS** |
 | [`BroadcastCleanupTests.test_event_only_client_failure_needs_no_scraper`](backend/test_ws_manager.py) | Existing | T5, T10 | event only client failure needs no scraper | **PASS** |
 | [`BroadcastCleanupTests.test_failed_broadcast_releases_last_subscriber_once`](backend/test_ws_manager.py) | Existing | T5, T10 | failed broadcast releases last subscriber once | **PASS** |
 | [`BroadcastCleanupTests.test_failure_preserves_other_subscribers_and_delivery`](backend/test_ws_manager.py) | Existing | T5, T10 | failure preserves other subscribers and delivery | **PASS** |

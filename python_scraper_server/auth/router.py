@@ -71,7 +71,7 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(req.password, user.hashed_pw):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenziali non valide")
 
-    access_token = create_access_token(user.id, user.role)
+    access_token = create_access_token(user.id, user.role, user.token_version)
     raw_refresh   = create_refresh_token_raw()
 
     rt = RefreshToken(
@@ -105,7 +105,7 @@ def refresh(req: RefreshRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Utente non trovato")
 
-    new_access = create_access_token(user.id, user.role)
+    new_access = create_access_token(user.id, user.role, user.token_version)
     return {"access_token": new_access, "token_type": "bearer"}
 
 

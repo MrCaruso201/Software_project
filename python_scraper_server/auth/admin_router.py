@@ -11,10 +11,11 @@ e il suo ruolo non può essere modificato tramite API, nemmeno da altri admin.
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from jose import JWTError
 from typing import Optional
 
-from auth.dependencies import require_role
-from auth.roles import Role
+from auth.dependencies import require_role, resolve_current_user
+from auth.roles import Role, has_permission
 from auth.schemas import UserResponse
 from db.database import get_db
 from db.models import User, Event, SignedRelease
@@ -129,7 +130,9 @@ def update_role(
         )
 
     old_role   = user.role
-    user.role  = body.role
+    if old_role != body.role:
+        user.role = body.role
+        user.token_version = User.token_version + 1
     db.commit()
 
     print(f"🛡️  Ruolo aggiornato: {user.username} {old_role} → {body.role}")
@@ -241,10 +244,8 @@ def download_release_pdf(
     if not token:
         raise HTTPException(401, "Token mancante")
     try:
-        from auth.jwt import verify_access_token
-        from auth.roles import has_permission, Role
-        user_payload = verify_access_token(token)
-    except Exception:
+        user_payload = resolve_current_user(token, db)
+    except JWTError:
         raise HTTPException(401, "Token non valido")
         
     if not has_permission(user_payload.get("role", ""), Role.RACE_DIRECTOR):

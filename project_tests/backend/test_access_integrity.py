@@ -60,6 +60,7 @@ class AccessIntegrityTests(unittest.IsolatedAsyncioTestCase):
         for role, expected in [('viewer', 403), ('user', 403), ('race_director', 200), ('admin', 200)]:
             self.user.role = role
             self.db.commit()
+            self.token = create_access_token(self.user.id, role)
             self.assertEqual(await self.request('PATCH', f'/events/{self.event.id}', {'title': role}, self.token), expected)
         for method, path, body in [('POST', '/events/', {'title': 'New', 'event_date': '2026-09-14T12:00:00', 'location': 'Track'}),
                                    ('PATCH', f'/events/{self.event.id}', {'title': 'Changed'}),
@@ -67,9 +68,10 @@ class AccessIntegrityTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await self.request(method, path, body), 401)
             self.user.role = 'viewer'
             self.db.commit()
-            self.assertEqual(await self.request(method, path, body, self.token), 403)
+            self.assertEqual(await self.request(method, path, body, create_access_token(self.user.id, 'viewer')), 403)
         self.user.role = 'race_director'
         self.db.commit()
+        self.token = create_access_token(self.user.id, 'race_director')
         self.assertEqual(await self.request('POST', '/events/', {'title': 'New', 'event_date': '2026-09-14T12:00:00', 'location': 'Track'}, self.token), 201)
         self.assertEqual(await self.request('DELETE', f'/events/{self.event.id}', token=self.token), 204)
 
@@ -84,6 +86,10 @@ class AccessIntegrityTests(unittest.IsolatedAsyncioTestCase):
         with patch('auth.token.SessionLocal', self.factory):
             self.user.role = 'viewer'
             self.db.commit()
+            self.assertIsNone(await verify_websocket_token(ws))
+            ws.close.assert_awaited_once_with(code=4401)
+            ws.close.reset_mock()
+            ws.query_params = {'token': create_access_token(self.user.id, 'viewer')}
             self.assertEqual((await verify_websocket_token(ws))['role'], 'viewer')
             self.db.delete(self.user)
             self.db.commit()

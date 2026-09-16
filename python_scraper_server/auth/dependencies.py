@@ -29,6 +29,9 @@ def resolve_current_user(token: str, db: Session) -> dict:
     user = db.get(User, user_id, populate_existing=True)
     if user is None:
         raise JWTError("Account non più disponibile")
+    # Legacy tokens without a version remain valid only before the first role change.
+    if payload.get("token_version", 0) != user.token_version or payload.get("role") != user.role:
+        raise JWTError("Permessi modificati: rinnova il token")
     return {**payload, "role": user.role}
 
 
