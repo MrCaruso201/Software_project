@@ -1,6 +1,6 @@
-## Kart Timing App
+## Race Manager
 
-Questa repository contiene il codice per l'ecosistema **Kart Timing App**, un'applicazione completa per il tracciamento e la visualizzazione in tempo reale dei tempi sul giro per gare di kart.
+Questa repository contiene il codice per l'ecosistema **Race Manager**, un'applicazione completa per il tracciamento e la visualizzazione in tempo reale dei tempi sul giro per gare di kart.
 
 Il progetto si divide in due componenti principali:
 
