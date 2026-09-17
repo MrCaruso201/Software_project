@@ -1,10 +1,10 @@
 ## Race Manager
 
-Questa repository contiene il codice per l'ecosistema **Race Manager**, un'applicazione completa per il tracciamento e la visualizzazione in tempo reale dei tempi sul giro per gare di kart.
+Questa repository contiene il codice per l'ecosistema **Race Manager**, un'applicazione completa per il tracciamento, l'organizzazione e la visualizzazione in tempo reale dei tempi sul giro per gare di kart.
 
 Il progetto si divide in due componenti principali:
 
-1. **App iOS (Client)**: Un'applicazione nativa per iOS (scritta in Swift) che offre un'interfaccia utente fluida per seguire gli eventi in tempo reale, esplorare gare passate e gestire team e piloti.
+1. **App iOS (Client)**: Un'applicazione nativa per iOS (scritta in Swift) che offre un'interfaccia utente fluida per seguire gli eventi in tempo reale, esplorare gare passate e gestire eventi,  team e piloti.
 2. **Server (Scraper & WebSocket API)**: Un server Python basato su FastAPI che estrae i dati dei tempi live (tramite Playwright) e li trasmette ai client connessi via WebSocket.
 
 ---
@@ -25,16 +25,15 @@ Il progetto si divide in due componenti principali:
 ### Lato App (iOS)
 
 - **Live Timing**: Visualizzazione in tempo reale dei tempi sul giro, distacchi e posizioni tramite connessione WebSocket.
-- **Gestione Eventi**: Possibilità di esplorare eventi passati, attuali e futuri.
-- **Dettagli Piloti e Team**: Pagine dedicate alle statistiche e alle formazioni dei team.
-- **Interfaccia Moderna**: Sviluppata in SwiftUI per offrire un'esperienza utente reattiva e nativa.
+- **Gestione Eventi**: Possibilità di esplorare ed iscriversi ad eventi creati direttamente in app.
+- **Dettagli Piloti**: Pagine dedicate alle statistiche.
 
 ### Lato Server (Python)
 
-- **Scraping Real-Time**: Motore di scraping basato su Playwright (headless browser) in grado di estrarre e parsare tempestivamente i dati dalle board dei tempi.
+- **Scraping Real-Time**: Motore di scraping basato su Playwright (headless browser) in grado di estrarre i tempi direttamente dalla rete di transponder già installata da vari provider nella maggior parte dei kartodromi.
 - **WebSocket Streaming**: Architettura multi-client gestita in tempo reale. I dati estratti vengono diffusi tramite WebSocket unicamente agli utenti interessati (logica a stanze/URL).
 - **Gestione Risorse**: Avvio dinamico delle sessioni di scraping in base alle richieste e spegnimento automatico quando non ci sono più client connessi, per risparmiare risorse.
-- **Autenticazione**: Sistema sicuro tramite JWT e ruoli differenziati (viewer, race_director, admin).
+- **Autenticazione**: Sistema sicuro tramite JWT e ruoli differenziati (viewer, user, race_director, admin).
 
 ---
 
