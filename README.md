@@ -13,9 +13,9 @@ Il progetto si divide in due componenti principali:
 
 <div align="center">
   <!-- INSERIRE QUI GLI SCREENSHOT -->
-  <img src="[URL_IMMAGINE_1]" width="250" alt="Screenshot Schermata Home">
-  <img src="[URL_IMMAGINE_2]" width="250" alt="Screenshot Schermata Live Timing">
-  <img src="[URL_IMMAGINE_3]" width="250" alt="Screenshot Schermata Dettaglio Gara">
+  <img src="screenshot app/home_user_evento.PNG" width="250" alt="Screenshot Schermata Home">
+  <img src="screenshot app/live_standings.PNG" width="250" alt="Screenshot Schermata Live Timing">
+  <img src="screenshot app/team_view.PNG" width="250" alt="Screenshot Schermata Dettaglio Gara">
 </div>
 
 ---
