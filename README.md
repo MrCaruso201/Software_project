@@ -1,6 +1,4 @@
-già in possesso
-
-# Kart Timing App
+## Kart Timing App
 
 Questa repository contiene il codice per l'ecosistema **Kart Timing App**, un'applicazione completa per il tracciamento e la visualizzazione in tempo reale dei tempi sul giro per gare di kart.
 
