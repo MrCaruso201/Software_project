@@ -272,12 +272,14 @@
 				INFOPLIST_FILE = KartTimingApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Race Manager";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "L'app cerca i server di timing sulla rete locale per mostrare i tempi in tempo reale.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "L'app necessita di accedere alla rete locale per scoprire il server del Kartdromo quando in Dev Mode.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "La posizione viene usata nella vista pilota per mostrare la velocità GPS in km/h.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -308,12 +310,14 @@
 				INFOPLIST_FILE = KartTimingApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Race Manager";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "L'app cerca i server di timing sulla rete locale per mostrare i tempi in tempo reale.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "L'app necessita di accedere alla rete locale per scoprire il server del Kartdromo quando in Dev Mode.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "La posizione viene usata nella vista pilota per mostrare la velocità GPS in km/h.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
