@@ -38,7 +38,7 @@ struct DiscoveredServer: Identifiable, Equatable, Hashable {
     static func remoteServer(token: String) -> DiscoveredServer {
         DiscoveredServer(
             name: "Kartdromo (remoto)",
-            host: "marcos-macbook-pro.tail71e118.ts.net",
+            host: "racemanager.mcarhome.duckdns.org",
             port: 443,
             useTLS: true,
             token: token

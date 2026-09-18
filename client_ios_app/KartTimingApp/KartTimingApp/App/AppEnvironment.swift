@@ -13,7 +13,7 @@ class AppEnvironment: ObservableObject {
     // MARK: - Costanti server
 
     /// URL pubblico (Tailscale Funnel) — usato in produzione
-    static let productionBaseURL = "https://marcos-macbook-pro.tail71e118.ts.net"
+    static let productionBaseURL = "https://racemanager.mcarhome.duckdns.org"
 
     // MARK: - Stato osservabile
 

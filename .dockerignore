@@ -1,0 +1,20 @@
+# App iOS: non serve nell'immagine del server
+client_ios_app/
+
+# Screenshot e materiale README
+screenshot app/
+
+# Git e ambienti virtuali
+.git/
+.gitignore
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.venv/
+**/venv/
+
+# Segreti: passati a runtime via env_file, mai copiati nell'immagine
+python_scraper_server/.env
+
+# Log
+**/*.log

@@ -1,0 +1,20 @@
+services:
+  race-manager-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: race-manager-server
+    restart: unless-stopped
+    env_file:
+      - ./python_scraper_server/.env
+    networks:
+      - pangolin_frontend
+    expose:
+      - "8000"
+    # Scommenta se vuoi anche accedere da localhost:8000 per debug
+    # ports:
+    #   - "8000:8000"
+
+networks:
+  pangolin_frontend:
+    external: true
