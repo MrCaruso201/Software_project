@@ -48,7 +48,7 @@ struct KartodromoService {
     /// Scarica i kartodromi attivi da `GET {baseURL}/kartodromi/`.
     ///
     /// - Parameters:
-    ///   - baseURL: Base URL del server (es. `"https://marcos-macbook-pro.tail71e118.ts.net"`).
+    ///   - baseURL: Base URL del server
     ///   - accessToken: JWT access token (ruolo minimo: viewer).
     /// - Returns: Array di `Kartodromo` restituiti dal server.
     static func fetchKartodromi(baseURL: String, accessToken: String) async throws -> [Kartodromo] {
